@@ -3,6 +3,8 @@
 """
 Created on Thu May  9 14:40:43 2019
 
+Remember to check propagator by turning off forces and checking dx/dt
+
 @author: mellis
 """
 import numpy as np
@@ -20,17 +22,21 @@ ctmqc_env = {'pos': [[-15.000646042846233]],  # Nucl. pos (nrep, natom) in bohr
              'mass': [2000],  # nuclear mass (nrep) in au_m
              'tullyModel': 3,  # Which model
              'nsteps': 10,  # How many steps
-             'dx': 1e-5,  # The increment for the NACV and grad E calc in bohr
+             'dx': 1e-6,  # The increment for the NACV and grad E calc in bohr
              'dt': 4,  # The timestep in au_t
              'elec_steps': 5,  # Number of electronic timesteps per nuclear one
              }
 
+elecProp = elec_prop.elecProp(ctmqc_env)
 
 class main(object):
     """
     Will carry out the full propagation from intialisation to end.
-
     """
+    
+    allX = []
+    allT = []
+    
     def __init__(self, ctmqc_env):
         self.ctmqc_env = ctmqc_env
         self.__init_tully_model()
@@ -175,25 +181,35 @@ class main(object):
             self.ctmqc_env['acc'] = F/ctmqc_env['mass'].astype(float)
 
             self.ctmqc_env['frc'] = F
+        
+        self.ctmqc_env['t'] = 0
+        self.ctmqc_env['iter'] = 0
+        self.__update_vars_step()
 
     def __main_loop(self):
         """
         Will loop over all steps and propagate the dynamics
         """
         for istep in range(self.ctmqc_env['nsteps']):
-            self.ctmqc_step()
+            self.__save_data()
+            self.__ctmqc_step()
+            self.ctmqc_env['t'] += self.ctmqc_env['dt']
+            self.ctmqc_env['iter'] += 1
+        self.__finalise()
 
-    def ctmqc_step(self):
+    def __ctmqc_step(self):
         """
         Will carry out a single step in the CTMQC.
         """
         dt = self.ctmqc_env['dt']
         nrep = self.ctmqc_env['nrep']
 
+        self.ctmqc_env['acc'] = 0
+
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
-
         for irep in range(nrep):
+            elecProp.do_adiab_prop(irep)
             pos = self.ctmqc_env['pos'][irep]
             gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
             self.ctmqc_env['adFrc'][irep] = gradE
@@ -201,6 +217,7 @@ class main(object):
             pop = elec_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
                                          self.ctmqc_env)
             self.ctmqc_env['adPops'][irep] = pop
+            
 
             F = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
             self.ctmqc_env['F_eh'] = F
@@ -210,10 +227,21 @@ class main(object):
 
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
+        self.__update_vars_step()  # Save old positions
 
+    def __save_data(self):
+        """
+        Will save data to RAM (arrays within this class)
+        """
+        self.allX.append(self.ctmqc_env['pos'])
+        self.allT.append(self.ctmqc_env['t'])
 
-
-
+    def __finalise(self):
+        """
+        Will tidy things up, change types of storage arrays to numpy arrays.
+        """
+        self.allX = np.array(self.allX)
+        self.allT = np.array(self.allT)
 
 
 
@@ -325,5 +353,6 @@ class main(object):
 
 everything = main(ctmqc_env)
 #everything.plot_eh_frc_all_x()
-#everything.plot_adFrc_all_x()
+#everything.plot_adFrc_all_x()2
 #everything.plot_ener_all_x()
+#everything.plot_NACV_all_x()
