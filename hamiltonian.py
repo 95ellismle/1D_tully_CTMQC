@@ -83,6 +83,13 @@ def calcNACV(irep, ctmqc_env):
     allU = [getEigProps(H, ctmqc_env)[1] for H in allH]
     grad = np.array(np.gradient(allU, dx, axis=0))[2]
     NACV = np.matmul(allU[1], grad)
+    for l in range(len(NACV)):
+        for k in range(len(NACV)):
+            if np.abs(NACV[l, k] - np.conjugate(NACV[l, k])) > 1e-10:
+                print("NACV:")
+                print(NACV)
+                raise SystemExit("NACV not antisymetric!")
+                
     return NACV
 
 
