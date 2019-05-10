@@ -112,17 +112,20 @@ class elecProp(object):
         """
         Will carry out the RK4 algorithm to propagate the coefficients
         """
-        
-        K1p = self.dTe * self.X1
-        K2p = self.dTe * np.matmul(self.X12, (1. + K1p/2.))
-        K3p = self.dTe * np.matmul(self.X12, (1. + K2p/2.))
-        K4p = self.dTe * np.matmul(self.X2, (1. + K3p))
+        K1 = self.dTe * np.dot(self.X1, coeff)
+        K1 = np.array(K1)[0]
 
-        Ktotp = (1./6.) * (K1p + (2.*K2p) + (2.*K3p) + K4p)
-        Ident = np.identity(self.ctmqc_env['nstate'])
-        Ktotp = Ident + Ktotp
-        self.Ktotp = Ktotp
+        K2 = self.dTe * np.dot(self.X12, coeff + K1/2.)
+        K2 = np.array(K2)[0]
 
-        coeff = np.dot(Ktotp, coeff)
+        K3 = self.dTe * np.dot(self.X12, coeff + K2/2.)
+        K3 = np.array(K3)[0]
+
+        K4 = self.dTe * np.dot(self.X2, coeff + K3)
+        K4 = np.array(K4)[0]
+
+        Ktot = (1/6.) * (K1 + (2.*K2) + (2.*K3) + K4)
+
+        coeff = coeff + Ktot
 
         return coeff
