@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu May  9 14:40:43 2019
@@ -22,10 +22,10 @@ ctmqc_env = {'pos': [[-15]],  # Nucl. pos (nrep, natom) in bohr
              'u': [[complex(1, 0), complex(0, 0)]],  # Ad Coeff (nrep, 2)
              'mass': [2000],  # nuclear mass (nrep) in au_m
              'tullyModel': 3,  # Which model
-             'nsteps': 1300,  # How many steps
+             'nsteps': 1600,  # How many steps
              'dx': 1e-6,  # The increment for the NACV and grad E calc in bohr
              'dt': 4,  # The timestep in au_t
-             'elec_steps': 50,  # Num elec. timesteps per nucl. one
+             'elec_steps': 5,  # Num elec. timesteps per nucl. one
              }
 
 elecProp = elec_prop.elecProp(ctmqc_env)
@@ -212,7 +212,7 @@ class main(object):
             self.__ctmqc_step()
             self.ctmqc_env['t'] += self.ctmqc_env['dt']
             self.ctmqc_env['iter'] += 1
-            print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep))
+            print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep), end="\r")
         self.__finalise()
 
     def __ctmqc_step(self):
@@ -222,8 +222,8 @@ class main(object):
         dt = self.ctmqc_env['dt']
         nrep = self.ctmqc_env['nrep']
 
-#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
-#        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
+        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
@@ -252,7 +252,7 @@ class main(object):
 
             self.ctmqc_env['frc'] = F
 
-#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
         self.__update_vars_step()  # Save old positions
 
@@ -277,11 +277,6 @@ class main(object):
         self.allX = np.array(self.allX)
         self.allT = np.array(self.allT)
 
-
-
-
-
-
     def plot_avg_vel(self):
         """
         Will plot x vs t and fit a linear line through it to get avg velocity
@@ -293,120 +288,20 @@ class main(object):
         plt.plot(t, x)
         plt.plot(t, np.polyval(fit, t))
 
-    def plot_eh_frc_all_x(self):
-        """
-        Will plot the Ehrenfest force for x between -15, 15
-        """
-        allF = []
-        allX = []
-        irep = 0
-        for pos in np.arange(-15, 15, 0.02):
-            ctmqc_env['pos'][0, 0] = pos
-            gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
-            self.ctmqc_env['adFrc'][irep] = gradE
 
-            pop = elec_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
-                                         self.ctmqc_env)
-            self.ctmqc_env['adPops'][irep] = pop
 
-            F = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
-            allF.append(F)
-            allX.append(pos)
-
-        allF = np.array(allF)
-        allX = np.array(allX)
-
-        plt.plot(allX, allF, label=r"$\mathbf{F}_{ehren}$")
-
-        plt.xlabel("Nucl. Crds")
-        plt.ylabel("Force")
-        plt.legend()
-        plt.show()
-
-    def plot_NACV_all_x(self):
-        """
-        Will plot the NACV for x between -15, 15
-        """
-        allNACV = []
-        allX = []
-        for x in np.arange(-15, 15, 0.02):
-            ctmqc_env['pos'][0, 0] = x
-            NACV = Ham.calcNACV(0, ctmqc_env)
-            allX.append(x)
-            allNACV.append(NACV)
-
-        allNACV = np.array(allNACV)
-        allX = np.array(allX)
-
-        plt.plot(allX, allNACV[:, 0, 0], label=r"$\mathbf{d}_{11}$")
-        plt.plot(allX, allNACV[:, 0, 1], label=r"$\mathbf{d}_{12}$")
-        plt.plot(allX, allNACV[:, 1, 0], label=r"$\mathbf{d}_{21}$")
-        plt.plot(allX, allNACV[:, 1, 1], label=r"$\mathbf{d}_{22}$")
-        plt.xlabel("Nucl. Crds")
-        plt.ylabel("NACV")
-        plt.legend()
-        plt.show()
-
-    def plot_ener_all_x(self):
-        """
-        Will plot the energy states for x between -15, 15
-        """
-        x = np.arange(-15, 15, 0.01)
-        allH = [self.ctmqc_env['Hfunc'](i) for i in x]
-
-        eigProps = [Ham.getEigProps(H, self.ctmqc_env) for H in allH]
-        allE = np.array([i[0] for i in eigProps])
-
-        plt.plot(x, allE[:, 0], label=r"E$_1$")
-        plt.plot(x, allE[:, 1], label=r"E$_2$")
-        plt.xlabel("Nucl. Coords [Bohr]")
-        plt.ylabel("Energy [Ha]")
-        plt.legend()
-        plt.show()
-
-    def plot_adFrc_all_x(self):
-        """
-        Will plot the adiabatic forces for x between -15, 15
-        """
-        x = np.arange(-15, 15, 0.01)
-        allAdFrc = np.array([nucl_prop.calc_ad_frc(i, self.ctmqc_env)
-                             for i in x])
-
-        plt.plot(x, allAdFrc[:, 0], label=r"$\nabla$E$_1$")
-        plt.plot(x, allAdFrc[:, 1], label=r"$\nabla$E$_2$")
-        plt.xlabel("Nucl. Coords [Bohr]")
-        plt.ylabel("Energy [Ha]")
-        plt.legend()
-        plt.show()
-
-    def plot_adStates_all_x(self):
-        """
-        Will plot the adiabatic states for x between -15, 15
-        """
-        x = np.arange(-15, 15, 0.01)
-        allH = [self.ctmqc_env['Hfunc'](i) for i in x]
-
-        eigProps = [Ham.getEigProps(H, self.ctmqc_env) for H in allH]
-        allU = np.array([i[1] for i in eigProps])
-
-        plt.plot(x, allU[:, 0, 0], label=r"U$_{1, 1}$")
-        plt.plot(x, allU[:, 0, 1], label=r"U$_{1, 2}$")
-        plt.plot(x, allU[:, 1, 0], label=r"U$_{2, 1}$")
-        plt.plot(x, allU[:, 1, 1], label=r"U$_{2, 2}$")
-        plt.xlabel("Nucl. Coords [Bohr]")
-        plt.ylabel("")
-        plt.legend()
-        plt.show()
 
 data = main(ctmqc_env)
 
 R = data.allX[:, 0, 0]
-#plot.plot_ad_pops(R, data.allAdPop)
+plot.plot_ad_pops(R, data.allAdPop)
 #plot.plot_di_pops(data.allT, data.allu, "Time")
 #plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
+#plot.plot_ad_pops(R, data.allAdPop)
 #plot.plot_H(data.allT, data.allH, "Time")
 
-#data.plot_eh_frc_all_x()
-#data.plot_adFrc_all_x()2
-#data.plot_ener_all_x()
-#data.plot_NACV_all_x()
+#plot.plot_H_all_x(ctmqc_env)
+#plot.plot_eh_frc_all_x()
+#plot.plot_adFrc_all_x(ctmqc_env)
+#plot.plot_ener_all_x()
+#plot.plot_NACV_all_x()

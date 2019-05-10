@@ -31,7 +31,6 @@ def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
     Will calculate the ehrenfest force in the adiabatic basis
     """
     nstate = ctmqc_env['nstate']
-
     E = Ham.getEigProps(ctmqc_env['H'][irep], ctmqc_env)[0]
     NACV = Ham.calcNACV(irep, ctmqc_env)
 
@@ -48,3 +47,10 @@ def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
         raise SystemExit("Something's gone wrong imaginary force!")
 
     return F.real
+
+
+def calc_ehren_diab_force(irep, diPops, ctmqc_env):
+    """
+    Will calculate the force using the diabatic basis
+    """
+    pass
