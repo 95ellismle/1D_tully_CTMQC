@@ -10,13 +10,16 @@ import numpy as np
 import hamiltonian as Ham
 
 
-def calc_ad_pops(C, ctmqc_env):
+def calc_ad_pops(C, ctmqc_env=False):
     """
     Will calculate the adiabatic populations of all replicas
     """
-    nstate = ctmqc_env['nstate']
-    if len(C) != nstate or len(np.shape(C)) != 1:
-        raise SystemExit("Incorrect Shape for adiab coeff in calc_ad_pops")
+    if ctmqc_env is not False:
+        nstate = ctmqc_env['nstate']
+        if len(C) != nstate or len(np.shape(C)) != 1:
+            raise SystemExit("Incorrect Shape for adiab coeff in calc_ad_pops")
+    else:
+        nstate = len(C)
     pops = np.zeros(nstate)
     for istate in range(nstate):
         pops[istate] = np.linalg.norm(C[istate])
@@ -31,32 +34,95 @@ class elecProp(object):
     def __init__(self, ctmqc_env):
         self.ctmqc_env = ctmqc_env
 
+        self.dTe = self.ctmqc_env['dt'] / float(self.ctmqc_env['elec_steps'])
+
+    def do_diab_prop(self, irep):
+        """
+        Will propagate the coefficients in the diabatic basis (without the
+        diabatic NACE)
+        """
+        dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
+        dx_E /= float(self.ctmqc_env['elec_steps'])
+
+        self.X1 = self.makeX_diab(self.ctmqc_env['pos_tm'], irep)
+        for Estep in range(self.ctmqc_env['elec_steps']):
+            pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
+            pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
+
+            self.X12 = self.makeX_diab(pos2, irep)
+            self.X2 = self.makeX_diab(pos3, irep)
+
+            self.ctmqc_env['u'][irep] = self.__RK4(self.ctmqc_env['u'][irep])
+
+            self.X1 = self.X2[:]
+
     def do_adiab_prop(self, irep):
         """
         Will actually carry out the propagation of the coefficients
         """
-        pos_diff = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm']) \
-                 / float(self.ctmqc_env['elec_steps'])
+        dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
+        dx_E /= float(self.ctmqc_env['elec_steps'])
 
+        self.X1 = self.makeX_adiab(self.ctmqc_env['pos_tm'], irep)
         for Estep in range(self.ctmqc_env['elec_steps']):
-            pos1 = self.ctmqc_env['pos_tm'] + Estep * pos_diff
-            pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * pos_diff
-            pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * pos_diff
-            
-            X1 = self.makeX_adiab(pos1, irep)
-            X12 = self.makeX_adiab(pos2, irep)
-            X2 = self.makeX_adiab(pos3, irep)
+            pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
+            pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
+
+            self.X12 = self.makeX_adiab(pos2, irep)
+            self.X2 = self.makeX_adiab(pos3, irep)
+
+            self.ctmqc_env['C'][irep] = self.__RK4(self.ctmqc_env['C'][irep])
+
+            self.X1 = self.X2[:]
+
+    def makeX_diab(self, pos, irep):
+        """
+        Will make the diabatic X matrix
+        """
+        H = self.ctmqc_env['Hfunc'](pos)
+
+        return -1j * H
 
     def makeX_adiab(self, pos, irep):
         """
         Will make the adiabatic X matrix
         """
         nstates = self.ctmqc_env['nstate']
-        X = np.zeros((nstates, nstates))
+        X = np.zeros((nstates, nstates), dtype=complex)
 
         H = self.ctmqc_env['Hfunc'](pos)
+        self.ctmqc_env['H'] = H
         E, U = Ham.getEigProps(H, self.ctmqc_env)
+        self.ctmqc_env['E'] = E
+
         NACV = Ham.calcNACV(irep, self.ctmqc_env)
+#        print(NACV, "\n")
         v = self.ctmqc_env['vel'][irep]
+
+        # First part
+        for l in range(nstates):
+            X[l, l] = E[l]
+
+        # Second part
+        X += -1j * NACV * v[0]
+
+        return -1j * X
+
+    def __RK4(self, coeff):
+        """
+        Will carry out the RK4 algorithm to propagate the coefficients
+        """
         
-        NACE
+        K1p = self.dTe * self.X1
+        K2p = self.dTe * np.matmul(self.X12, (1. + K1p/2.))
+        K3p = self.dTe * np.matmul(self.X12, (1. + K2p/2.))
+        K4p = self.dTe * np.matmul(self.X2, (1. + K3p))
+
+        Ktotp = (1./6.) * (K1p + (2.*K2p) + (2.*K3p) + K4p)
+        Ident = np.identity(self.ctmqc_env['nstate'])
+        Ktotp = Ident + Ktotp
+        self.Ktotp = Ktotp
+
+        coeff = np.dot(Ktotp, coeff)
+
+        return coeff
