@@ -17,15 +17,15 @@ import elec_prop
 import plot
 
 # All units must be atomic units
-ctmqc_env = {'pos': [[-5]],  # Nucl. pos (nrep, natom) in bohr
+ctmqc_env = {'pos': [[-15]],  # Nucl. pos (nrep, natom) in bohr
              'vel': [[5e-3]],  # Nuclear Velocities (nrep, natom) in au_v
              'u': [[complex(1, 0), complex(0, 0)]],  # Ad Coeff (nrep, 2)
              'mass': [2000],  # nuclear mass (nrep) in au_m
              'tullyModel': 3,  # Which model
-             'nsteps': 1600,  # How many steps
+             'nsteps': 1300,  # How many steps
              'dx': 1e-6,  # The increment for the NACV and grad E calc in bohr
              'dt': 4,  # The timestep in au_t
-             'elec_steps': 5,  # Num elec. timesteps per nucl. one
+             'elec_steps': 50,  # Num elec. timesteps per nucl. one
              }
 
 elecProp = elec_prop.elecProp(ctmqc_env)
@@ -212,8 +212,7 @@ class main(object):
             self.__ctmqc_step()
             self.ctmqc_env['t'] += self.ctmqc_env['dt']
             self.ctmqc_env['iter'] += 1
-            print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep),
-                  end="\r")
+            print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep))
         self.__finalise()
 
     def __ctmqc_step(self):
@@ -403,8 +402,8 @@ data = main(ctmqc_env)
 
 R = data.allX[:, 0, 0]
 #plot.plot_ad_pops(R, data.allAdPop)
-plot.plot_di_pops(data.allT, data.allu, "Time")
-plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
+#plot.plot_di_pops(data.allT, data.allu, "Time")
+#plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
 #plot.plot_H(data.allT, data.allH, "Time")
 
 #data.plot_eh_frc_all_x()
