@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu May  9 14:40:43 2019
@@ -17,12 +17,12 @@ import elec_prop
 import plot
 
 # All units must be atomic units
-ctmqc_env = {'pos': [[-5]],  # Nucl. pos (nrep, natom) in bohr
+ctmqc_env = {'pos': [[-15]],  # Nucl. pos (nrep, natom) in bohr
              'vel': [[5e-3]],  # Nuclear Velocities (nrep, natom) in au_v
-             'u': [[complex(1, 0), complex(0, 0)]],  # Ad Coeff (nrep, 2)
+             'C': [[complex(1, 0), complex(0, 0)]],  # Ad Coeff (nrep, 2)
              'mass': [2000],  # nuclear mass (nrep) in au_m
              'tullyModel': 3,  # Which model
-             'nsteps': 1600,  # How many steps
+             'nsteps': 800,  # How many steps
              'dx': 1e-6,  # The increment for the NACV and grad E calc in bohr
              'dt': 4,  # The timestep in au_t
              'elec_steps': 5,  # Num elec. timesteps per nucl. one
@@ -223,8 +223,8 @@ class main(object):
         dt = self.ctmqc_env['dt']
         nrep = self.ctmqc_env['nrep']
 
-#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
-#        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
+        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
@@ -253,7 +253,7 @@ class main(object):
 
             self.ctmqc_env['frc'] = F
 
-#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
         self.__update_vars_step()  # Save old positions
 
@@ -402,9 +402,9 @@ class main(object):
 data = main(ctmqc_env)
 
 R = data.allX[:, 0, 0]
-#plot.plot_ad_pops(R, data.allAdPop)
-plot.plot_di_pops(data.allT, data.allu, "Time")
-plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
+plot.plot_ad_pops(R, data.allAdPop)
+#plot.plot_di_pops(data.allT, data.allu, "Time")
+#plot.plot_Rabi(data.allT, data.allH[0, 0])
 #plot.plot_H(data.allT, data.allH, "Time")
 
 #data.plot_eh_frc_all_x()

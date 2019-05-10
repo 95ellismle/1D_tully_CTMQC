@@ -54,18 +54,25 @@ def plot_H(x, allH, xlabel="Nucl. Crds"):
     plt.legend()
 
 
-def plot_Rabi(t, H, ctmqc_env):
-    E, U = Ham.getEigProps(H, ctmqc_env)
-
+def plot_Rabi(t, H):
+    """
+    Will plot Rabi Oscilations for times t using Hamiltonian H
+    """
     Hab = H[0, 1]
-    delE = E[1] - E[0]
+    delE = H[1, 1] - H[0, 0]
+    Hab4 = 4*Hab**2
 
-    omegaR = np.sqrt(delE**2 + (4*Hab)**2)
+    omegaR = np.sqrt(delE**2 + Hab4)
 
-    pops = 4*Hab**2
-    pops /= (delE**2 + pops)
-    pops = 1 - pops
+    pops = Hab4 / (delE**2 + Hab4)
     pops *= np.sin(0.5*omegaR*t)**2
+    pops = 1 - pops
 
-    plt.plot(t, pops)
-    
+    plt.plot(t, pops, 'k--', lw=2)
+
+
+def plot_x_t(x, t):
+    """
+    Will plot the position vs time
+    """
+    pass
