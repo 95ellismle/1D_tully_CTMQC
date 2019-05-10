@@ -6,6 +6,7 @@ Created on Thu May  9 14:41:10 2019
 @author: mellis
 """
 import numpy as np
+import time
 
 import hamiltonian as Ham
 
@@ -33,7 +34,6 @@ class elecProp(object):
     """
     def __init__(self, ctmqc_env):
         self.ctmqc_env = ctmqc_env
-
         self.dTe = self.ctmqc_env['dt'] / float(self.ctmqc_env['elec_steps'])
 
     def do_diab_prop(self, irep):
@@ -43,7 +43,6 @@ class elecProp(object):
         """
         dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
         dx_E /= float(self.ctmqc_env['elec_steps'])
-
         self.X1 = self.makeX_diab(self.ctmqc_env['pos_tm'], irep)
         for Estep in range(self.ctmqc_env['elec_steps']):
             pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
@@ -91,9 +90,7 @@ class elecProp(object):
         X = np.zeros((nstates, nstates), dtype=complex)
 
         H = self.ctmqc_env['Hfunc'](pos)
-        self.ctmqc_env['H'] = H
         E, U = Ham.getEigProps(H, self.ctmqc_env)
-        self.ctmqc_env['E'] = E
 
         NACV = Ham.calcNACV(irep, self.ctmqc_env)
 #        print(NACV, "\n")
@@ -112,22 +109,13 @@ class elecProp(object):
         """
         Will carry out the RK4 algorithm to propagate the coefficients
         """
-        K1p = self.X1[:]
-        
-        K2p = np.matmul((self.dTe/2.) * self.X12, K1p)
-        K2p += self.X12
+        K1 = np.array(self.dTe * np.dot(self.X1, coeff))[0]
+        K2 = np.array(self.dTe * np.dot(self.X12, coeff + K1/2.))[0]
+        K3 = np.array(self.dTe * np.dot(self.X12, coeff + K2/2.))[0]
+        K4 = np.array(self.dTe * np.dot(self.X2, coeff + K3))[0]
 
-        K3p = np.matmul((self.dTe/2.) * self.X12, K2p)
-        K3p += self.X12
-        
-        K4p = np.matmul((self.dTe) * self.X2, K3p)
-        K4p += self.X2
+        Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
 
-        Ktotp = (self.dTe/6.) * (K1p + (2.*K2p) + (2.*K3p) + K4p)
-        Ident = np.identity(self.ctmqc_env['nstate'])
-        Ktotp = Ident + Ktotp
-        self.Ktotp = Ktotp
-
-        coeff = np.dot(Ktotp, coeff)
+        coeff = coeff + Ktot
 
         return coeff
