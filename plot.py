@@ -17,8 +17,8 @@ def plot_ad_pops(x, allAdPops):
     """
     Will plot the adiabatic population output of the simulation.
     """
-    plt.plot(x, allAdPops[:, 0, 0], label=r"$|C_{1}|$")
-    plt.plot(x, allAdPops[:, 0, 1], label=r"$|C_{2}|$")
+    plt.plot(x, allAdPops[:, 0], label=r"$|C_{1}|$")
+    plt.plot(x, allAdPops[:, 1], label=r"$|C_{2}|$")
     plt.xlabel("Nucl. Crds")
     plt.ylabel("Adiab Pops")
     plt.legend()
@@ -45,10 +45,10 @@ def plot_H(x, allH, xlabel="Nucl. Crds"):
     """
     Will plot each element of H
     """
-    plt.plot(x, allH[:, 0, 0, 0], label=r"H$_{1,1}$")
-    plt.plot(x, allH[:, 0, 0, 1], label=r"H$_{1,2}$")
-    plt.plot(x, allH[:, 0, 1, 0], label=r"H$_{2,1}$")
-    plt.plot(x, allH[:, 0, 1, 1], label=r"H$_{2,2}$")
+    plt.plot(x, allH[:, 0, 0], label=r"H$_{1,1}$")
+    plt.plot(x, allH[:, 0, 1], label=r"H$_{1,2}$")
+    plt.plot(x, allH[:, 1, 0], label=r"H$_{2,1}$")
+    plt.plot(x, allH[:, 1, 1], label=r"H$_{2,2}$")
 
     plt.xlabel(xlabel)
     plt.ylabel("H [Ha]")

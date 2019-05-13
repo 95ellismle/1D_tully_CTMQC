@@ -10,23 +10,33 @@ Remember to check propagator by turning off forces and checking dx/dt
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+import random as rd
 
 import hamiltonian as Ham
 import nucl_prop
 import elec_prop
 import plot
 
+nRep = 2
+v_mean = 5e-3
+v_std = 5e-4
+
+pos = [-15 for i in range(nRep)]
+vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
+coeff = [[complex(1, 0), complex(0, 0)] for i in range(nRep)]
+
 # All units must be atomic units
-ctmqc_env = {'pos': [[-15]],  # Nucl. pos (nrep, natom) in bohr
-             'vel': [[5e-3]],  # Nuclear Velocities (nrep, natom) in au_v
-             'u': [[complex(1, 0), complex(0, 0)]],  # Ad Coeff (nrep, 2)
-             'mass': [2000],  # nuclear mass (nrep) in au_m
-             'tullyModel': 3,  # Which model
-             'nsteps': 1600,  # How many steps
-             'dx': 1e-6,  # The increment for the NACV and grad E calc in bohr
-             'dt': 4,  # The timestep in au_t
-             'elec_steps': 5,  # Num elec. timesteps per nucl. one
-             }
+ctmqc_env = {
+        'pos': pos,  # Intial Nucl. pos | nrep |in bohr
+        'vel': vel,  # Initial Nucl. veloc | nrep |au_v
+        'u': coeff,  # Intial WF |nrep, 2| -
+        'mass': [2000],  # nuclear mass |nrep| au_m
+        'tullyModel': 2,  # Which model | | -
+        'max_time': 2500,  # How many steps | | -
+        'dx': 1e-3,  # The increment for the NACV and grad E calc | | bohr
+        'dt': 4,  # The timestep | |au_t
+        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+            }
 
 elecProp = elec_prop.elecProp(ctmqc_env)
 
@@ -41,11 +51,23 @@ class main(object):
     def __init__(self, ctmqc_env):
         self.ctmqc_env = ctmqc_env
         self.__init_tully_model()
+        self.__init_nsteps()
         self.__init_pos_vel_wf()
         self.__init_arrays()
 
         self.__init_step()
         self.__main_loop()
+
+    def __init_nsteps(self):
+        """
+        Will calculate the number of steps from the maximum time needed and the
+        timestep.
+        """
+        max_time = self.ctmqc_env['max_time']
+        dt = self.ctmqc_env['dt']
+        nsteps = max_time // dt
+        self.ctmqc_env['nsteps'] = nsteps
+        print(nsteps)
 
     def __init_pos_vel_wf(self):
         """
@@ -53,7 +75,7 @@ class main(object):
         and u arrays. Will also check they are there and convert them to numpy
         arrays
         """
-
+        changes = {'replicas': False}
         # Check coeff array
         if 'u' in self.ctmqc_env:
             self.adiab_diab = "diab"
@@ -74,8 +96,10 @@ class main(object):
         if 'pos' in self.ctmqc_env:
             self.ctmqc_env['pos'] = np.array(self.ctmqc_env['pos'],
                                              dtype=np.float64)
-            nrep1, natom = np.shape(self.ctmqc_env['pos'])
+            nrep1 = len(self.ctmqc_env['pos'])
             nrep = np.min([nrep1, nrep])
+            if nrep != nrep1:
+                changes['replicas'] = 'coeff & pos'
         else:
             msg = "Can't find initial positionss\n\t"
             msg += "(specify this as 'pos')"
@@ -85,27 +109,37 @@ class main(object):
         if 'vel' in self.ctmqc_env:
             self.ctmqc_env['vel'] = np.array(self.ctmqc_env['vel'],
                                              dtype=np.float64)
-            nrep1, natom1 = np.shape(self.ctmqc_env['vel'])
+            nrep1 = len(self.ctmqc_env['vel'])
             nrep = np.min([nrep1, nrep])
-            natom = np.min([natom, natom1])
+            if nrep != nrep1:
+                changes['replicas'] = 'velocity & pos'
         else:
             msg = "Can't find initial positionss\n\t"
             msg += "(specify this as 'pos')"
             raise SystemExit(msg)
 
-        self.ctmqc_env['natom'] = natom
+        for T in changes:
+            if changes[T] is not False:
+                print("\n\nWARNING: Not all arrays have same num of replicas")
+                print("Changing size of arrays so num rep is consistent\n\n")
+                self.ctmqc_env['pos'] = self.ctmqc_env['pos'][:nrep]
+                self.ctmqc_env['vel'] = self.ctmqc_env['vel'][:nrep]
+                if self.adiab_diab == 'adiab':
+                    self.ctmqc_env['C'] = self.ctmqc_env['C'][:nrep]
+                else:
+                    self.ctmqc_env['u'] = self.ctmqc_env['u'][:nrep]
+
         self.ctmqc_env['nrep'] = nrep
         self.ctmqc_env['nstate'] = nstate
 
         print("Number Replicas = %i" % nrep)
-        print("Number Atoms = %i" % natom)
 
     def __init_arrays(self):
         """
         Will fill the ctmqc_env dictionary with the correct sized arrays such
         as the force array
         """
-        nrep, natom = self.ctmqc_env['nrep'], self.ctmqc_env['natom']
+        nrep = self.ctmqc_env['nrep']
         nstate, nstep = self.ctmqc_env['nstate'], self.ctmqc_env['nsteps']
         if 'mass' in self.ctmqc_env:
             self.ctmqc_env['mass'] = np.array(self.ctmqc_env['mass'])
@@ -113,7 +147,7 @@ class main(object):
             raise SystemExit("Mass not specified in startup")
 
         # For saving the data
-        self.allX = np.zeros((nstep, nrep, natom))
+        self.allX = np.zeros((nstep, nrep))
         self.allT = np.zeros((nstep))
         self.allE = np.zeros((nstep, nrep, nstate))
         self.allC = np.zeros((nstep, nrep, nstate), dtype=complex)
@@ -122,10 +156,10 @@ class main(object):
         self.allH = np.zeros((nstep, nrep, nstate, nstate))
 
         # For propagating dynamics
-        self.ctmqc_env['frc'] = np.zeros((nrep, natom))
-        self.ctmqc_env['F_eh'] = np.zeros((nrep, natom))
-        self.ctmqc_env['F_ctmqc'] = np.zeros((nrep, natom))
-        self.ctmqc_env['acc'] = np.zeros((nrep, natom))
+        self.ctmqc_env['frc'] = np.zeros((nrep))
+        self.ctmqc_env['F_eh'] = np.zeros((nrep))
+        self.ctmqc_env['F_ctmqc'] = np.zeros((nrep))
+        self.ctmqc_env['acc'] = np.zeros((nrep))
         self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['U'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['E'] = np.zeros((nrep, nstate))
@@ -262,11 +296,11 @@ class main(object):
         """
         istep = self.ctmqc_env['iter']
         self.allX[istep] = self.ctmqc_env['pos']
-        self.allE[istep] = self.ctmqc_env['E']
+        self.allE[istep] = self.ctmqc_env['E'][:, 0]
         self.allC[istep] = self.ctmqc_env['C']
         self.allu[istep] = self.ctmqc_env['u']
         self.allAdPop[istep] = self.ctmqc_env['adPops']
-        self.allH[istep] = self.ctmqc_env['H']
+        self.allH[istep] = self.ctmqc_env['H'][:, 0]
 
         self.allT[istep] = self.ctmqc_env['t']
 
@@ -293,15 +327,15 @@ class main(object):
 
 data = main(ctmqc_env)
 
-R = data.allX[:, 0, 0]
-plot.plot_ad_pops(R, data.allAdPop)
+R = data.allX[:, 0]
+plot.plot_ad_pops(data.allT, data.allAdPop[:, 0, :])
 #plot.plot_di_pops(data.allT, data.allu, "Time")
 #plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
 #plot.plot_ad_pops(R, data.allAdPop)
 #plot.plot_H(data.allT, data.allH, "Time")
 
 #plot.plot_H_all_x(ctmqc_env)
-#plot.plot_eh_frc_all_x()
+#plot.plot_eh_frc_all_x(ctmqc_env)
 #plot.plot_adFrc_all_x(ctmqc_env)
-#plot.plot_ener_all_x()
-#plot.plot_NACV_all_x()
+#plot.plot_ener_all_x(ctmqc_env)
+#plot.plot_NACV_all_x(ctmqc_env)
