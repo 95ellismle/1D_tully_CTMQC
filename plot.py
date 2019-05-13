@@ -13,15 +13,15 @@ import nucl_prop
 import hamiltonian as Ham
 
 
-def plot_ad_pops(x, allAdPops):
+def plot_ad_pops(x, allAdPops, params={}):
     """
     Will plot the adiabatic population output of the simulation.
     """
-    plt.plot(x, allAdPops[:, 0], label=r"$|C_{1}|$")
-    plt.plot(x, allAdPops[:, 1], label=r"$|C_{2}|$")
+    plt.plot(x, allAdPops[:, 0], **params)
+    plt.plot(x, allAdPops[:, 1], **params)
     plt.xlabel("Nucl. Crds")
     plt.ylabel("Adiab Pops")
-    plt.legend()
+#    plt.legend()
     plt.show()
 
 
@@ -72,6 +72,16 @@ def plot_Rabi(t, H):
     plt.plot(t, pops, 'k--', lw=2)
 
 
+def plot_x_t(x, t):
+    """
+    Will plot the position vs time
+    """
+    plt.plot(t, x)
+    plt.ylabel("Nucl. Pos. [bohr]")
+    plt.ylabel("Time. [au_t]")
+    plt.show()
+
+
 def plot_H_all_x(ctmqc_env):
     """
     Willl plot each element of H vs R
@@ -107,15 +117,16 @@ def plot_ener_all_x(ctmqc_env):
     plt.show()
 
 
-def plot_eh_frc_all_x(ctmqc_env):
+def plot_eh_frc_all_x(ctmqc_env, label=False):
     """
-    Will plot the Ehrenfest force for x between -15, 15
+    Will plot the Ehrenfest force for x between -15, 15 with the coefficient
+    given in the ctmqc_env. This coefficient is constant.
     """
     allF = []
     allX = []
     irep = 0
     for pos in np.arange(-15, 15, 0.02):
-        ctmqc_env['pos'][0, 0] = pos
+        ctmqc_env['pos'][0] = pos
         gradE = nucl_prop.calc_ad_frc(pos, ctmqc_env)
         ctmqc_env['adFrc'][irep] = gradE
 
@@ -130,7 +141,10 @@ def plot_eh_frc_all_x(ctmqc_env):
     allF = np.array(allF)
     allX = np.array(allX)
 
-    plt.plot(allX, allF, label=r"$\mathbf{F}_{ehren}$")
+    if label is False:
+        plt.plot(allX, allF, label=r"$\mathbf{F}_{ehren}$")
+    else:
+        plt.plot(allX, allF, label=label)
 
     plt.xlabel("Nucl. Crds")
     plt.ylabel("Force")
@@ -197,10 +211,3 @@ def plot_adStates_all_x(ctmqc_env):
     plt.ylabel("")
     plt.legend()
     plt.show()
-
-
-def plot_x_t(x, t):
-    """
-    Will plot the position vs time
-    """
-    pass
