@@ -6,7 +6,6 @@ Created on Thu May  9 14:41:10 2019
 @author: mellis
 """
 import numpy as np
-import time
 
 import hamiltonian as Ham
 
@@ -43,6 +42,7 @@ class elecProp(object):
         """
         dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
         dx_E /= float(self.ctmqc_env['elec_steps'])
+
         self.X1 = self.makeX_diab(self.ctmqc_env['pos_tm'], irep)
         for Estep in range(self.ctmqc_env['elec_steps']):
             pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
@@ -78,7 +78,7 @@ class elecProp(object):
         """
         Will make the diabatic X matrix
         """
-        H = self.ctmqc_env['Hfunc'](pos)
+        H = self.ctmqc_env['Hfunc'](pos[irep])
 
         return -1j * H
 

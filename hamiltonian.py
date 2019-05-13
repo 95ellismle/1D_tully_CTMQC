@@ -74,24 +74,34 @@ def calcNACV(irep, ctmqc_env):
     Will calculate the adiabatic NACV for replica irep
     """
     dx = ctmqc_env['dx']
+    nState = ctmqc_env['nstate']
 
     H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] - dx)
     H_x = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
     H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
 
     allH = [H_xm, H_x, H_xp]
-    allU = [getEigProps(H, ctmqc_env)[1] for H in allH]
-    grad = np.array(np.gradient(allU, dx, axis=0))[2]
-    NACV = np.matmul(allU[1], grad)
+    gradH = np.gradient(allH, axis=0)[1]
+    E, U = getEigProps(H_x, ctmqc_env)
+    NACV = np.zeros((nState, nState), dtype=complex)
+    for l in range(nState):
+        for k in range(nState):
+            if l != k:
+                phil = np.array(U)[l]
+                phik = np.array(U)[k]
+                NACV[l, k] = np.dot(phil, np.dot(gradH, phik))
+                NACV[l, k] /= E[k] - E[l]
+    
     for l in range(len(NACV)):
-        for k in range(len(NACV)):
-            if np.abs(NACV[l, k] - np.conjugate(NACV[l, k])) > 1e-10:
+        for k in range(l+1, len(NACV)):
+            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
                 print("NACV:")
                 print(NACV)
+                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
+                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
                 raise SystemExit("NACV not antisymetric!")
-                
+    
     return NACV
-
 
 def trans_diab_to_adiab(H, u, ctmqc_env):
     """
