@@ -44,9 +44,18 @@ def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
 
             F -= Clk * Ekl * NACV[l, k]
     if F.imag > 1e-12:
-        raise SystemExit("Something's gone wrong imaginary force!")
+        msg = "Something's gone wrong ehrenfest force "
+        msg += "-it has a imaginary component!"
+        raise SystemExit(msg)
 
     return F.real
+
+
+def calc_QM_force(irep, adPops, QM, adMom, ctmqc_env):
+    """
+    Will calculate the force due to the quantum momentum term
+    """
+    pass
 
 
 def calc_ehren_diab_force(irep, diPops, ctmqc_env):
