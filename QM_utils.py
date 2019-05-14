@@ -24,16 +24,25 @@ def calc_ad_mom(ctmqc_env, irep):
     return ad_mom
 
 
-def calc_Rvl(adPops, ctmqc_env, irep):
+def gaussian(RIv, RJv, sigma):
     """
-    Will calculate the funny Rvl term in the Agostini, 17 paper
+    Will calculate the gaussian on the traj
     """
-    for I in range(ctmqc_env['nrep']):
-        pos = ctmqc_env['pos'][I]
+    pre_fact = (1. / (2 * np.pi * sigma**2)) ** (1/2)
+    exponent = -((RIv - RJv)**2 / (2 * sigma**2))
+    return pre_fact * np.exp(exponent)
 
 
-def calc_QM(ctmqc_env, adPops, irep):
+def calc_WIJ(ctmqc_env, I):
+    """
+    Will calculate the WIJ term from Min, 17 SI
+    """
+    RIv = ctmqc_env['pos'][I]
+    RJv = ctmqc_env['pos'][J]
+
+
+def calc_QM(adPops, ctmqc_env, irep):
     """
     Will calculate the quantum momentum.
     """
-    calc_Rvl(adPops, ctmqc_env, irep)
+    calc_WIJ()
