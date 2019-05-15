@@ -60,7 +60,6 @@ def getEigProps(H, ctmqc_env):
     (corrected) minus signs in the code.
     """
     E, U = np.linalg.eigh(H)
-
     if ctmqc_env['tullyModel'] == 2:
         E1, _ = np.linalg.eig(H)
         if E1[0] > E1[1]:
@@ -81,7 +80,7 @@ def calcNACV(irep, ctmqc_env):
     H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
 
     allH = [H_xm, H_x, H_xp]
-    gradH = np.gradient(allH, axis=0)[1]
+    gradH = np.gradient(allH, dx, axis=0)[1]
     E, U = getEigProps(H_x, ctmqc_env)
     NACV = np.zeros((nState, nState), dtype=complex)
     for l in range(nState):
@@ -91,7 +90,7 @@ def calcNACV(irep, ctmqc_env):
                 phik = np.array(U)[k]
                 NACV[l, k] = np.dot(phil, np.dot(gradH, phik))
                 NACV[l, k] /= E[k] - E[l]
-    
+
     for l in range(len(NACV)):
         for k in range(l+1, len(NACV)):
             if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
@@ -100,8 +99,9 @@ def calcNACV(irep, ctmqc_env):
                 print("NACV[%i, %i]: " % (l, k), NACV[l, k])
                 print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
                 raise SystemExit("NACV not antisymetric!")
-    
+
     return NACV
+
 
 def trans_diab_to_adiab(H, u, ctmqc_env):
     """

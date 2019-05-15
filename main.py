@@ -19,19 +19,23 @@ import elec_prop
 import plot
 import QM_utils as qUt
 
+velMultiplier = 3
+
 nRep = 10
-v_mean = 5e-3
-v_std = 5e-4
-p_mean = -15
+v_mean = 5e-3 * velMultiplier
+v_std = 2e-4 * velMultiplier * 3
+p_mean = -10
 p_std = 0
 
 pos = [rd.gauss(p_mean, p_std) for i in range(nRep)]
 vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
-coeff = [[complex(1, 0), complex(0, 0)] for i in range(nRep)]
+coeff = [[complex(0, 0), complex(1, 0)] for i in range(nRep)]
 
 corrV = v_mean / np.mean(vel)
 vel = [i * corrV for i in vel]
-corrP = p_mean / np.mean(pos)
+corrP = 1
+if np.mean(pos) != 0:
+    corrP = p_mean / np.mean(pos)
 pos = [i * corrP for i in pos]
 
 # All units must be atomic units
@@ -41,11 +45,13 @@ ctmqc_env = {
         'u': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
         'tullyModel': 3,  # Which model | | -
-        'max_time': 5000,  # How many steps | | -
-        'dx': 1e-3,  # The increment for the NACV and grad E calc | | bohr
+        'max_time': 1300,  # Maximum time to simulate to | | au_t
+        'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
         'dt': 4,  # The timestep | |au_t
         'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': True,
+        'do_QM_F': True,  # Do the QM force
+        'do_QM_C': True,  # Do the QM force
+        'sigma': 2,  # The value of sigma (width of gaussian)
             }
 
 elecProp = elec_prop.elecProp(ctmqc_env)
@@ -174,7 +180,7 @@ class main(object):
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
         self.ctmqc_env['F_eh'] = np.zeros((nrep))
-        self.ctmqc_env['F_ctmqc'] = np.zeros((nrep))
+        self.ctmqc_env['F_qm'] = np.zeros((nrep))
         self.ctmqc_env['acc'] = np.zeros((nrep))
         self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['U'] = np.zeros((nrep, nstate, nstate))
@@ -182,7 +188,7 @@ class main(object):
         self.ctmqc_env['adFrc'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adPops'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adMom'] = np.zeros((nrep, nstate))
-        self.ctmqc_env['QM'] = np.zeros((nrep, 3))
+        self.ctmqc_env['QM'] = np.zeros(nrep)  # QM is 1D
 
     def __init_tully_model(self):
         """
@@ -239,6 +245,8 @@ class main(object):
 
             # Calculate the forces
             self.__calc_F(irep)
+            self.ctmqc_env['F'] = 0
+            self.ctmqc_env['a'] = 0
 
         self.ctmqc_env['t'] = 0
         self.ctmqc_env['iter'] = 0
@@ -262,6 +270,7 @@ class main(object):
         """
         # Get adiab forces (grad E) for each state
         pos = self.ctmqc_env['pos'][irep]
+        ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
         gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
         self.ctmqc_env['adFrc'][irep] = gradE
 
@@ -271,18 +280,23 @@ class main(object):
         self.ctmqc_env['adPops'][irep] = pop
 
         # Get Ehrenfest Forces
-        F = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
+        Feh = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
 
+        Fqm = 0.0
         if self.ctmqc_env['do_QM_F']:
             QM = qUt.calc_QM(pop, ctmqc_env, irep)
             ctmqc_env['QM'][irep] = QM
+
             adMom = qUt.calc_ad_mom(ctmqc_env, irep)
             ctmqc_env['adMom'][irep] = adMom
-            nucl_prop.calc_QM_force(irep, pop, QM, adMom, ctmqc_env)
+            Fqm = nucl_prop.calc_QM_force(irep, pop, QM, adMom, ctmqc_env)
 
-        self.ctmqc_env['F_eh'] = F
-        self.ctmqc_env['acc'] = F/ctmqc_env['mass'].astype(float)
-        self.ctmqc_env['frc'] = F
+        Ftot = Feh + Fqm
+
+        self.ctmqc_env['F_eh'] = Feh
+        self.ctmqc_env['F_cqm'] = Fqm
+        self.ctmqc_env['frc'] = Ftot
+        self.ctmqc_env['acc'] = Ftot/ctmqc_env['mass'].astype(float)
 
     def __ctmqc_step(self):
         """
@@ -298,14 +312,24 @@ class main(object):
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
 
-            if self.adiab_diab == 'adiab':
-                elecProp.do_adiab_prop(irep)
+            if self.ctmqc_env['do_QM_C']:
+                if self.adiab_diab == 'adiab':
+                    elecProp.do_adiab_prop_QM(irep)
+                else:
+                    elecProp.do_diab_prop_QM(irep)
+                    C = Ham.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
+                                                self.ctmqc_env['u'][irep],
+                                                self.ctmqc_env)
+                    self.ctmqc_env['C'][irep] = C
             else:
-                elecProp.do_diab_prop(irep)
-                C = Ham.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                            self.ctmqc_env['u'][irep],
-                                            self.ctmqc_env)
-                self.ctmqc_env['C'][irep] = C
+                if self.adiab_diab == 'adiab':
+                    elecProp.do_adiab_prop_ehren(irep)
+                else:
+                    elecProp.do_diab_prop_ehren(irep)
+                    C = Ham.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
+                                                self.ctmqc_env['u'][irep],
+                                                self.ctmqc_env)
+                    self.ctmqc_env['C'][irep] = C
 
             self.__calc_F(irep)
 
@@ -361,18 +385,34 @@ R = data.allR[:, 0]
 
 # Plot ad coeffs
 for I in range(nRep):
-    params = {'lw': 0.5, 'alpha': 0.2}
+    params = {'lw': 0.5, 'alpha': 0.1, 'color': 'k'}
     plot.plot_ad_pops(data.allt, data.allAdPop[:, I, :], params)
 
 avgData = np.mean(data.allAdPop, axis=1)
 params = {'lw': 2, 'alpha': 1, 'ls': '--'}
 plot.plot_ad_pops(data.allt, avgData, params)
+plt.xlabel("Time [au_t]")
 plt.annotate(r"K$_0$ = %.1f au" % (v_mean * ctmqc_env['mass'][0]), (10, 0.5),
              fontsize=24)
 
+# Plot Decoherence
+plt.figure()
+allDeco = data.allAdPop[:, :, 0] * data.allAdPop[:, :, 1]
+avgDeco = np.mean(allDeco, axis=1)
+#plt.plot(data.allt, allDeco, lw=0.5, alpha=0.1, color='k')
+plt.plot(data.allt, avgDeco)
 
-# plot.plot_di_pops(data.allt, data.allu, "Time")
-# plot.plot_Rabi(data.allt, data.allH[0, 0], ctmqc_env)
+minD, maxD = np.min(avgDeco), np.max(avgDeco)
+rD = maxD - minD
+plt.annotate(r"K$_0$ = %.1f au" % (v_mean * ctmqc_env['mass'][0]), (10, minD+(rD/2.)),
+             fontsize=24)
+plt.ylabel("Decoherence")
+plt.xlabel("Time [au_t]")
+#plt.title(r"Decoherence = $\frac{1}{N_{tr}} \sum_{J}^{N_{tr}} |C_0^J|^2 |C_1^J|^2$")
+plt.show()
+
+#plot.plot_di_pops(data.allt, data.allu, "Time")
+#plot.plot_Rabi(data.allt, data.allH[0, 0])
 # plot.plot_ad_pops(R, data.allAdPop)
 # plot.plot_H(data.allt, data.allH, "Time")
 
@@ -380,7 +420,7 @@ plt.annotate(r"K$_0$ = %.1f au" % (v_mean * ctmqc_env['mass'][0]), (10, 0.5),
 #for i in np.arange(0, 1, 0.1):
 #    pops = [1-i, i]
 #    ctmqc_env['C'] = np.array([[complex(np.sqrt(1-i), 0), complex(np.sqrt(i), 0)]])
-#    plot.plot_eh_frc_all_x(ctmqc_env, label="%i" % i)
+#    plot.plot_eh_frc_all_x(ctmqc_env, label=r"$|C|^2 = $%.1g" % i)
 # plot.plot_adFrc_all_x(ctmqc_env)
 # plot.plot_ener_all_x(ctmqc_env)
 # plot.plot_NACV_all_x(ctmqc_env)
