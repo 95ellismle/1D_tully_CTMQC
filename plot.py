@@ -69,7 +69,8 @@ def plot_Rabi(t, H):
     pops *= np.sin(0.5*omegaR*t)**2
     pops = 1 - pops
 
-    plt.plot(t, pops, 'k--', lw=2)
+    plt.plot(t, pops, 'k--', lw=2, label="Rabi")
+    plt.legend()
 
 
 def plot_x_t(x, t):
@@ -127,6 +128,7 @@ def plot_eh_frc_all_x(ctmqc_env, label=False):
     irep = 0
     for pos in np.arange(-15, 15, 0.02):
         ctmqc_env['pos'][0] = pos
+        ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
         gradE = nucl_prop.calc_ad_frc(pos, ctmqc_env)
         ctmqc_env['adFrc'][irep] = gradE
 
@@ -152,25 +154,25 @@ def plot_eh_frc_all_x(ctmqc_env, label=False):
     plt.show()
 
 
-def plot_NACV_all_x(ctmqc_env):
+def plot_NACV_all_x(ctmqc_env, multiplier=1, params={}):
     """
     Will plot the NACV for x between -15, 15
     """
     allNACV = []
     allX = []
     for x in np.arange(-15, 15, 0.02):
-        ctmqc_env['pos'][0, 0] = x
+        ctmqc_env['pos'][0] = x
         NACV = Ham.calcNACV(0, ctmqc_env)
         allX.append(x)
         allNACV.append(NACV)
 
-    allNACV = np.array(allNACV)
+    allNACV = np.array(allNACV) * multiplier
     allX = np.array(allX)
 
-    plt.plot(allX, allNACV[:, 0, 0], label=r"$\mathbf{d}_{11}$")
-    plt.plot(allX, allNACV[:, 0, 1], label=r"$\mathbf{d}_{12}$")
-    plt.plot(allX, allNACV[:, 1, 0], label=r"$\mathbf{d}_{21}$")
-    plt.plot(allX, allNACV[:, 1, 1], label=r"$\mathbf{d}_{22}$")
+    plt.plot(allX, allNACV[:, 0, 0], label=r"$\mathbf{d}_{11}$", **params)
+    plt.plot(allX, allNACV[:, 0, 1], label=r"$\mathbf{d}_{12}$", **params)
+    plt.plot(allX, allNACV[:, 1, 0], label=r"$\mathbf{d}_{21}$", **params)
+    plt.plot(allX, allNACV[:, 1, 1], label=r"$\mathbf{d}_{22}$", **params)
     plt.xlabel("Nucl. Crds")
     plt.ylabel("NACV")
     plt.legend()
@@ -211,3 +213,4 @@ def plot_adStates_all_x(ctmqc_env):
     plt.ylabel("")
     plt.legend()
     plt.show()
+

@@ -15,11 +15,9 @@ def calc_ad_frc(pos, ctmqc_env):
     Will calculate the forces from each adiabatic state (the grad E term)
     """
     dx = ctmqc_env['dx']
-
     H_xm = ctmqc_env['Hfunc'](pos - dx)
     H_x = ctmqc_env['Hfunc'](pos)
     H_xp = ctmqc_env['Hfunc'](pos + dx)
-
     allH = [H_xm, H_x, H_xp]
     allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
     grad = np.array(np.gradient(allE, dx, axis=0))[2]
@@ -31,7 +29,9 @@ def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
     Will calculate the ehrenfest force in the adiabatic basis
     """
     nstate = ctmqc_env['nstate']
+    ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
     E = Ham.getEigProps(ctmqc_env['H'][irep], ctmqc_env)[0]
+    ctmqc_env['E'][irep] = E
     NACV = Ham.calcNACV(irep, ctmqc_env)
 
     F = -np.sum(adPops * gradE)
@@ -55,7 +55,14 @@ def calc_QM_force(irep, adPops, QM, adMom, ctmqc_env):
     """
     Will calculate the force due to the quantum momentum term
     """
-    pass
+    F = 0.0
+    for l in range(ctmqc_env['nstate']):
+        tmp = 0.0
+        for k in range(ctmqc_env['nstate']):
+            tmp += adPops[k] * (adMom[k] - adMom[l])
+        F -= (2 * adPops[l] * QM * adMom[l]) * tmp
+
+    return F
 
 
 def calc_ehren_diab_force(irep, diPops, ctmqc_env):
