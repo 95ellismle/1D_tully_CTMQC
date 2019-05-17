@@ -8,8 +8,21 @@ Created on Mon May 13 12:25:43 2019
 import numpy as np
 import scipy.integrate as integrate
 
-#import hamiltonian as Ham
-import nucl_prop
+import hamiltonian as Ham
+
+
+def calc_ad_frc(pos, ctmqc_env):
+    """
+    Will calculate the forces from each adiabatic state (the grad E term)
+    """
+    dx = ctmqc_env['dx']
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
+    allH = [H_xm, H_x, H_xp]
+    allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
+    grad = np.array(np.gradient(allE, dx, axis=0))[2]
+    return grad
 
 
 def calc_ad_mom(ctmqc_env, irep):
@@ -17,7 +30,7 @@ def calc_ad_mom(ctmqc_env, irep):
     Will calculate the adiabatic momenta (time-integrated adiab force)
     """
     pos = ctmqc_env['pos'][irep]
-    ad_frc = nucl_prop.calc_ad_frc(pos, ctmqc_env)
+    ad_frc = calc_ad_frc(pos, ctmqc_env)
     ad_mom = ctmqc_env['adMom'][irep]
     dt = ctmqc_env['dt']
 
