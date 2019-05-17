@@ -21,7 +21,7 @@ import QM_utils as qUt
 
 velMultiplier = 3
 
-nRep = 100
+nRep = 2
 natom = 1
 v_mean = 5e-3 * velMultiplier
 v_std = 2e-4 * velMultiplier * 3
@@ -31,7 +31,8 @@ p_std = 0
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
 vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
        for I in range(nRep)]
-coeff = [[complex(0, 0), complex(1, 0)] for i in range(nRep)]
+coeff = [[[complex(0, 0), complex(1, 0)] for v in range(natom)]
+         for i in range(nRep)]
 
 corrV = 1
 if np.mean(vel) != 0:
@@ -47,15 +48,15 @@ pos = np.array(pos) * corrP
 ctmqc_env = {
         'pos': pos,  # Intial Nucl. pos | nrep |in bohr
         'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-        'C': coeff,  # Intial WF |nrep, 2| -
+        'u': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
         'tullyModel': 3,  # Which model | | -
         'max_time': 1300,  # Maximum time to simulate to | | au_t
         'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
         'dt': 4,  # The timestep | |au_t
         'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': True,  # Do the QM force
-        'do_QM_C': True,  # Do the QM force
+        'do_QM_F': False,  # Do the QM force
+        'do_QM_C': False,  # Do the QM force
         'sigma': 2,  # The value of sigma (width of gaussian)
             }
 
@@ -103,11 +104,11 @@ class main(object):
         if 'u' in self.ctmqc_env:
             self.adiab_diab = "diab"
             self.ctmqc_env['u'] = np.array(self.ctmqc_env['u'])
-            nrep, nstate = np.shape(self.ctmqc_env['u'])
+            nrep, natom, nstate = np.shape(self.ctmqc_env['u'])
         elif 'C' in ctmqc_env:
             self.adiab_diab = "adiab"
             self.ctmqc_env['C'] = np.array(self.ctmqc_env['C'])
-            nrep, nstate = np.shape(self.ctmqc_env['C'])
+            nrep, natom, nstate = np.shape(self.ctmqc_env['C'])
         else:
             msg = "Can't find initial wavefunction\n\t"
             msg += "(specify this as 'u' or 'C')"
@@ -119,12 +120,16 @@ class main(object):
         if 'pos' in self.ctmqc_env:
             self.ctmqc_env['pos'] = np.array(self.ctmqc_env['pos'],
                                              dtype=np.float64)
-            nrep1, natom = np.shape(self.ctmqc_env['pos'])
-            nrep = np.min([nrep1, nrep])
+            nrep1, natom1 = np.shape(self.ctmqc_env['pos'])
+
+            if natom != natom1:
+                changes['atoms'] = "velocity & pos"
+            natom = np.min([natom, natom1])
             if nrep != nrep1:
                 changes['replicas'] = 'coeff & pos'
+            nrep = np.min([nrep1, nrep])
         else:
-            msg = "Can't find initial positionss\n\t"
+            msg = "Can't find initial positions\n\t"
             msg += "(specify this as 'pos')"
             raise SystemExit(msg)
 
@@ -133,15 +138,16 @@ class main(object):
             self.ctmqc_env['vel'] = np.array(self.ctmqc_env['vel'],
                                              dtype=np.float64)
             nrep1, natom1 = np.shape(self.ctmqc_env['vel'])
+
             if nrep != nrep1:
                 changes['replicas'] = 'velocity & pos'
+            nrep = np.min([nrep1, nrep])
             if natom != natom1:
                 changes['atoms'] = "velocity & pos"
-            nrep = np.min([nrep1, nrep])
             natom = np.min([natom, natom1])
         else:
-            msg = "Can't find initial positionss\n\t"
-            msg += "(specify this as 'pos')"
+            msg = "Can't find initial velocities\n\t"
+            msg += "(specify this as 'vel')"
             raise SystemExit(msg)
 
         for T in changes:
@@ -155,6 +161,11 @@ class main(object):
                     self.ctmqc_env['C'] = self.ctmqc_env['C'][:nrep]
                 else:
                     self.ctmqc_env['u'] = self.ctmqc_env['u'][:nrep]
+
+        if natom > 1:
+            msg = "\n\nSTOP!\n"
+            msg += "The code is currently not ready for more than 1 atom\n\n"
+            raise SystemExit(msg)
 
         self.ctmqc_env['nrep'] = nrep
         self.ctmqc_env['nstate'] = nstate
@@ -176,30 +187,30 @@ class main(object):
             raise SystemExit("Mass not specified in startup")
 
         # For saving the data
-        self.allR = np.zeros((nstep, natom, nrep))
+        self.allR = np.zeros((nstep, nrep, natom))
         self.allt = np.zeros((nstep))
-        self.allv = np.zeros((nstep, nrep))
-        self.allE = np.zeros((nstep, nrep, nstate))
-        self.allC = np.zeros((nstep, nrep, nstate), dtype=complex)
-        self.allu = np.zeros((nstep, nrep, nstate), dtype=complex)
-        self.allAdPop = np.zeros((nstep, nrep, nstate))
-        self.allH = np.zeros((nstep, nrep, nstate, nstate))
-        self.allAdMom = np.zeros((nstep, nrep, nstate))
-        self.allAdFrc = np.zeros((nstep, nrep, nstate))
-        self.allQM = np.zeros((nstep, nrep))
+        self.allv = np.zeros((nstep, nrep, natom))
+        self.allE = np.zeros((nstep, nrep, natom, nstate))
+        self.allC = np.zeros((nstep, nrep, natom, nstate), dtype=complex)
+        self.allu = np.zeros((nstep, nrep, natom, nstate), dtype=complex)
+        self.allAdPop = np.zeros((nstep, nrep, natom, nstate))
+        self.allH = np.zeros((nstep, nrep, natom, nstate, nstate))
+        self.allAdMom = np.zeros((nstep, nrep, natom, nstate))
+        self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
+        self.allQM = np.zeros((nstep, natom, nrep))
 
         # For propagating dynamics
-        self.ctmqc_env['frc'] = np.zeros((nrep))
-        self.ctmqc_env['F_eh'] = np.zeros((nrep))
-        self.ctmqc_env['F_qm'] = np.zeros((nrep))
-        self.ctmqc_env['acc'] = np.zeros((nrep))
-        self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
-        self.ctmqc_env['U'] = np.zeros((nrep, nstate, nstate))
-        self.ctmqc_env['E'] = np.zeros((nrep, nstate))
-        self.ctmqc_env['adFrc'] = np.zeros((nrep, nstate))
-        self.ctmqc_env['adPops'] = np.zeros((nrep, nstate))
-        self.ctmqc_env['adMom'] = np.zeros((nrep, nstate))
-        self.ctmqc_env['QM'] = np.zeros(nrep)  # QM is 1D
+        self.ctmqc_env['frc'] = np.zeros((nrep, natom))
+        self.ctmqc_env['F_eh'] = np.zeros((nrep, natom))
+        self.ctmqc_env['F_qm'] = np.zeros((nrep, natom))
+        self.ctmqc_env['acc'] = np.zeros((nrep, natom))
+        self.ctmqc_env['H'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['U'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['E'] = np.zeros((nrep, natom, nstate))
+        self.ctmqc_env['adFrc'] = np.zeros((nrep, natom, nstate))
+        self.ctmqc_env['adPops'] = np.zeros((nrep, natom, nstate))
+        self.ctmqc_env['adMom'] = np.zeros((nrep, natom, nstate))
+        self.ctmqc_env['QM'] = np.zeros((nrep, natom))
 
     def __init_tully_model(self):
         """
@@ -230,35 +241,41 @@ class main(object):
         Will carry out the initialisation step (just 1 step without
         wf propagation for RK4)
         """
-        nrep = self.ctmqc_env['nrep']
+        nrep, natom = self.ctmqc_env['nrep'], self.ctmqc_env['natom']
+        nstate = self.ctmqc_env['nstate']
 
-        # Calculate the Hamiltonian
+        # Calculate the Hamiltonian (why not over natom too?)
         for irep in range(nrep):
-            pos = self.ctmqc_env['pos'][irep]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            for v in range(natom):
+                pos = self.ctmqc_env['pos'][irep, v]
+                self.ctmqc_env['H'][irep, v] = self.ctmqc_env['Hfunc'](pos)
 
         # Transform the coefficieints
         if 'u' in self.ctmqc_env:
-            self.ctmqc_env['C'] = np.zeros((nrep, 2), dtype=complex)
+            self.ctmqc_env['C'] = np.zeros((nrep, natom, nstate),
+                                           dtype=complex)
             for irep in range(nrep):
-                C = e_prop.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                               self.ctmqc_env['u'][irep],
-                                               self.ctmqc_env)
-                self.ctmqc_env['C'][irep] = C
+                for v in range(natom):
+                    C = e_prop.trans_diab_to_adiab(
+                                                  self.ctmqc_env['H'][irep, v],
+                                                  self.ctmqc_env['u'][irep, v],
+                                                  self.ctmqc_env)
+                    self.ctmqc_env['C'][irep, v] = C
         else:
-            self.ctmqc_env['u'] = np.zeros((nrep, 2), dtype=complex)
+            self.ctmqc_env['u'] = np.zeros((nrep, natom, nstate),
+                                           dtype=complex)
             for irep in range(nrep):
-                u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'][irep],
-                                               self.ctmqc_env['C'][irep],
-                                               self.ctmqc_env)
-                self.ctmqc_env['u'][irep] = u
+                for v in range(natom):
+                    u = e_prop.trans_adiab_to_diab(
+                                                  self.ctmqc_env['H'][irep, v],
+                                                  self.ctmqc_env['u'][irep, v],
+                                                  self.ctmqc_env)
+                self.ctmqc_env['u'][irep, v] = u
 
         for irep in range(nrep):
-
-            # Calculate the forces
-            self.__calc_F(irep)
-            self.ctmqc_env['F'] = 0
-            self.ctmqc_env['a'] = 0
+            for v in range(natom):
+                # Calculate the forces
+                self.__calc_F(irep, v)
 
         self.ctmqc_env['t'] = 0
         self.ctmqc_env['iter'] = 0
@@ -276,23 +293,24 @@ class main(object):
             self.ctmqc_env['iter'] += 1
             print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep), end="\r")
 
-    def __calc_F(self, irep):
+    def __calc_F(self, irep, v):
         """
         Will calculate the force on the nuclei
         """
         # Get adiab forces (grad E) for each state
-        pos = self.ctmqc_env['pos'][irep]
-        ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
-        gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
-        self.ctmqc_env['adFrc'][irep] = gradE
-
+        pos = self.ctmqc_env['pos'][irep, v]
+        ctmqc_env['H'][irep, v] = ctmqc_env['Hfunc'](pos)
+        gradE = qUt.calc_ad_frc(pos, self.ctmqc_env)
+        self.ctmqc_env['adFrc'][irep, v] = gradE
         # Get adiabatic populations
-        pop = e_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
+        pop = e_prop.calc_ad_pops(self.ctmqc_env['C'][irep, v],
                                   self.ctmqc_env)
-        self.ctmqc_env['adPops'][irep] = pop
+        self.ctmqc_env['adPops'][irep, v] = pop
 
         # Get Ehrenfest Forces
-        Feh = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
+        Feh = nucl_prop.calc_ehren_adiab_force(irep, v, gradE, pop, ctmqc_env)
+        print(Feh)
+        raise SystemExit("BREAK")
 
         Fqm = 0.0
         if self.ctmqc_env['do_QM_F']:
