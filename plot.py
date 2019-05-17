@@ -73,11 +73,11 @@ def plot_Rabi(t, H):
     plt.legend()
 
 
-def plot_x_t(x, t):
+def plot_x_t(data):
     """
     Will plot the position vs time
     """
-    plt.plot(t, x)
+    plt.plot(data.allt, data.allR)
     plt.ylabel("Nucl. Pos. [bohr]")
     plt.ylabel("Time. [au_t]")
     plt.show()
