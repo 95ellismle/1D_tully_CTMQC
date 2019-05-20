@@ -25,13 +25,13 @@ def calc_ad_frc(pos, ctmqc_env):
     return grad
 
 
-def calc_ad_mom(ctmqc_env, irep):
+def calc_ad_mom(ctmqc_env, irep, v):
     """
     Will calculate the adiabatic momenta (time-integrated adiab force)
     """
-    pos = ctmqc_env['pos'][irep]
+    pos = ctmqc_env['pos'][irep, v]
     ad_frc = calc_ad_frc(pos, ctmqc_env)
-    ad_mom = ctmqc_env['adMom'][irep]
+    ad_mom = ctmqc_env['adMom'][irep, v]
     dt = ctmqc_env['dt']
 
     ad_mom += dt * ad_frc
@@ -61,7 +61,7 @@ def test_norm_gauss():
     print("All is well with the gaussian")
 
 
-def calc_nucl_dens_prime(ctmqc_env, I):
+def calc_nucl_dens_prime(ctmqc_env, I, v):
     """
     Will calculate the nuclear density summed over all replicas (not averaged).
     """
@@ -75,7 +75,7 @@ def calc_nucl_dens_prime(ctmqc_env, I):
     return np.sum(nucl_dens)
 
 
-def calc_QM(adPops, ctmqc_env, I):
+def calc_QM(adPops, ctmqc_env, I, v):
     """
     Will calculate the quantum momentum.
     """

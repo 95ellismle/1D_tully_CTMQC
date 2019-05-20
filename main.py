@@ -24,8 +24,8 @@ velMultiplier = 3
 nRep = 2
 natom = 1
 v_mean = 5e-3 * velMultiplier
-v_std = 2e-4 * velMultiplier * 3
-p_mean = -15
+v_std = 2e-4 * velMultiplier * 3 * 0
+p_mean = -10
 p_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -197,7 +197,7 @@ class main(object):
         self.allH = np.zeros((nstep, nrep, natom, nstate, nstate))
         self.allAdMom = np.zeros((nstep, nrep, natom, nstate))
         self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
-        self.allQM = np.zeros((nstep, natom, nrep))
+        self.allQM = np.zeros((nstep, nrep, natom))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep, natom))
@@ -309,16 +309,14 @@ class main(object):
 
         # Get Ehrenfest Forces
         Feh = nucl_prop.calc_ehren_adiab_force(irep, v, gradE, pop, ctmqc_env)
-        print(Feh)
-        raise SystemExit("BREAK")
 
         Fqm = 0.0
         if self.ctmqc_env['do_QM_F']:
-            QM = qUt.calc_QM(pop, ctmqc_env, irep)
+            QM = qUt.calc_QM(pop, ctmqc_env, irep, v)
             ctmqc_env['QM'][irep] = QM
 
-            adMom = qUt.calc_ad_mom(ctmqc_env, irep)
-            ctmqc_env['adMom'][irep] = adMom
+            adMom = qUt.calc_ad_mom(ctmqc_env, irep, v)
+            ctmqc_env['adMom'][irep, v] = adMom
             Fqm = nucl_prop.calc_QM_force(irep, pop, QM, adMom, ctmqc_env)
 
         Ftot = Feh + Fqm
@@ -327,6 +325,37 @@ class main(object):
         self.ctmqc_env['F_cqm'] = Fqm
         self.ctmqc_env['frc'] = Ftot
         self.ctmqc_env['acc'] = Ftot/ctmqc_env['mass'].astype(float)
+
+    def __prop_wf(self, irep, v):
+        """
+        Will propagate the wavefunction in the correct basis and transform the
+        coefficients.
+        """
+        # Propagate WF
+        if self.ctmqc_env['do_QM_C']:
+            if self.adiab_diab == 'adiab':
+                elecProp.do_adiab_prop_QM(irep, v)
+            else:
+                elecProp.do_diab_prop_QM(irep, v)
+        else:
+            if self.adiab_diab == 'adiab':
+                elecProp.do_adiab_prop_ehren(irep, v)
+            else:
+                elecProp.do_diab_prop_ehren(irep, v)
+
+        # Transform WF
+        if self.adiab_diab == 'adiab':
+            u = e_prop.trans_adiab_to_diab(
+                                      self.ctmqc_env['H'][irep, v],
+                                      self.ctmqc_env['u'][irep, v],
+                                      self.ctmqc_env)
+            self.ctmqc_env['u'][irep, v] = u
+        else:
+            C = e_prop.trans_diab_to_adiab(
+                                      self.ctmqc_env['H'][irep, v],
+                                      self.ctmqc_env['u'][irep, v],
+                                      self.ctmqc_env)
+            self.ctmqc_env['C'][irep, v] = C
 
     def __ctmqc_step(self):
         """
@@ -339,32 +368,13 @@ class main(object):
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         for irep in range(nrep):
-            pos = self.ctmqc_env['pos'][irep]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            for v in range(natom):
+                pos = self.ctmqc_env['pos'][irep, v]
+                self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
 
-            if self.ctmqc_env['do_QM_C']:
-                if self.adiab_diab == 'adiab':
-                    elecProp.do_adiab_prop_QM(irep)
-                    u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'][irep],
-                                                   self.ctmqc_env['C'][irep],
-                                                   self.ctmqc_env)
-                    self.ctmqc_env['u'][irep] = u
-                else:
-                    elecProp.do_diab_prop_QM(irep)
-                    C = e_prop.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                                   self.ctmqc_env['u'][irep],
-                                                   self.ctmqc_env)
-                    self.ctmqc_env['C'][irep] = C
-            else:
-                if self.adiab_diab == 'adiab':
-                    elecProp.do_adiab_prop_ehren(irep)
-                else:
-                    elecProp.do_diab_prop_ehren(irep)
-                    C = e_prop.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                                   self.ctmqc_env['u'][irep],
-                                                   self.ctmqc_env)
-                    self.ctmqc_env['C'][irep] = C
-            self.__calc_F(irep)
+                self.__prop_wf(irep, v)
+                self.__calc_F(irep, v)
+
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
         self.__update_vars_step()  # Save old positions
@@ -430,7 +440,7 @@ plt.annotate(r"K$_0$ = %.1f au" % (v_mean * ctmqc_env['mass'][0]), (10, 0.5),
 
 # Plot Decoherence
 plt.figure()
-allDeco = data.allAdPop[:, :, 0] * data.allAdPop[:, :, 1]
+allDeco = data.allAdPop[:, :, :, 0] * data.allAdPop[:, :, :, 1]
 avgDeco = np.mean(allDeco, axis=1)
 #plt.plot(data.allt, allDeco, lw=0.5, alpha=0.1, color='k')
 plt.plot(data.allt, avgDeco)
