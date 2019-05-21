@@ -62,7 +62,7 @@ class elecProp(object):
         self.ctmqc_env = ctmqc_env
         self.dTe = self.ctmqc_env['dt'] / float(self.ctmqc_env['elec_steps'])
 
-    def do_diab_prop_QM(self, irep, v):
+    def do_diab_prop_QM(self, irep, iatom):
         """
         Will propagate the coefficients in the diabatic basis (without the
         diabatic NACE)
@@ -70,20 +70,20 @@ class elecProp(object):
         dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
         dx_E /= float(self.ctmqc_env['elec_steps'])
 
-        self.X1 = self.makeX_diab_QM(self.ctmqc_env['pos_tm'], irep, v)
+        self.X1 = self.makeX_diab_QM(self.ctmqc_env['pos_tm'], irep, iatom)
         for Estep in range(self.ctmqc_env['elec_steps']):
             pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
             pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
 
-            self.X12 = self.makeX_diab_QM(pos2, irep, v)
-            self.X2 = self.makeX_diab_QM(pos3, irep, v)
+            self.X12 = self.makeX_diab_QM(pos2, irep, iatom)
+            self.X2 = self.makeX_diab_QM(pos3, irep, iatom)
 
-            coeff = self.__RK4(self.ctmqc_env['u'][irep, v])
-            self.ctmqc_env['u'][irep, v] = coeff
+            coeff = self.__RK4(self.ctmqc_env['u'][irep, iatom])
+            self.ctmqc_env['u'][irep, iatom] = coeff
 
             self.X1 = self.X2[:]
 
-    def do_adiab_prop_QM(self, irep, v):
+    def do_adiab_prop_QM(self, irep, iatom):
         """
         Will actually carry out the propagation of the coefficients
         """
@@ -94,26 +94,26 @@ class elecProp(object):
 
         # Make X_{1}
         self.ctmqc_env['vel'] = self.ctmqc_env['vel_tm']
-        self.X1 = self.makeX_adiab_QM(self.ctmqc_env['pos_tm'], irep, v)
+        self.X1 = self.makeX_adiab_QM(self.ctmqc_env['pos_tm'], irep, iatom)
         for Estep in range(self.ctmqc_env['elec_steps']):
             # Make X_{1/2}
             pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
             self.ctmqc_env['vel'] = self.ctmqc_env['vel_tm'] \
                 + (Estep + 0.5) * dv_E
-            self.X12 = self.makeX_adiab_QM(pos2, irep, v)
+            self.X12 = self.makeX_adiab_QM(pos2, irep, iatom)
 
             # Make X_2
             pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
             self.ctmqc_env['vel'] = self.ctmqc_env['vel_tm'] \
                 + (Estep + 1) * dv_E
-            self.X2 = self.makeX_adiab_QM(pos3, irep, v)
+            self.X2 = self.makeX_adiab_QM(pos3, irep, iatom)
 
-            coeff = self.__RK4(self.ctmqc_env['C'][irep, v])
-            self.ctmqc_env['C'][irep, v] = coeff
+            coeff = self.__RK4(self.ctmqc_env['C'][irep, iatom])
+            self.ctmqc_env['C'][irep, iatom] = coeff
 
             self.X1 = self.X2[:]  # Update X_{1}
 
-    def do_diab_prop_ehren(self, irep, v):
+    def do_diab_prop_ehren(self, irep, iatom):
         """
         Will propagate the coefficients in the diabatic basis (without the
         diabatic NACE)
@@ -121,68 +121,71 @@ class elecProp(object):
         dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
         dx_E /= float(self.ctmqc_env['elec_steps'])
 
-        self.X1 = self.makeX_diab(self.ctmqc_env['pos_tm'], irep, v)
+        self.X1 = self.makeX_diab(self.ctmqc_env['pos_tm'], irep, iatom)
         for Estep in range(self.ctmqc_env['elec_steps']):
             pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
             pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
 
-            self.X12 = self.makeX_diab(pos2, irep, v)
-            self.X2 = self.makeX_diab(pos3, irep, v)
+            self.X12 = self.makeX_diab(pos2, irep, iatom)
+            self.X2 = self.makeX_diab(pos3, irep, iatom)
 
-            coeff = self.__RK4(self.ctmqc_env['u'][irep, v])
-            self.ctmqc_env['u'][irep, v]  = coeff
+            coeff = self.__RK4(self.ctmqc_env['u'][irep, iatom])
+            self.ctmqc_env['u'][irep, iatom] = coeff
 
             self.X1 = self.X2[:]
 
-    def do_adiab_prop_ehren(self, irep, v):
+    def do_adiab_prop_ehren(self, irep, iatom):
         """
         Will actually carry out the propagation of the coefficients
         """
         dx_E = (self.ctmqc_env['pos'] - self.ctmqc_env['pos_tm'])
         dx_E /= float(self.ctmqc_env['elec_steps'])
 
-        self.X1 = self.makeX_adiab(self.ctmqc_env['pos_tm'], irep, v)
+        self.ctmqc_env['pos'] = self.ctmqc_env['pos_tm']
+        self.X1 = self.makeX_adiab(irep, iatom)
         for Estep in range(self.ctmqc_env['elec_steps']):
-            pos2 = self.ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-            pos3 = self.ctmqc_env['pos_tm'] + (Estep+1) * dx_E
+            self.ctmqc_env['pos'] = self.ctmqc_env['pos_tm'] \
+                                    + (Estep + 0.5) * dx_E
+            self.X12 = self.makeX_adiab(irep, iatom)
 
-            self.X12 = self.makeX_adiab(pos2, irep, v)
-            self.X2 = self.makeX_adiab(pos3, irep, v)
+            self.ctmqc_env['pos'] = self.ctmqc_env['pos_tm'] \
+                                    + (Estep+1) * dx_E
+            self.X2 = self.makeX_adiab(irep, iatom)
 
-            coeff = self.__RK4(self.ctmqc_env['C'][irep, v])
-            self.ctmqc_env['C'][irep, v] = coeff
+            coeff = self.__RK4(self.ctmqc_env['C'][irep, iatom])
+            self.ctmqc_env['C'][irep, iatom] = coeff
 
             self.X1 = self.X2[:]
 
-    def makeX_diab(self, pos, irep, v):
+    def makeX_diab(self, pos, irep, iatom):
         """
         Will make the diabatic X matrix
         """
-        H = self.ctmqc_env['Hfunc'](pos[irep, v])
+        H = self.ctmqc_env['Hfunc'](pos[irep, iatom])
 
         return -1j * H
 
-    def makeX_diab_QM(self, pos, irep, v):
+    def makeX_diab_QM(self, pos, irep, iatom):
         """
         Will make the diabatic X matrix
         """
         nstate = self.ctmqc_env['nstate']
-        H = self.ctmqc_env['Hfunc'](pos[irep, v])
+        H = self.ctmqc_env['Hfunc'](pos[irep, iatom])
         U = Ham.getEigProps(H, self.ctmqc_env)[1]
         X = -1j * H
         K = np.zeros((nstate, nstate))
 
         C = trans_diab_to_adiab(H,
-                                self.ctmqc_env['u'][irep, v],
+                                self.ctmqc_env['u'][irep, iatom],
                                 self.ctmqc_env)
-        self.ctmqc_env['C'][irep, v] = C
-        self.ctmqc_env['adPops'][irep, v] = calc_ad_pops(C, self.ctmqc_env)
+        self.ctmqc_env['C'][irep, iatom] = C
+        self.ctmqc_env['adPops'][irep, iatom] = calc_ad_pops(C, self.ctmqc_env)
 
-        QM = qUt.calc_QM(self.ctmqc_env['adPops'][irep, v],
+        QM = qUt.calc_QM(self.ctmqc_env['adPops'][irep, iatom],
                          self.ctmqc_env,
-                         irep, v)
+                         irep, iatom)
         self.ctmqc_env['pos'] = pos
-        adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, v)
+        adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, iatom)
 
         for l in range(nstate):
             tmp = 0.0
@@ -197,18 +200,18 @@ class elecProp(object):
 
         return X - Xctmqc
 
-    def makeX_adiab(self, pos, irep, v):
+    def makeX_adiab(self, irep, iatom):
         """
         Will make the adiabatic X matrix
         """
         nstates = self.ctmqc_env['nstate']
         X = np.zeros((nstates, nstates), dtype=complex)
+        pos = self.ctmqc_env['pos']
 
-        H = self.ctmqc_env['Hfunc'](pos[irep, v])
+        H = self.ctmqc_env['Hfunc'](pos[irep, iatom])
         E, U = Ham.getEigProps(H, self.ctmqc_env)
-
-        NACV = Ham.calcNACV(irep, v, self.ctmqc_env)
-        vel = self.ctmqc_env['vel'][irep, v]
+        NACV = Ham.calcNACV(irep, iatom, self.ctmqc_env)
+        vel = self.ctmqc_env['vel'][irep, iatom]
         # First part
         for l in range(nstates):
             X[l, l] = E[l]
@@ -218,30 +221,32 @@ class elecProp(object):
 
         return -1j * np.array(X)
 
-    def makeX_adiab_QM(self, pos, irep, v):
+    def makeX_adiab_QM(self, pos, irep, iatom):
         """
         Will make the adiabatic X matrix with QM
         """
         nstates = self.ctmqc_env['nstate']
         X = np.zeros((nstates, nstates), dtype=complex)
+        pos = self.ctmqc_env['pos']
 
-        H = self.ctmqc_env['Hfunc'](pos[irep, v])
+        H = self.ctmqc_env['Hfunc'](pos[irep, iatom])
         E, U = Ham.getEigProps(H, self.ctmqc_env)
-
-        NACV = Ham.calcNACV(irep, v, self.ctmqc_env)
-        vel = self.ctmqc_env['vel'][irep, v]
+        NACV = Ham.calcNACV(irep, iatom, self.ctmqc_env)
+        vel = self.ctmqc_env['vel'][irep, iatom]
         # First part
         for l in range(nstates):
             X[l, l] = E[l]
 
         # Second part
         X += -1j * NACV * vel
+        X = -1j * np.array(X)
 
-        # # QM Part
-        C = self.ctmqc_env['C'][irep]
+        # QM Part
+        C = self.ctmqc_env['C'][irep, iatom]
         self.ctmqc_env['adPops'][irep] = calc_ad_pops(C, self.ctmqc_env)
-        QM = qUt.calc_QM(self.ctmqc_env['adPops'][irep], self.ctmqc_env, irep)
-        adMom = qUt.calc_ad_mom(self.ctmqc_env, irep)
+        QM = qUt.calc_QM(self.ctmqc_env['adPops'][irep], self.ctmqc_env, irep,
+                         iatom)
+        adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, iatom)
 
         tmp = 0.0
         for k in range(nstates):
@@ -263,7 +268,6 @@ class elecProp(object):
         K2 = np.array(self.dTe * np.dot(np.array(self.X12), coeff + K1/2.))
         K3 = np.array(self.dTe * np.dot(np.array(self.X12), coeff + K2/2.))
         K4 = np.array(self.dTe * np.dot(np.array(self.X2), coeff + K3))
-
         Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
         coeff = coeff + Ktot
 

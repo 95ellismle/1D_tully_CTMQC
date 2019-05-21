@@ -11,6 +11,7 @@ import numpy as np
 import elec_prop
 import nucl_prop
 import hamiltonian as Ham
+import QM_utils as qUt
 
 
 def plot_ad_pops(x, allAdPops, params={}):
@@ -77,7 +78,7 @@ def plot_x_t(data):
     """
     Will plot the position vs time
     """
-    plt.plot(data.allt, data.allR)
+    plt.plot(data.allt, data.allR[:, 0])
     plt.ylabel("Nucl. Pos. [bohr]")
     plt.ylabel("Time. [au_t]")
     plt.show()
@@ -129,7 +130,7 @@ def plot_eh_frc_all_x(ctmqc_env, label=False):
     for pos in np.arange(-15, 15, 0.02):
         ctmqc_env['pos'][0] = pos
         ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
-        gradE = nucl_prop.calc_ad_frc(pos, ctmqc_env)
+        gradE = qUt.calc_ad_frc(pos, ctmqc_env)
         ctmqc_env['adFrc'][irep] = gradE
 
         pop = elec_prop.calc_ad_pops(ctmqc_env['C'][irep],
