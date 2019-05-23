@@ -37,15 +37,18 @@ def calc_ehren_adiab_force(irep, v, gradE, adPops, ctmqc_env):
     return F.real
 
 
-def calc_QM_force(irep, adPops, QM, adMom, ctmqc_env):
+def calc_QM_force(adPops, QM, adMom, ctmqc_env):
     """
-    Will calculate the force due to the quantum momentum term
+    Will calculate the force due to the quantum momentum term for 1 replica and
+    1 atom.
     """
     F = 0.0
     for l in range(ctmqc_env['nstate']):
+
         tmp = 0.0
         for k in range(ctmqc_env['nstate']):
             tmp += adPops[k] * (adMom[k] - adMom[l])
+
         F -= (2 * adPops[l] * QM * adMom[l]) * tmp
 
     return F
