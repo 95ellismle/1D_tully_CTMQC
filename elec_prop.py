@@ -244,8 +244,7 @@ class elecProp(object):
         # QM Part
         C = self.ctmqc_env['C'][irep, iatom]
         self.ctmqc_env['adPops'][irep] = calc_ad_pops(C, self.ctmqc_env)
-        QM = qUt.calc_QM(self.ctmqc_env['adPops'][irep], self.ctmqc_env, irep,
-                         iatom)
+        QM = qUt.calc_QM_FD(self.ctmqc_env, irep, iatom)
         adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, iatom)
 
         tmp = 0.0

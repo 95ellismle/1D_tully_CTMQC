@@ -185,7 +185,7 @@ def plot_adFrc_all_x(ctmqc_env):
     Will plot the adiabatic forces for x between -15, 15
     """
     x = np.arange(-15, 15, 0.01)
-    allAdFrc = np.array([nucl_prop.calc_ad_frc(i, ctmqc_env)
+    allAdFrc = np.array([qUt.calc_ad_frc(i, ctmqc_env)
                          for i in x])
 
     plt.plot(x, allAdFrc[:, 0], label=r"$\nabla$E$_1$")
