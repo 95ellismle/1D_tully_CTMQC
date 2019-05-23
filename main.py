@@ -22,12 +22,12 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = 'nucl_dens deco |C|^2 qm_fl_fk'
+whichPlot = 'deco |C|^2'
 
 
 velMultiplier = 3
 
-nRep = 100
+nRep = 70
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
@@ -69,7 +69,7 @@ ctmqc_env = {
         'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
         'dt': 1,  # The timestep | |au_t
         'elec_steps': 6,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': True,  # Do the QM force
+        'do_QM_F': False,  # Do the QM force
         'do_QM_C': True,  # Do the QM force
         'sigma': sigma,  # The value of sigma (width of gaussian)
         'const': 12,  # The constant in the sigma calc
