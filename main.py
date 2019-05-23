@@ -27,7 +27,7 @@ whichPlot = 'deco |C|^2'
 
 velMultiplier = 3
 
-nRep = 70
+nRep = 1
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
@@ -70,12 +70,10 @@ ctmqc_env = {
         'dt': 1,  # The timestep | |au_t
         'elec_steps': 6,  # Num elec. timesteps per nucl. one | | -
         'do_QM_F': False,  # Do the QM force
-        'do_QM_C': True,  # Do the QM force
+        'do_QM_C': False,  # Do the QM force
         'sigma': sigma,  # The value of sigma (width of gaussian)
         'const': 12,  # The constant in the sigma calc
             }
-
-elecProp = e_prop.elecProp(ctmqc_env)
 
 
 class CTMQC(object):
@@ -406,14 +404,14 @@ class CTMQC(object):
         # Propagate WF
         if self.ctmqc_env['do_QM_C']:
             if self.adiab_diab == 'adiab':
-                elecProp.do_adiab_prop_QM(irep, v)
+                e_prop.do_adiab_prop_QM(self.ctmqc_env, irep, v)
             else:
-                elecProp.do_diab_prop_QM(irep, v)
+                e_prop.do_diab_prop_QM(self.ctmqc_env, irep, v)
         else:
             if self.adiab_diab == 'adiab':
-                elecProp.do_adiab_prop_ehren(irep, v)
+                e_prop.do_adiab_prop_ehren(self.ctmqc_env, irep, v)
             else:
-                elecProp.do_diab_prop_ehren(irep, v)
+                e_prop.do_diab_prop_ehren(self.ctmqc_env, irep, v)
 
         # Transform WF
         if self.adiab_diab == 'adiab':
@@ -545,11 +543,11 @@ class CTMQC(object):
 if redo:
     data = CTMQC(ctmqc_env)
 
-    with open('data', 'w') as f:
+    with open('data', 'wb') as f:
         pickle.dump(data, f)
 
 else:
-    with open('data') as f:
+    with open('data', 'rb') as f:
         data = pickle.load(f)
 
 
