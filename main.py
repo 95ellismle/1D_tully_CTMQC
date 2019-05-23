@@ -22,17 +22,22 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = 'nucl_dens'
+whichPlot = 'QM_fl_fk'
 
 
-velMultiplier = 2
+velMultiplier = 3
 
-nRep = 70
+nRep = 100
 natom = 1
+
 v_mean = 5e-3 * velMultiplier
-v_std = 2e-4 * velMultiplier * 1
+v_std = 1e-4
+
 p_mean = -15
 p_std = np.sqrt(2)
+
+s_mean = np.sqrt(2)
+s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
 vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
@@ -50,21 +55,26 @@ if np.mean(pos) != 0:
     corrP = p_mean / np.mean(pos)
 pos = np.array(pos) * corrP
 
+sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
+#sigma = [[1/(v_mean*100) for v in range(natom)] for I in range(nRep)]
+
 # All units must be atomic units
-ctmqc_env = {
-        'pos': pos,  # Intial Nucl. pos | nrep |in bohr
-        'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-        'C': coeff,  # Intial WF |nrep, 2| -
-        'mass': [2000],  # nuclear mass |nrep| au_m
-        'tullyModel': 3,  # Which model | | -
-        'max_time': 1200,  # Maximum time to simulate to | | au_t
-        'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-        'dt': 4,  # The timestep | |au_t
-        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': False,  # Do the QM force
-        'do_QM_C': False,  # Do the QM force
-        'sigma': np.sqrt(2),  # The value of sigma (width of gaussian)
-            }
+if redo:
+    ctmqc_env = {
+            'pos': pos,  # Intial Nucl. pos | nrep |in bohr
+            'vel': vel,  # Initial Nucl. veloc | nrep |au_v
+            'C': coeff,  # Intial WF |nrep, 2| -
+            'mass': [2000],  # nuclear mass |nrep| au_m
+            'tullyModel': 3,  # Which model | | -
+            'max_time': 1200,  # Maximum time to simulate to | | au_t
+            'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
+            'dt': 1,  # The timestep | |au_t
+            'elec_steps': 6,  # Num elec. timesteps per nucl. one | | -
+            'do_QM_F': True,  # Do the QM force
+            'do_QM_C': False,  # Do the QM force
+            'sigma': sigma,  # The value of sigma (width of gaussian)
+            'const': 12,  # The constant in the sigma calc
+                }
 
 elecProp = e_prop.elecProp(ctmqc_env)
 
@@ -83,6 +93,7 @@ class CTMQC(object):
         self.__init_nsteps()  # Find how many steps to take
         self.__init_pos_vel_wf()  # set pos vel wf as arrays, get nrep & natom
         self.__init_arrays()  # Create the arrays used
+        self.__init_sigma()  # Will initialise the nuclear width
 
         # Carry out the propagation
         self.__init_step()  # Get things prepared for RK4 (propagate positions)
@@ -98,6 +109,38 @@ class CTMQC(object):
         dt = self.ctmqc_env['dt']
         nsteps = int(max_time // dt)
         self.ctmqc_env['nsteps'] = nsteps
+
+    def __init_sigma(self):
+        """
+        Init the nuclear width
+        """
+        nrep, natom = self.ctmqc_env['nrep'], self.ctmqc_env['natom']
+        if isinstance(self.ctmqc_env['sigma'], float):
+            self.ctmqc_env['sigma'] = [self.ctmqc_env['sigma']] * natom
+            self.ctmqc_env['sigma'] = [self.ctmqc_env['sigma']
+                                       for i in range(nrep)]
+
+        self.ctmqc_env['sigma'] = np.array(self.ctmqc_env['sigma'])
+        self.ctmqc_env['sigma'] = self.ctmqc_env['sigma'][:nrep, :natom]
+        self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
+
+        self.ctmqc_env['const'] = float(self.ctmqc_env['const'])
+
+    def __check_pos_vel_QM(self):
+        """
+        Checks whether there is any variation in the positions and velocities
+        if the quantum momentum term is being used because if all positions are
+        the same then the QM is 0.
+        """
+        if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
+            v_std = np.std(self.ctmqc_env['vel'])
+            p_std = np.std(self.ctmqc_env['pos'])
+            if p_std == 0 and v_std == 0:
+                print("\n\n\nWARNING\n\n")
+                print("The initial positions and velocities are all the same,")
+                print(" meaning that the quantum momentum will be 0. If this ")
+                print("is OK then ignore this warning.\n\n")
+                print("WARNING\n\n\n")
 
     def __init_pos_vel_wf(self):
         """
@@ -179,6 +222,7 @@ class CTMQC(object):
 
         print("Number Replicas = %i" % nrep)
         print("Number Atoms = %i" % natom)
+        self.__check_pos_vel_QM()  # Just check that the QM will be non-zero
 
     def __init_arrays(self):
         """
@@ -207,6 +251,7 @@ class CTMQC(object):
         self.allAdMom = np.zeros((nstep, nrep, natom, nstate))
         self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
         self.allQM = np.zeros((nstep, nrep, natom))
+        self.allSigma = np.zeros((nstep, nrep, natom))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep, natom))
@@ -297,26 +342,31 @@ class CTMQC(object):
         nstep = self.ctmqc_env['nsteps']
         allTimes = []
         for istep in range(nstep):
-            t1 = time.time()
+            try:
+                t1 = time.time()
+                self.__save_data()
+                self.__ctmqc_step()
+                self.ctmqc_env['t'] += self.ctmqc_env['dt']
+                self.ctmqc_env['iter'] += 1
 
-            self.__save_data()
-            self.__ctmqc_step()
-            self.ctmqc_env['t'] += self.ctmqc_env['dt']
-            self.ctmqc_env['iter'] += 1
+                t2 = time.time()
 
-            t2 = time.time()
-
-            # Print some useful info
-            allTimes.append(t2 - t1)
-            avgTime = np.mean(allTimes)
-            msg = "\rStep %i/%i  Time Taken = %.2gs" % (self.ctmqc_env['iter'],
-                                                        nstep, avgTime)
-            timeLeft = int((nstep - istep) * avgTime)
-            msg += "  Time Left = %s" % (str(dt.timedelta(seconds=timeLeft)))
-            msg += "  %i%% Complete" % ((float(istep) / float(nstep)) * 100)
-            print(" "*200, end="\r")
-            print(msg,
-                  end="\r")
+                # Print some useful info
+                allTimes.append(t2 - t1)
+                avgTime = np.mean(allTimes)
+                msg = "\rStep %i/%i  Time Taken = %.2gs" % (istep, nstep,
+                                                            avgTime)
+                timeLeft = int((nstep - istep) * avgTime)
+                timeLeft = str(dt.timedelta(seconds=timeLeft))
+                msg += "  Time Left = %s" % (timeLeft)
+                percentComplete = (float(istep) / float(nstep)) * 100
+                msg += "  %i%% Complete" % (percentComplete)
+    #            print(" "*200, end="\r")
+                print(msg,
+                      end="\r")
+            except KeyboardInterrupt:
+                print("\nOk Exiting Safely")
+                return
 
     def __calc_F(self, irep, v):
         """
@@ -336,7 +386,7 @@ class CTMQC(object):
 
         Fqm = 0.0
         if self.ctmqc_env['do_QM_F']:
-            QM = qUt.calc_QM(pop, ctmqc_env, irep, v)
+            QM = qUt.calc_QM_FD(ctmqc_env, irep, v)
             ctmqc_env['QM'][irep] = QM
 
             adMom = qUt.calc_ad_mom(ctmqc_env, irep, v)
@@ -344,7 +394,6 @@ class CTMQC(object):
             Fqm = nucl_prop.calc_QM_force(irep, pop, QM, adMom, ctmqc_env)
 
         Ftot = Feh + Fqm
-
         self.ctmqc_env['F_eh'] = Feh
         self.ctmqc_env['F_qm'] = Fqm
         self.ctmqc_env['frc'] = Ftot
@@ -392,16 +441,22 @@ class CTMQC(object):
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         for irep in range(nrep):
-            for v in range(natom):
-                pos = self.ctmqc_env['pos'][irep, v]
-                self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
-
-                self.__prop_wf(irep, v)
-                self.__calc_F(irep, v)
+            self.__parallel_step(irep)
 
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
         self.__update_vars_step()  # Save old positions
+
+    def __parallel_step(self, irep):
+        """
+        A wrapper function in order to parallelise a step
+        """
+        for v in range(natom):
+            pos = self.ctmqc_env['pos'][irep, v]
+            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+
+            self.__prop_wf(irep, v)
+            self.__calc_F(irep, v)
 
     def __save_data(self):
         """
@@ -421,6 +476,7 @@ class CTMQC(object):
         self.allAdFrc[istep] = self.ctmqc_env['adFrc']
         self.allv[istep] = self.ctmqc_env['vel']
         self.allQM[istep] = self.ctmqc_env['QM']
+        self.allSigma[istep] = self.ctmqc_env['sigma']
 
         self.allt[istep] = self.ctmqc_env['t']
 
@@ -430,6 +486,22 @@ class CTMQC(object):
         """
         self.allR = np.array(self.allR)
         self.allt = np.array(self.allt)
+
+        self.allR = self.allR[:self.ctmqc_env['iter']]
+        self.allt = self.allt[:self.ctmqc_env['iter']]
+        self.allF = self.allF[:self.ctmqc_env['iter']]
+        self.allFeh = self.allFeh[:self.ctmqc_env['iter']]
+        self.allFqm = self.allFqm[:self.ctmqc_env['iter']]
+        self.allE = self.allE[:self.ctmqc_env['iter']]
+        self.allC = self.allC[:self.ctmqc_env['iter']]
+        self.allu = self.allu[:self.ctmqc_env['iter']]
+        self.allAdPop = self.allAdPop[:self.ctmqc_env['iter']]
+        self.allH = self.allH[:self.ctmqc_env['iter']]
+        self.allAdMom = self.allAdMom[:self.ctmqc_env['iter']]
+        self.allAdFrc = self.allAdFrc[:self.ctmqc_env['iter']]
+        self.allv = self.allv[:self.ctmqc_env['iter']]
+        self.allQM = self.allQM[:self.ctmqc_env['iter']]
+        self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
 
     def plot_avg_vel(self):
         """
@@ -481,6 +553,8 @@ else:
     with open('data') as f:
         data = pickle.load(f)
 
+
+# Actually do the plotting
 if isinstance(whichPlot, str):
     whichPlot = whichPlot.lower()
     if 'qm_fl_fk' in whichPlot:
@@ -516,17 +590,17 @@ if isinstance(whichPlot, str):
             return ln1, ln2
 
         ln1, ln2 = init_QM_fl_fk()
-        axes[1].plot(data.allR[:, 0, 0], data.allE[:, 0, 0])
+        axes[1].plot(data.allR[:, :, 0], data.allE[:, 0, 0])
 
         ani = animation.FuncAnimation(
                 fig, animate_QM_fl_fk, init_func=ani_init_2,
-                interval=20, blit=True)
+                interval=10, blit=True)
 
         plt.show()
 
     if whichPlot == 'nucl_dens':
         nstep, nrep, natom = np.shape(data.allR)
-        allND = [qUt.calc_nucl_dens(R, np.ones((nrep, natom))*np.sqrt(2))
+        allND = [qUt.calc_nucl_dens_PP(R, np.ones((nrep, natom))*np.sqrt(2))
                  for R in data.allR]
         allND = np.array(allND)
         minR, maxR = np.min(data.allR), np.max(data.allR)
@@ -539,7 +613,9 @@ if isinstance(whichPlot, str):
                         '.', color=(1., 0., 1.))
 
         def ani_init_1():
-            axes.plot(data.allR[:, 0, 0], data.allE[:, 0, 0])
+            for I in range(nrep):
+                axes.plot(data.allR[:, I, 0], data.allE[:, I, 0],
+                          lw=0.3, alpha=0.2)
             return ln,
 
         def animate_ND(step):
@@ -548,7 +624,7 @@ if isinstance(whichPlot, str):
             return ln,
 
         ani = animation.FuncAnimation(
-                f, animate_ND, init_func=ani_init_1, interval=20, blit=True)
+                f, animate_ND, init_func=ani_init_1, interval=10, blit=True)
 
         plt.show()
 
