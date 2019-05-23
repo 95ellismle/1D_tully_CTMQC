@@ -22,7 +22,7 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = 'QM_fl_fk'
+whichPlot = 'nucl_dens deco |C|^2 qm_fl_fk'
 
 
 velMultiplier = 3
@@ -59,22 +59,21 @@ sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
 #sigma = [[1/(v_mean*100) for v in range(natom)] for I in range(nRep)]
 
 # All units must be atomic units
-if redo:
-    ctmqc_env = {
-            'pos': pos,  # Intial Nucl. pos | nrep |in bohr
-            'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'C': coeff,  # Intial WF |nrep, 2| -
-            'mass': [2000],  # nuclear mass |nrep| au_m
-            'tullyModel': 3,  # Which model | | -
-            'max_time': 1200,  # Maximum time to simulate to | | au_t
-            'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 1,  # The timestep | |au_t
-            'elec_steps': 6,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': True,  # Do the QM force
-            'do_QM_C': False,  # Do the QM force
-            'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 12,  # The constant in the sigma calc
-                }
+ctmqc_env = {
+        'pos': pos,  # Intial Nucl. pos | nrep |in bohr
+        'vel': vel,  # Initial Nucl. veloc | nrep |au_v
+        'C': coeff,  # Intial WF |nrep, 2| -
+        'mass': [2000],  # nuclear mass |nrep| au_m
+        'tullyModel': 3,  # Which model | | -
+        'max_time': 1200,  # Maximum time to simulate to | | au_t
+        'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
+        'dt': 1,  # The timestep | |au_t
+        'elec_steps': 6,  # Num elec. timesteps per nucl. one | | -
+        'do_QM_F': True,  # Do the QM force
+        'do_QM_C': True,  # Do the QM force
+        'sigma': sigma,  # The value of sigma (width of gaussian)
+        'const': 12,  # The constant in the sigma calc
+            }
 
 elecProp = e_prop.elecProp(ctmqc_env)
 
@@ -391,13 +390,13 @@ class CTMQC(object):
 
             adMom = qUt.calc_ad_mom(ctmqc_env, irep, v)
             ctmqc_env['adMom'][irep, v] = adMom
-            Fqm = nucl_prop.calc_QM_force(irep, pop, QM, adMom, ctmqc_env)
+            Fqm = nucl_prop.calc_QM_force(pop, QM, adMom, ctmqc_env)
 
         Ftot = Feh + Fqm
-        self.ctmqc_env['F_eh'] = Feh
-        self.ctmqc_env['F_qm'] = Fqm
-        self.ctmqc_env['frc'] = Ftot
-        self.ctmqc_env['acc'] = Ftot/ctmqc_env['mass'].astype(float)
+        self.ctmqc_env['F_eh'][irep, v] = Feh
+        self.ctmqc_env['F_qm'][irep, v] = Fqm
+        self.ctmqc_env['frc'][irep, v] = Ftot
+        self.ctmqc_env['acc'][irep, v] = Ftot/ctmqc_env['mass'].astype(float)
 
     def __prop_wf(self, irep, v):
         """
@@ -652,7 +651,7 @@ if isinstance(whichPlot, str):
 
         minD, maxD = np.min(avgDeco), np.max(avgDeco)
         rD = maxD - minD
-        plt.annotate(r"K$_0$ = %.1f au" % (v_mean * ctmqc_env['mass'][0]),
+        plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
                      (10, minD+(rD/2.)), fontsize=24)
         plt.ylabel("Decoherence")
         plt.xlabel("Time [au_t]")

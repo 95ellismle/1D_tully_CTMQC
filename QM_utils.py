@@ -58,10 +58,11 @@ def test_norm_gauss():
     Will test whether the gaussian is normalised by checking 50 different
     random gaussians.
     """
-    x = np.arange(-10, 10, 0.001)
+    x = np.arange(-13, 13, 0.001)
     y = [gaussian(x, -1, abs(rd.gauss(0.5, 0.3))+0.05) for i in range(50)]
     norms = [integrate.simps(i, x) for i in y]
     if any(abs(norm - 1) > 1e-9 for norm in norms):
+        print(norms)
         raise SystemExit("Gaussian not normalised!")
 
 
@@ -122,19 +123,22 @@ def calc_QM_FD(ctmqc_env, I, v):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-#    calc_sigma(ctmqc_env, I, v)
+    calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     dx = ctmqc_env['dx']
 
     nuclDens_xm = calc_nucl_dens(RIv - dx, v, ctmqc_env)
     nuclDens = calc_nucl_dens(RIv, v, ctmqc_env)
-    nuclDens_xp = calc_nucl_dens(RIv, v, ctmqc_env)
+    nuclDens_xp = calc_nucl_dens(RIv + dx, v, ctmqc_env)
 
     gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
-                               ctmqc_env['dx'])[1]
+                               dx)[2]
     if nuclDens < 1e-12:
         return 0
-    return -gradNuclDens/(2*nuclDens)
+
+    QM = -gradNuclDens/(2*nuclDens)
+
+    return QM / ctmqc_env['mass'][0]
 
 
 def calc_QM_analytic(ctmqc_env, I, v):
@@ -161,6 +165,25 @@ def calc_QM_analytic(ctmqc_env, I, v):
         QM /= ctmqc_env['mass'][0]
 
     return QM
+
+
+
+def test_QM_calc(ctmqc_env):
+    """
+    Will compare the output of the analytic QM calculation and the finite
+    difference one.
+    """
+    allDiffs = []
+    for I in range(ctmqc_env['nrep']):
+        for v in range(ctmqc_env['natom']):
+            QM1 = calc_QM_analytic(ctmqc_env, I, v)
+            QM2 = calc_QM_FD(ctmqc_env, I, v)
+
+            allDiffs.append(QM1 - QM2)
+
+    print("Avg Diff = %.2g +/- %.2g" % (np.mean(allDiffs), np.std(allDiffs)))
+    print("Max Diff = %.2g" % np.max(np.abs(allDiffs)))
+    print("Min Diff = %.2g" % np.min(np.abs(allDiffs)))
 
 
 test_norm_gauss()
