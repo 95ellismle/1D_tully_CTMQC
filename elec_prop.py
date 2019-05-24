@@ -94,7 +94,7 @@ def do_diab_prop_QM(ctmqc_env, irep, iatom):
     X1 = makeX_diab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
     for Estep in range(ctmqc_env['elec_steps']):
         pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-        pos3 = ctmqc_env['pos_tm'] + (Estep+1) * dx_E
+        pos3 = ctmqc_env['pos_tm'] + (Estep + 1.0) * dx_E
 
         X12 = makeX_diab_QM(ctmqc_env, pos2, irep, iatom)
         X2 = makeX_diab_QM(ctmqc_env, pos3, irep, iatom)
@@ -119,18 +119,15 @@ def makeX_diab_QM(ctmqc_env, pos, irep, iatom):
                             ctmqc_env['u'][irep, iatom],
                             ctmqc_env)
     ctmqc_env['C'][irep, iatom] = C
-    ctmqc_env['adPops'][irep, iatom] = calc_ad_pops(C, ctmqc_env)
+    adPops = calc_ad_pops(C, ctmqc_env)
 
-    QM = qUt.calc_QM(ctmqc_env['adPops'][irep, iatom],
-                     ctmqc_env,
-                     irep, iatom)
     ctmqc_env['pos'] = pos
+    QM = qUt.calc_QM_analytic(ctmqc_env, irep, iatom)
     adMom = qUt.calc_ad_mom(ctmqc_env, irep, iatom)
-
     for l in range(nstate):
         tmp = 0.0
         for k in range(nstate):
-            Ck = ctmqc_env['adPops'][irep, k]
+            Ck = adPops[k]
             fk = adMom[k]
             tmp += Ck*fk
 
@@ -191,27 +188,48 @@ def do_adiab_prop_QM(ctmqc_env, irep, iatom):
     """
     Will actually carry out the propagation of the coefficients
     """
-    dx_E = (ctmqc_env['pos'] - ctmqc_env['pos_tm'])
+    dx_E = (ctmqc_env['pos'][irep, iatom] - ctmqc_env['pos_tm'][irep, iatom])
     dx_E /= float(ctmqc_env['elec_steps'])
-    dv_E = (ctmqc_env['vel'] - ctmqc_env['vel_tm'])
+    dv_E = (ctmqc_env['vel'][irep, iatom] - ctmqc_env['vel_tm'][irep, iatom])
     dv_E /= float(ctmqc_env['elec_steps'])
+    dQM_E = (ctmqc_env['QM'][irep, iatom] - ctmqc_env['QM_tm'][irep, iatom])
+    dQM_E /= float(ctmqc_env['elec_steps'])
+    df_E = (ctmqc_env['adMom'][irep, iatom] - ctmqc_env['adMom_tm'][irep,
+                                                                    iatom])
+    df_E /= float(ctmqc_env['elec_steps'])
 
     # Make X_{1}
-    ctmqc_env['vel'] = ctmqc_env['vel_tm']
+    ctmqc_env['vel'][irep, iatom] = ctmqc_env['vel_tm'][irep, iatom]
+    ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom]    
+    ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep, iatom]
+
     X1 = makeX_adiab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
     for Estep in range(ctmqc_env['elec_steps']):
-        # Make X_{1/2}
-        pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-        ctmqc_env['vel'] = ctmqc_env['vel_tm'] \
+        # Linear Interpolation
+        ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom] \
+            + (Estep + 0.5) * dQM_E
+        ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep, iatom] \
+            + (Estep + 0.5) * df_E
+        pos2 = ctmqc_env['pos_tm'][irep, iatom] + (Estep + 0.5) * dx_E
+        ctmqc_env['vel'][irep, iatom] = ctmqc_env['vel_tm'][irep, iatom] \
             + (Estep + 0.5) * dv_E
+
+        # Make X12
         X12 = makeX_adiab_QM(ctmqc_env, pos2, irep, iatom)
 
-        # Make X_2
-        pos3 = ctmqc_env['pos_tm'] + (Estep+1) * dx_E
-        ctmqc_env['vel'] = ctmqc_env['vel_tm'] \
+        # Linear Interpolation
+        pos3 = ctmqc_env['pos_tm'][irep, iatom] + (Estep+1) * dx_E
+        ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom] \
+            + (Estep + 1.0) * dQM_E
+        ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep, iatom] \
+            + (Estep + 1.0) * df_E
+        ctmqc_env['vel'][irep, iatom] = ctmqc_env['vel_tm'][irep, iatom] \
             + (Estep + 1) * dv_E
+
+        # Make X2
         X2 = makeX_adiab_QM(ctmqc_env, pos3, irep, iatom)
 
+        # RK4
         coeff = __RK4(ctmqc_env['C'][irep, iatom], X1, X12, X2, ctmqc_env)
         ctmqc_env['C'][irep, iatom] = coeff
 
@@ -242,8 +260,8 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     C = ctmqc_env['C'][irep, iatom]  # coeff
 
     adPops = calc_ad_pops(C, ctmqc_env)
-    QM = qUt.calc_QM_FD(ctmqc_env, irep, iatom)
-    adMom = qUt.calc_ad_mom(ctmqc_env, irep, iatom)
+    QM = ctmqc_env['QM'][irep, iatom]
+    adMom = ctmqc_env['adMom'][irep, iatom]
 
     # ammend X
     tmp = np.sum(adPops * adMom)  # The sum over k part

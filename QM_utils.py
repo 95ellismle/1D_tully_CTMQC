@@ -26,12 +26,14 @@ def calc_ad_frc(pos, ctmqc_env):
     return -gradE
 
 
-def calc_ad_mom(ctmqc_env, irep, v):
+def calc_ad_mom(ctmqc_env, irep, v, ad_frc=False):
     """
     Will calculate the adiabatic momenta (time-integrated adiab force)
     """
-    pos = ctmqc_env['pos'][irep, v]
-    ad_frc = calc_ad_frc(pos, ctmqc_env)
+    if ad_frc is False:
+        pos = ctmqc_env['pos'][irep, v]
+        ad_frc = calc_ad_frc(pos, ctmqc_env)
+        
     ad_mom = ctmqc_env['adMom'][irep, v]
     dt = ctmqc_env['dt']
 
@@ -123,7 +125,7 @@ def calc_QM_FD(ctmqc_env, I, v):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-    calc_sigma(ctmqc_env, I, v)
+#    calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     dx = ctmqc_env['dx']
 
@@ -152,20 +154,14 @@ def calc_QM_analytic(ctmqc_env, I, v):
                 for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
                                       ctmqc_env['sigma'][:, v])]
     QM = 0.0
-
     # Calc WIJ
     sigma2 = ctmqc_env['sigma'][:, v]**2
     WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
 
     # Calc QM
-    for J in range(ctmqc_env['nrep']):
-        RJv = ctmqc_env['pos'][J, v]
+    QM = np.sum(WIJ * (RIv - ctmqc_env['pos'][:, v]))
 
-        QM += WIJ[J] * (RIv - RJv)
-        QM /= ctmqc_env['mass'][0]
-
-    return QM
-
+    return QM / ctmqc_env['mass'][0]
 
 
 def test_QM_calc(ctmqc_env):
@@ -173,29 +169,24 @@ def test_QM_calc(ctmqc_env):
     Will compare the output of the analytic QM calculation and the finite
     difference one.
     """
-    allDiffs = []
+    allDiffs, allPos = [], []
     for I in range(ctmqc_env['nrep']):
         for v in range(ctmqc_env['natom']):
             QM1 = calc_QM_analytic(ctmqc_env, I, v)
             QM2 = calc_QM_FD(ctmqc_env, I, v)
+            diff = 100*(QM1 - QM2) / QM2
 
-            allDiffs.append(QM1 - QM2)
+            allDiffs.append(diff)
+            allPos.append(ctmqc_env['pos'][I, v])
 
-    print("Avg Diff = %.2g +/- %.2g" % (np.mean(allDiffs), np.std(allDiffs)))
-    print("Max Diff = %.2g" % np.max(np.abs(allDiffs)))
-    print("Min Diff = %.2g" % np.min(np.abs(allDiffs)))
+    if np.max(np.abs(allDiffs)) > 0.1:
+        raise SystemExit("Analytic Quantum Momentum != Finite Difference")
+
+    print("Avg Percentage Diff = %.2g%% +/- %.2g" % (np.mean(allDiffs),
+                                                     np.std(allDiffs)))
+    print("Max Percentage Diff = %.2g%%" % np.max(np.abs(allDiffs)))
+    print("Min Percentage Diff = %.2g%%" % np.min(np.abs(allDiffs)))
+    return allDiffs, allPos
 
 
 test_norm_gauss()
-
-
-'''
-def calc_prod_gauss(RIv)
-
-
-def calc_Qlk(adPops, adMom, ctmqc_env, I, v):
-    """
-    Will calculate the Qlk quantum momentum.
-    """
-    pass
-'''
