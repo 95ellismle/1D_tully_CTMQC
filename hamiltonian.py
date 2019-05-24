@@ -76,7 +76,7 @@ def calcNACV(irep, v, ctmqc_env):
     nState = ctmqc_env['nstate']
 
     H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v] - dx)
-    H_x = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v])
+    H_x = ctmqc_env['H'][irep, v]
     H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v] + dx)
 
     allH = [H_xm, H_x, H_xp]

@@ -18,7 +18,7 @@ def calc_ehren_adiab_force(irep, v, gradE, adPops, ctmqc_env):
     ctmqc_env['H'][irep, v] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v])
     E = Ham.getEigProps(ctmqc_env['H'][irep, v], ctmqc_env)[0]
     ctmqc_env['E'][irep, v] = E
-    NACV = Ham.calcNACV(irep, v, ctmqc_env)
+    NACV = ctmqc_env['NACV'][irep, v]
 
     F = -np.sum(adPops * gradE)
     for k in range(nstate):
