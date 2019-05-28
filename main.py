@@ -22,19 +22,19 @@ import plot
 import QM_utils as qUt
 
 redo = False
-whichPlot = 'qm_fl_fk'
+whichPlot = 'nucl_dens'
 
 
 velMultiplier = 3
 
-nRep = 20
+nRep = 150
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
 v_std = 2.5e-4 * 0
 
 p_mean = -15
-p_std = np.sqrt(2) * 0.5
+p_std = np.sqrt(2) * 0.7
 
 s_mean = np.sqrt(2)
 s_std = 0
@@ -367,11 +367,14 @@ class CTMQC(object):
 
         # Get the QM quantities
         if self.ctmqc_env['do_QM_F']:
-            QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
-            ctmqc_env['QM'][irep, v] = QM
+            if any(Ck > 0.995 for Ck in pop):
+                adMom = 0.0
+            else:
+                QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
+                ctmqc_env['QM'][irep, v] = QM
 
-            adMom = qUt.calc_ad_mom(ctmqc_env, irep, v,
-                                    gradE)
+                adMom = qUt.calc_ad_mom(ctmqc_env, irep, v,
+                                        gradE)
             ctmqc_env['adMom'][irep, v] = adMom
 
     def __main_loop(self):
