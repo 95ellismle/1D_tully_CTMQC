@@ -200,7 +200,7 @@ def do_adiab_prop_QM(ctmqc_env, irep, iatom):
 
     # Make X_{1}
     ctmqc_env['vel'][irep, iatom] = ctmqc_env['vel_tm'][irep, iatom]
-    ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom]    
+    ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom]
     ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep, iatom]
 
     X1 = makeX_adiab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
