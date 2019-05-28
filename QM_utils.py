@@ -8,6 +8,7 @@ Created on Mon May 13 12:25:43 2019
 import numpy as np
 import scipy.integrate as integrate
 import random as rd
+import copy
 
 import hamiltonian as Ham
 
@@ -106,7 +107,10 @@ def calc_nucl_dens(RIv, v, ctmqc_env):
 
 def calc_sigma(ctmqc_env, I, v):
     """
-    Will calculate the value of sigma used in constructing the nuclear density
+    Will calculate the value of sigma used in constructing the nuclear density.
+
+    This algorithm doesn't seem to work -it gives discontinuous sigma and sigma
+    seems to blow up. To fix discontinuities a weighted stddev might work.
     """
     cnst = ctmqc_env['const']
     sigma_tm = ctmqc_env['sigma_tm'][I, v]
@@ -125,7 +129,8 @@ def calc_QM_FD(ctmqc_env, I, v):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-#    calc_sigma(ctmqc_env, I, v)
+    if ctmqc_env['do_sigma_calc']:
+        calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     dx = ctmqc_env['dx']
 
@@ -140,14 +145,15 @@ def calc_QM_FD(ctmqc_env, I, v):
 
     QM = -gradNuclDens/(2*nuclDens)
 
-    return QM / ctmqc_env['mass'][0]
+    return QM / ctmqc_env['mass'][v]
 
 
 def calc_QM_analytic(ctmqc_env, I, v):
     """
     Will use the analytic formula provided in SI to calculate the QM.
     """
-#    calc_sigma(ctmqc_env, I, v)
+    if ctmqc_env['do_sigma_calc']:
+        calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
     allGauss = [gaussian(RIv, RJv, sig)
@@ -161,7 +167,54 @@ def calc_QM_analytic(ctmqc_env, I, v):
     # Calc QM
     QM = np.sum(WIJ * (RIv - ctmqc_env['pos'][:, v]))
 
-    return QM / ctmqc_env['mass'][0]
+    return QM / ctmqc_env['mass'][v]
+
+
+def calc_all_alpha(ctmqc_env, v):
+    """
+    Will calculate alpha for all replicas (and 1 atom)
+    """
+    nRep = ctmqc_env['nrep']
+    alpha = np.zeros(nRep)
+    for I in range(nRep):
+        RIv = ctmqc_env['pos'][I, v]
+        WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
+        allGauss = [gaussian(RIv, RJv, sig)
+                    for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
+                                          ctmqc_env['sigma'][:, v])]
+        # Calc WIJ and alpha
+        sigma2 = ctmqc_env['sigma'][:, v]**2
+        WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+        alpha[I] = np.sum(WIJ)
+    return alpha
+
+
+def calc_Qlk(ctmqc_env, I, v):
+    """
+    Will return an array of size (Nstate, Nstate) containing data for the
+    Quantum Momentum with the pairwise states.
+
+    N.B Currently only works for a 2 state system
+    """
+#    print("Qlk only works for 2 states atm")
+#    if ctmqc_env['do_sigma_calc']:
+#        calc_sigma(ctmqc_env, I, v)
+#    nState, nRep = ctmqc_env['nstate'], ctmqc_env['nrep']
+#    Qlk = 0.0
+#
+#    # First Calculate Alpha
+#    RIv = ctmqc_env['pos'][:, v]
+#    alpha = calc_all_alpha( ctmqc_env, v)
+#
+#    # Then Calculate Rlk
+#    C2 = ctmqc_env['adPops'][:, v, :]
+#    f = ctmqc_env['adMom'][:, v, :]
+#    bottom_Rlk = C2[:, 0] * C2[:, 1] * (f[:, 0] - f[:, 1])
+#    nonZeroMask = bottom_Rlk > 0.0
+#    print(ctmqc_env['adMom'])
+#
+#    return Qlk
+    pass
 
 
 def test_QM_calc(ctmqc_env):
