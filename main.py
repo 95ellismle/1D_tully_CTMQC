@@ -27,7 +27,7 @@ whichPlot = '|C|^2 deco norm'
 
 velMultiplier = 3
 
-nRep = 70
+nRep = 200
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
@@ -66,8 +66,8 @@ ctmqc_env = {
         'tullyModel': 3,  # Which model | | -
         'max_time': 1600,  # Maximum time to simulate to | | au_t
         'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-        'dt': 1,  # The timestep | |au_t
-        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+        'dt': 2,  # The timestep | |au_t
+        'elec_steps': 15,  # Num elec. timesteps per nucl. one | | -
         'do_QM_F': True,  # Do the QM force
         'do_QM_C': True,  # Do the QM force
         'do_sigma_calc': False,  # Dynamically adapt the value of sigma or not.
@@ -337,7 +337,7 @@ class CTMQC(object):
         for irep in range(nrep):
             for v in range(natom):
                 # Calculate the forces
-                self.__calc_F(irep, v)
+                self.__calc_F()
 
         self.ctmqc_env['t'] = 0
         self.ctmqc_env['iter'] = 0
@@ -367,7 +367,7 @@ class CTMQC(object):
                 ctmqc_env['NACV'][irep, v] = Ham.calcNACV(irep, v, ctmqc_env)
 
                 # Get the QM quantities
-                if self.ctmqc_env['do_QM_F']:
+                if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                     if any(Ck > 0.995 for Ck in pop):
                         adMom = 0.0
                     else:
@@ -414,89 +414,89 @@ class CTMQC(object):
                 print("\nOk Exiting Safely")
                 return
 
-    def __calc_F(self, irep, v):
+    def __calc_F(self):
         """
         Will calculate the force on the nuclei
         """
-        # Get Ehrenfest Forces
-        Feh = nucl_prop.calc_ehren_adiab_force(
+        for irep in range(self.ctmqc_env['nrep']):
+            for v in range(self.ctmqc_env['natom']):
+                # Get Ehrenfest Forces
+                Feh = nucl_prop.calc_ehren_adiab_force(
                                              irep, v,
                                              self.ctmqc_env['adFrc'][irep, v],
                                              self.ctmqc_env['adPops'][irep, v],
-                                             ctmqc_env)
+                                             self.ctmqc_env)
 
-        Fqm = 0.0
-        if self.ctmqc_env['do_QM_F']:
-            Fqm = nucl_prop.calc_QM_force(self.ctmqc_env['adPops'][irep, v],
-                                          ctmqc_env['QM'][irep, v],
-                                          ctmqc_env['adMom'][irep, v],
-                                          ctmqc_env)
+                Fqm = 0.0
+                if self.ctmqc_env['do_QM_F']:
+                    Fqm = nucl_prop.calc_QM_force(
+                                             self.ctmqc_env['adPops'][irep, v],
+                                             self.ctmqc_env['QM'][irep, v],
+                                             self.ctmqc_env['adMom'][irep, v],
+                                             self.ctmqc_env)
 
-        Ftot = Feh + Fqm
-        self.ctmqc_env['F_eh'][irep, v] = Feh
-        self.ctmqc_env['F_qm'][irep, v] = Fqm
-        self.ctmqc_env['frc'][irep, v] = Ftot
-        self.ctmqc_env['acc'][irep, v] = Ftot/ctmqc_env['mass'].astype(float)
+                Ftot = float(Feh) + float(Fqm)
+                self.ctmqc_env['F_eh'][irep, v] = Feh
+                self.ctmqc_env['F_qm'][irep, v] = Fqm
+                self.ctmqc_env['frc'][irep, v] = Ftot
+                self.ctmqc_env['acc'][irep, v] = Ftot / ctmqc_env['mass'][0]
 
-    def __prop_wf(self, irep, v):
+    def __prop_wf(self):
         """
         Will propagate the wavefunction in the correct basis and transform the
         coefficients.
         """
-        # Propagate WF
-        if self.ctmqc_env['do_QM_C']:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_QM(self.ctmqc_env, irep, v)
-            else:
-                e_prop.do_diab_prop_QM(self.ctmqc_env, irep, v)
-        else:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_ehren(self.ctmqc_env, irep, v)
-            else:
-                e_prop.do_diab_prop_ehren(self.ctmqc_env, irep, v)
+        for irep in range(self.ctmqc_env['nrep']):
+            for v in range(self.ctmqc_env['natom']):
+                # Propagate WF
+                if self.ctmqc_env['do_QM_C']:
+                    if self.adiab_diab == 'adiab':
+                        e_prop.do_adiab_prop_QM(self.ctmqc_env, irep, v)
+                    else:
+                        e_prop.do_diab_prop_QM(self.ctmqc_env, irep, v)
+                else:
+                    if self.adiab_diab == 'adiab':
+                        e_prop.do_adiab_prop_ehren(self.ctmqc_env, irep, v)
+                    else:
+                        e_prop.do_diab_prop_ehren(self.ctmqc_env, irep, v)
 
-        # Transform WF
-        if self.adiab_diab == 'adiab':
-            u = e_prop.trans_adiab_to_diab(
-                                      self.ctmqc_env['H'][irep, v],
-                                      self.ctmqc_env['u'][irep, v],
-                                      self.ctmqc_env)
-            self.ctmqc_env['u'][irep, v] = u
-        else:
-            C = e_prop.trans_diab_to_adiab(
-                                      self.ctmqc_env['H'][irep, v],
-                                      self.ctmqc_env['u'][irep, v],
-                                      self.ctmqc_env)
-            self.ctmqc_env['C'][irep, v] = C
+                # Transform WF
+                if self.adiab_diab == 'adiab':
+                    if ctmqc_env['iter'] % 30 == 0:
+                        self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+                                                           self.ctmqc_env['C'])
+                    u = e_prop.trans_adiab_to_diab(
+                                              self.ctmqc_env['H'][irep, v],
+                                              self.ctmqc_env['C'][irep, v],
+                                              self.ctmqc_env)
+                    self.ctmqc_env['u'][irep, v] = u
+                else:
+                    if ctmqc_env['iter'] % 30 == 0:
+                        self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
+                                                           self.ctmqc_env['u'])
+                    C = e_prop.trans_diab_to_adiab(
+                                              self.ctmqc_env['H'][irep, v],
+                                              self.ctmqc_env['u'][irep, v],
+                                              self.ctmqc_env)
+                    self.ctmqc_env['C'][irep, v] = C
 
     def __ctmqc_step(self):
         """
         Will carry out a single step in the CTMQC.
         """
         dt = self.ctmqc_env['dt']
-        nrep = self.ctmqc_env['nrep']
 
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         self.__calc_quantities()
-        for irep in range(nrep):
-            self.__parallel_step(irep)
+
+        self.__prop_wf()
+        self.__calc_F()
 
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
 
         self.__update_vars_step()  # Save old positions
-
-    def __parallel_step(self, irep):
-        """
-        A wrapper function in order to parallelise a step
-        """
-        for v in range(natom):
-            pos = self.ctmqc_env['pos'][irep, v]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
-
-            self.__prop_wf(irep, v)
-            self.__calc_F(irep, v)
 
     def __save_data(self):
         """
