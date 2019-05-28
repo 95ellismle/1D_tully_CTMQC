@@ -35,6 +35,19 @@ def trans_adiab_to_diab(H, C, ctmqc_env):
     return np.dot(np.array(U.T), np.array(C))
 
 
+def renormalise_all_coeffs(coeff):
+    """
+    Will renormalise all the coefficients for replica I, atom v.
+    """
+    return coeff
+#    norms = np.linalg.norm(coeff, axis=2)
+#    print(coeff.shape)
+#    coeff = coeff[:, :] / norms
+#    print(coeff.shape)
+#    raise SystemExit("BREAK")
+#    return coeff
+
+
 def calc_ad_pops(C, ctmqc_env=False):
     """
     Will calculate the adiabatic populations of 1 replica given the coefficient
@@ -205,7 +218,7 @@ def do_adiab_prop_QM(ctmqc_env, irep, iatom):
 
     X1 = makeX_adiab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
     for Estep in range(ctmqc_env['elec_steps']):
-        # Linear Interpolation
+        # Linear Interpolationprint(check)
         ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom] \
             + (Estep + 0.5) * dQM_E
         ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep, iatom] \
@@ -242,6 +255,8 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     """
     nstates = ctmqc_env['nstate']
     X = np.zeros((nstates, nstates), dtype=complex)
+    Xeh = np.zeros((nstates, nstates), dtype=complex)
+    Xqm = np.zeros((nstates, nstates), dtype=complex)
     pos = ctmqc_env['pos']
 
     H = ctmqc_env['Hfunc'](pos[irep, iatom])
@@ -253,7 +268,7 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     for l in range(nstates):
         X[l, l] = -1j * E[l]
 
-    X -= NACV * vel
+    Xeh -= NACV * vel
 
     # QM Part
     # Calculate QM, adMom and adPops
@@ -266,9 +281,14 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     # ammend X
     tmp = np.sum(adPops * adMom)  # The sum over k part
     for l in range(nstates):
-        X[l, l] += QM * (tmp - adMom[l])
+        Xqm[l, l] += QM * (tmp - adMom[l])
 
-    return np.array(X)
+    check = np.sum(adPops * np.diagonal(Xqm))
+    if check > 1e-5:
+        print(check)
+
+    X = np.array(Xeh + Xqm)
+    return X
 
 
 def __RK4(coeff, X1, X12, X2, ctmqc_env):
