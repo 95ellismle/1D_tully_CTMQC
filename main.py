@@ -759,8 +759,10 @@ if isinstance(whichPlot, str):
         plt.figure()
         # Plot ad coeffs
         for I in range(data.ctmqc_env['nrep']):
-            params = {'lw': 0.5, 'alpha': 0.1, 'color': 'k'}
-            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, :], params)
+            params = {'lw': 0.5, 'alpha': 0.1, 'color': 'r'}
+            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0], params)
+            params = {'lw': 0.5, 'alpha': 0.1, 'color': 'b'}
+            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 1], params)
 
         avgData = np.mean(data.allAdPop, axis=1)
         params = {'lw': 2, 'alpha': 1, 'ls': '--'}
