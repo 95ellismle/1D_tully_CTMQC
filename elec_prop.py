@@ -162,7 +162,6 @@ def makeX_diab_QM(ctmqc_env, pos, irep, iatom):
     return X - Xctmqc
 
 
-
 def do_adiab_prop_ehren(ctmqc_env):
     """
     Will actually carry out the propagation of the coefficients
@@ -210,7 +209,6 @@ def makeX_adiab(ctmqc_env, irep, iatom):
     X += -1j * NACV * vel
 
     return -1j * np.array(X)
-
 
 
 def do_adiab_prop_QM(ctmqc_env, allTimes):
@@ -338,6 +336,9 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
             Xqm[l, l] += QM * adPops[k] * (adMom[k] - adMom[l])
 
     check = np.sum(adPops * np.diagonal(Xqm))
+    if check > 1e-5:
+        print("Something wrong in the electronic propagation")
+        print("(conservation of norm check)")
 
     X = np.array(Xeh + Xqm)
     return X

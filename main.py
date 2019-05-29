@@ -38,7 +38,7 @@ v_std = 2.5e-4 * 1
 p_mean = -15
 p_std = np.sqrt(2) * 0.7
 
-s_mean = 0.6666666666666666666
+s_mean = np.sqrt(2)
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -164,7 +164,6 @@ class CTMQC(object):
         self.ctmqc_env['sigma'] = np.array(self.ctmqc_env['sigma'])
         self.ctmqc_env['sigma'] = self.ctmqc_env['sigma'][:nrep, :natom]
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
-
         self.ctmqc_env['const'] = float(self.ctmqc_env['const'])
 
     def __check_pos_vel_QM(self):
@@ -425,7 +424,6 @@ class CTMQC(object):
             qUt.calc_sigma(ctmqc_env)
         self.ctmqc_env['QM'] = qUt.calc_Qlk(self.ctmqc_env)
 
-#
 #        ctmqc_env['alpha'] = qUt.calc_all_alpha(ctmqc_env, v)
 #        qUt.calc_Qlk(ctmqc_env, irep, v)
 
@@ -441,7 +439,7 @@ class CTMQC(object):
                                                               },
                                                               'transform': []},
                          'prep': []}
-    
+
         for istep in range(nstep):
             try:
                 t1 = time.time()
@@ -557,7 +555,7 @@ class CTMQC(object):
         self.allTimes['prep'].append(t2 - t1)
 #        self.allTimes['wf_prop'].append(t3 - t2)
         self.allTimes['force'].append(t4 - t3)
-
+        self.__update_vars_step()  # Save old positions
 
         self.__update_vars_step()  # Save old positions
 
@@ -669,7 +667,6 @@ else:
 
 
 
-
     ###   Now Plot the Data   ###
 """
 
@@ -730,7 +727,6 @@ if isinstance(whichPlot, str):
         allND = np.array(allND)
         minR, maxR = np.min(data.allR), np.max(data.allR)
         minND, maxND = np.min(allND[:, 0]), np.max(allND[:, 0])
-
         f, axes = plt.subplots(1)
 
         ln, = axes.plot(np.linspace(minR, maxR, nrep),
@@ -808,7 +804,7 @@ if isinstance(whichPlot, str):
         for i in np.arange(0, 1, 0.1):
             pops = [1-i, i]
             data.ctmqc_env['C'] = np.array([[complex(np.sqrt(1-i), 0),
-                                        complex(np.sqrt(i), 0)]])
+                                             complex(np.sqrt(i), 0)]])
             plot.plot_eh_frc_all_x(data.ctmqc_env, label=r"$|C|^2 = $%.1g" % i)
     if 'ad_frc_ax' in whichPlot:
         plot.plot_adFrc_all_x(data.ctmqc_env)
