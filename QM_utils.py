@@ -8,7 +8,6 @@ Created on Mon May 13 12:25:43 2019
 import numpy as np
 import scipy.integrate as integrate
 import random as rd
-import copy
 
 import hamiltonian as Ham
 
@@ -105,32 +104,34 @@ def calc_nucl_dens(RIv, v, ctmqc_env):
     return np.mean(allGauss)
 
 
-def calc_sigma(ctmqc_env, I, v):
+def calc_sigma(ctmqc_env):
     """
     Will calculate the value of sigma used in constructing the nuclear density.
 
     This algorithm doesn't seem to work -it gives discontinuous sigma and sigma
     seems to blow up. To fix discontinuities a weighted stddev might work.
     """
-    cnst = ctmqc_env['const']
-    sigma_tm = ctmqc_env['sigma_tm'][I, v]
-    cutoff_rad = cnst * sigma_tm
-    sig_thresh = cnst/ctmqc_env['nrep'] * np.min(ctmqc_env['sigma_tm'])
-
-    distances = ctmqc_env['pos'] - ctmqc_env['pos'][I, v]
-    new_var = np.std(distances[distances < cutoff_rad])
-
-    if new_var < sig_thresh:
-        new_var = sig_thresh
-    ctmqc_env['sigma'][I, v] = new_var
+    for I in range(ctmqc_env['nrep']):
+        for v in range(ctmqc_env['natom']):
+            cnst = ctmqc_env['const']
+            sigma_tm = ctmqc_env['sigma_tm'][I, v]
+            cutoff_rad = cnst * sigma_tm
+            sig_thresh = cnst/ctmqc_env['nrep'] * np.min(ctmqc_env['sigma_tm'])
+        
+            distances = ctmqc_env['pos'] - ctmqc_env['pos'][I, v]
+            distMask = distances < cutoff_rad
+            if any(distMask):
+                new_var = np.std(distances[distances < cutoff_rad])
+            else:
+                print(cutoff_rad)
+                new_var = sig_thresh
+            ctmqc_env['sigma'][I, v] = new_var
 
 
 def calc_QM_FD(ctmqc_env, I, v):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-    if ctmqc_env['do_sigma_calc']:
-        calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     dx = ctmqc_env['dx']
 
@@ -152,8 +153,6 @@ def calc_QM_analytic(ctmqc_env, I, v):
     """
     Will use the analytic formula provided in SI to calculate the QM.
     """
-    if ctmqc_env['do_sigma_calc']:
-        calc_sigma(ctmqc_env, I, v)
     RIv = ctmqc_env['pos'][I, v]
     WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
     allGauss = [gaussian(RIv, RJv, sig)
@@ -198,11 +197,6 @@ def calc_Qlk(ctmqc_env):
     N.B Currently only works for a 2 state system
     """
     nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
-#    nState = ctmqc_env['nstate']
-    if ctmqc_env['do_sigma_calc']:
-        for I in range(nRep):
-            for v in range(nAtom):
-                ctmqc_env['sigma'][I, v] = calc_sigma(ctmqc_env, I, v)
 
     # Calculate Rlk
     pops = ctmqc_env['adPops']
