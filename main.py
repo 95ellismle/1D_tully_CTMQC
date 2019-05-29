@@ -22,12 +22,12 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = '|C|^2 deco norm'
+whichPlot = '|C|^2'
 
 
 velMultiplier = 3
 
-nRep = 200
+nRep = 30
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
@@ -64,7 +64,7 @@ ctmqc_env = {
         'C': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
         'tullyModel': 3,  # Which model | | -
-        'max_time': 1600,  # Maximum time to simulate to | | au_t
+        'max_time': 2200,  # Maximum time to simulate to | | au_t
         'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
         'dt': 2,  # The timestep | |au_t
         'elec_steps': 15,  # Num elec. timesteps per nucl. one | | -
@@ -371,12 +371,14 @@ class CTMQC(object):
                     if any(Ck > 0.995 for Ck in pop):
                         adMom = 0.0
                     else:
-                        QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
-                        ctmqc_env['QM'][irep, v] = QM
+#                        QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
+#                        ctmqc_env['QM'][irep, v] = QM
 
                         adMom = qUt.calc_ad_mom(ctmqc_env, irep, v,
                                                 gradE)
                     ctmqc_env['adMom'][irep, v] = adMom
+
+        ctmqc_env['QM'] = qUt.calc_Qlk(ctmqc_env)
 #
 #        ctmqc_env['alpha'] = qUt.calc_all_alpha(ctmqc_env, v)
 #        qUt.calc_Qlk(ctmqc_env, irep, v)
@@ -644,6 +646,8 @@ if isinstance(whichPlot, str):
             ln1.set_xdata(data.allR[step, :, 0])
             ln2.set_ydata(QM[step, :])  # update the data.
             ln2.set_xdata(data.allR[step, :, 0])
+            fig.savefig("/homes/mellis/Documents/Graphs/Tully_Models/Model3/"+
+                      "Qlk/%i.png" % step)
             return ln1, ln2
 
         ln1, ln2 = init_QM_fl_fk()
@@ -657,12 +661,12 @@ if isinstance(whichPlot, str):
 
     # Nuclear Density
     if whichPlot == 'nucl_dens':
-        nstep, nrep, natom = np.shape(data.allR)
-        allND = [qUt.calc_nucl_dens_PP(R, sig)
-                 for R, sig in zip(data.allR, data.allSigma)]
-        allND = np.array(allND)
-        minR, maxR = np.min(data.allR), np.max(data.allR)
-        minND, maxND = np.min(allND[:, 0]), np.max(allND[:, 0])
+#        nstep, nrep, natom = np.shape(data.allR)
+#        allND = [qUt.calc_nucl_dens_PP(R, sig)
+#                 for R, sig in zip(data.allR, data.allSigma)]
+#        allND = np.array(allND)
+#        minR, maxR = np.min(data.allR), np.max(data.allR)
+#        minND, maxND = np.min(allND[:, 0]), np.max(allND[:, 0])
 
         f, axes = plt.subplots(1)
 
@@ -691,7 +695,7 @@ if isinstance(whichPlot, str):
     if '|c|^2' in whichPlot:
         plt.figure()
         # Plot ad coeffs
-        for I in range(nRep):
+        for I in range(data.ctmqc_env['nrep']):
             params = {'lw': 0.5, 'alpha': 0.1, 'color': 'k'}
             plot.plot_ad_pops(data.allt, data.allAdPop[:, I, :], params)
 
@@ -725,7 +729,7 @@ if isinstance(whichPlot, str):
         plt.figure()
         plt.plot(data.allt, norm[:, :, 0], lw=0.7, alpha=0.5)
         plt.plot(data.allt, np.mean(norm[:, :, 0], axis=1), lw=1.3, ls='--')
-        plt.xlabel("Time [au_t]")
+        plt.xlFigure_3.abel("Time [au_t]")
         plt.ylabel("Norm (adPops)")
     if 'rabi' in whichPlot:
         plot.plot_Rabi(data.allt, data.allH[0, 0])

@@ -170,52 +170,58 @@ def calc_QM_analytic(ctmqc_env, I, v):
     return QM / ctmqc_env['mass'][v]
 
 
-def calc_all_alpha(ctmqc_env, v):
+def calc_all_alpha(ctmqc_env):
     """
-    Will calculate alpha for all replicas (and 1 atom)
+    Will calculate alpha for all replicas and atoms
     """
-    nRep = ctmqc_env['nrep']
-    alpha = np.zeros(nRep)
-    for I in range(nRep):
-        RIv = ctmqc_env['pos'][I, v]
-        WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
-        allGauss = [gaussian(RIv, RJv, sig)
-                    for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
-                                          ctmqc_env['sigma'][:, v])]
-        # Calc WIJ and alpha
-        sigma2 = ctmqc_env['sigma'][:, v]**2
-        WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
-        alpha[I] = np.sum(WIJ)
+    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
+    alpha = np.zeros((nRep, nAtom))
+    for v in range(nAtom):
+        for I in range(nRep):
+            RIv = ctmqc_env['pos'][I, v]
+            WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
+            allGauss = [gaussian(RIv, RJv, sig)
+                        for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
+                                              ctmqc_env['sigma'][:, v])]
+            # Calc WIJ and alpha
+            sigma2 = ctmqc_env['sigma'][:, v]**2
+            WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+            alpha[I] = np.sum(WIJ)
     return alpha
 
 
-def calc_Qlk(ctmqc_env, I, v):
+def calc_Qlk(ctmqc_env):
     """
     Will return an array of size (Nstate, Nstate) containing data for the
     Quantum Momentum with the pairwise states.
 
     N.B Currently only works for a 2 state system
     """
-#    print("Qlk only works for 2 states atm")
-#    if ctmqc_env['do_sigma_calc']:
-#        calc_sigma(ctmqc_env, I, v)
-#    nState, nRep = ctmqc_env['nstate'], ctmqc_env['nrep']
-#    Qlk = 0.0
-#
-#    # First Calculate Alpha
-#    RIv = ctmqc_env['pos'][:, v]
-#    alpha = calc_all_alpha( ctmqc_env, v)
-#
-#    # Then Calculate Rlk
-#    C2 = ctmqc_env['adPops'][:, v, :]
-#    f = ctmqc_env['adMom'][:, v, :]
-#    bottom_Rlk = C2[:, 0] * C2[:, 1] * (f[:, 0] - f[:, 1])
-#    nonZeroMask = bottom_Rlk > 0.0
-#    print(ctmqc_env['adMom'])
-#
-#    return Qlk
-    pass
+    nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
+#    nState = ctmqc_env['nstate']
+    if ctmqc_env['do_sigma_calc']:
+        for I in range(nRep):
+            for v in range(nAtom):
+                ctmqc_env['sigma'][I, v] = calc_sigma(ctmqc_env, I, v)
 
+    # Calculate Rlk
+    pops = ctmqc_env['adPops']
+    f = ctmqc_env['adMom']
+    bottom_Rlk = pops[:, :, 0] * pops[:, :, 1] * (f[:, :, 0] - f[:, :, 1])
+    sum_Rlk = np.sum(bottom_Rlk, axis=0)
+    if sum_Rlk > 1e-12:
+        Rlk = bottom_Rlk / sum_Rlk
+    else:
+        return np.zeros((nRep, nAtom))
+    
+    # Then get the weighted pos
+    alpha = calc_all_alpha(ctmqc_env)
+    Ralpha = ctmqc_env['pos'] * alpha
+    
+    Rlk = np.sum(Ralpha * Rlk)
+    Qlk = Ralpha - Rlk
+
+    return Qlk / ctmqc_env['mass'][0]
 
 def test_QM_calc(ctmqc_env):
     """

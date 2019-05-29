@@ -279,12 +279,11 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     adMom = ctmqc_env['adMom'][irep, iatom]
 
     # ammend X
-    tmp = np.sum(adPops * adMom)  # The sum over k part
-    for l in range(nstates):
-        Xqm[l, l] += QM * (tmp - adMom[l])
+    X[0, 0] = QM * adPops[1] * (adMom[1] - adMom[0])
+    X[1, 1] = QM * adPops[0] * (adMom[0] - adMom[1])
 
     check = np.sum(adPops * np.diagonal(Xqm))
-    if check > 1e-5:
+    if check > 1e-12:
         print(check)
 
     X = np.array(Xeh + Xqm)
