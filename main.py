@@ -71,8 +71,8 @@ def setup(pos, vel, coeff, sigma):
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': 2,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': True,  # Do the QM force
-            'do_QM_C': True,  # Do the QM force
+            'do_QM_F': False,  # Do the QM force
+            'do_QM_C': False,  # Do the QM force
             'do_sigma_calc': True,  # Dynamically adapt the value of sigma or not.
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 12,  # The constant in the sigma calc
@@ -756,13 +756,15 @@ if isinstance(whichPlot, str):
         # Plot ad coeffs
         for I in range(data.ctmqc_env['nrep']):
             params = {'lw': 0.5, 'alpha': 0.1, 'color': 'r'}
-            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0], params)
+            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 0], params)
             params = {'lw': 0.5, 'alpha': 0.1, 'color': 'b'}
-            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 1], params)
+            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 1], params)
 
         avgData = np.mean(data.allAdPop, axis=1)
-        params = {'lw': 2, 'alpha': 1, 'ls': '--'}
-        plot.plot_ad_pops(data.allt, avgData, params)
+        params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'r'}
+        plot.plot_ad_pops(data.allt, avgData[:, 0, 0], params)
+        params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'b'}
+        plot.plot_ad_pops(data.allt, avgData[:, 0, 1], params)
         plt.xlabel("Time [au_t]")
         plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
                      (10, 0.5), fontsize=24)

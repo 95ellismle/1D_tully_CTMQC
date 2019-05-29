@@ -18,8 +18,7 @@ def plot_ad_pops(x, allAdPops, params={}):
     """
     Will plot the adiabatic population output of the simulation.
     """
-    plt.plot(x, allAdPops[:, :, 0], **params)
-    plt.plot(x, allAdPops[:, :, 1], **params)
+    plt.plot(x, allAdPops, **params)
     plt.xlabel("Nucl. Crds")
     plt.ylabel("Adiab Pops")
 #    plt.legend()
