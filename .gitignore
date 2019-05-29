@@ -1,9 +1,6 @@
 *data*
-<<<<<<< HEAD
 *core.*
 */*core.
-=======
->>>>>>> d0b3b87a8b0d946fbd34df49b85d799b82846ebb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
