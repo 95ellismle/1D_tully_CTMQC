@@ -41,13 +41,15 @@ def calc_QM_force(adPops, QM, adMom, ctmqc_env):
     """
     Will calculate the force due to the quantum momentum term for 1 replica and
     1 atom.
+
+    N.B. Doesn't work for multiple atoms at the moment!
     """
     F = 0.0
     for l in range(ctmqc_env['nstate']):
 
         tmp = 0.0
         for k in range(ctmqc_env['nstate']):
-            tmp += adPops[k] * (adMom[k] - adMom[l])
+            tmp += ((adPops[k] * adMom[k]) - adMom[l])
 
         F -= (2 * adPops[l] * QM * adMom[l]) * tmp
 

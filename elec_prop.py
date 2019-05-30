@@ -244,6 +244,7 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
             t1 = time.time()
             X1 = makeX_adiab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
             makeX_time += time.time() - t1
+
             for Estep in range(ctmqc_env['elec_steps']):
                 t1 = time.time()
                 # Linear Interpolationprint(check)
@@ -293,9 +294,9 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
                 X1 = X2[:]  # Update X_{1}
                 linInterp += time.time() - t1
 
-        allTimes['wf_prop']['prop']['makeX'].append(makeX_time)
-        allTimes['wf_prop']['prop']['RK4'].append(RK4_time)
-        allTimes['wf_prop']['prop']['lin. interp'].append(RK4_time)
+    allTimes['wf_prop']['prop']['makeX'].append(makeX_time)
+    allTimes['wf_prop']['prop']['RK4'].append(RK4_time)
+    allTimes['wf_prop']['prop']['lin. interp'].append(RK4_time)
 
 
 def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
@@ -314,12 +315,9 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     vel = ctmqc_env['vel'][irep, iatom]
 
     # Ehrenfest Part
-    for l in range(nstates):
-        X[l, l] = -1j * E[l]
+    Xeh = (-1j * np.identity(2) * E) - NACV * vel
 
-    Xeh -= NACV * vel
-
-    # QM Part
+#     QM Part
     # Calculate QM, adMom and adPops
     C = ctmqc_env['C'][irep, iatom]  # coeff
 
@@ -328,13 +326,16 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     adMom = ctmqc_env['adMom'][irep, iatom]
 
     # ammend X
-    tmp = np.sum(adPops * adMom)  # The sum over k part
     for l in range(nstates):
-        Xqm[l, l] += QM * (tmp - adMom[l])
+        for k in range(l):
+            Xqm[l, l] += QM * adPops[k] * (adMom[k] - adMom[l])
+        for k in range(l+1, nstates):
+            Xqm[l, l] += QM * adPops[k] * (adMom[k] - adMom[l])
 
     check = np.sum(adPops * np.diagonal(Xqm))
     if check > 1e-5:
-        print(check)
+        print("Something wrong in the electronic propagation")
+        print("(conservation of norm check)")
 
     X = np.array(Xeh + Xqm)
     return X
