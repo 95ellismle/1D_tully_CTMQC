@@ -28,16 +28,16 @@ whichPlot = 'deco |C|^2'
 
 velMultiplier = 3
 
-nRep = 10
+nRep = 50
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
-v_std = 2.5e-4 * 1
+v_std = 2.5e-4 * 0.3
 
 p_mean = -15
-p_std = np.sqrt(2) * 0.7
+p_std = np.sqrt(2) * 0.3
 
-s_mean = np.sqrt(2)
+s_mean = 0.3
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -67,11 +67,11 @@ def setup(pos, vel, coeff, sigma):
             'C': coeff,  # Intial WF |nrep, 2| -
             'mass': [2000],  # nuclear mass |nrep| au_m
             'tullyModel': 3,  # Which model | | -
-            'max_time': 1900,  # Maximum time to simulate to | | au_t
+            'max_time': 1200,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': 2,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': True,  # Do the QM force
+            'do_QM_F': False,  # Do the QM force
             'do_QM_C': True,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
@@ -412,7 +412,7 @@ class CTMQC(object):
 
                 # Get the QM quantities
                 if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-                    if any(Ck > 0.995 for Ck in pop):
+                    if any(Ck > 0.9995 for Ck in pop):
                         adMom = 0.0
                     else:
 
@@ -422,8 +422,8 @@ class CTMQC(object):
 
         # Do for all reps
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-            if ctmqc_env['do_sigma_calc']:
-                qUt.calc_sigma(ctmqc_env)
+            if self.ctmqc_env['do_sigma_calc']:
+                qUt.calc_sigma(self.ctmqc_env)
 #            for irep in range(self.ctmqc_env['nrep']):
 #                for v in range(self.ctmqc_env['natom']):
 #                   QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
@@ -645,34 +645,10 @@ if redo:
 else:
     with open('data', 'rb') as f:
         data = pickle.load(f)
+
 """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     ###   Now Plot the Data   ###
 """
-
 
 if data.ctmqc_env['iter'] < 30:
     whichPlot = ""
@@ -771,6 +747,9 @@ if isinstance(whichPlot, str):
         plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
                      (10, 0.5), fontsize=24)
 
+#            plt.title("Sigma = %.2f" % s_mean)
+#            plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model3/Qlk/%.2f_pops.png" % s_mean)
+
     if 'deco' in whichPlot:
         # Plot Decoherence
         plt.figure()
@@ -784,7 +763,9 @@ if isinstance(whichPlot, str):
                      (10, minD+(rD/2.)), fontsize=24)
         plt.ylabel("Decoherence")
         plt.xlabel("Time [au_t]")
-        plt.show()
+
+#            plt.title("Sigma = %.2f" % s_mean)
+#            plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model3/Qlk/%.2f_deco.png" % s_mean)
 
     if '|u|^2' in whichPlot:
         plt.figure()
@@ -816,3 +797,6 @@ if isinstance(whichPlot, str):
         plot.plot_ener_all_x(data.ctmqc_env)
     if 'nacv_ax' in whichPlot:
         plot.plot_NACV_all_x(data.ctmqc_env)
+
+    plt.show()
+#        plt.close("all")
