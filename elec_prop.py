@@ -227,30 +227,33 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
             dv_E = (ctmqc_env['vel'][irep, iatom]
                     - ctmqc_env['vel_tm'][irep, iatom])
             dv_E /= float(ctmqc_env['elec_steps'])
-            dQM_E = (ctmqc_env['QM'][irep, iatom]
-                     - ctmqc_env['QM_tm'][irep, iatom])
-            dQM_E /= float(ctmqc_env['elec_steps'])
+#            dQM_E = (ctmqc_env['QM'][irep, iatom]
+#                     - ctmqc_env['QM_tm'][irep, iatom])
+#            dQM_E /= float(ctmqc_env['elec_steps'])
+            dQlk_E = (ctmqc_env['Qlk'][irep, iatom]
+                      - ctmqc_env['Qlk_tm'][irep, iatom])
+            dQlk_E /= float(ctmqc_env['elec_steps'])
             df_E = (ctmqc_env['adMom'][irep, iatom]
                     - ctmqc_env['adMom_tm'][irep, iatom])
             df_E /= float(ctmqc_env['elec_steps'])
 
             # Make X_{1}
             ctmqc_env['vel'][irep, iatom] = ctmqc_env['vel_tm'][irep, iatom]
-            ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom]
+            ctmqc_env['Qlk'][irep, iatom] = ctmqc_env['Qlk_tm'][irep, iatom]
             ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep,
                                                                     iatom]
             linInterp += time.time() - t1
 
             t1 = time.time()
-            X1 = makeX_adiab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
+            X1 = makeX_adiab_Qlk(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
             makeX_time += time.time() - t1
 
             for Estep in range(ctmqc_env['elec_steps']):
                 t1 = time.time()
                 # Linear Interpolationprint(check)
-                ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep,
-                                                                  iatom]\
-                    + (Estep + 0.5) * dQM_E
+                ctmqc_env['Qlk'][irep, iatom] = ctmqc_env['Qlk_tm'][irep,
+                                                                    iatom]\
+                    + (Estep + 0.5) * dQlk_E
                 ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep,
                                                                         iatom]\
                     + (Estep + 0.5) * df_E
@@ -262,14 +265,14 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
 
                 # Make X12
                 t1 = time.time()
-                X12 = makeX_adiab_QM(ctmqc_env, pos2, irep, iatom)
+                X12 = makeX_adiab_Qlk(ctmqc_env, pos2, irep, iatom)
                 makeX_time += time.time() - t1
 
                 # Linear Interpolation
                 t1 = time.time()
                 pos3 = ctmqc_env['pos_tm'][irep, iatom] + (Estep+1) * dx_E
-                ctmqc_env['QM'][irep, iatom] = ctmqc_env['QM_tm'][irep, iatom]\
-                    + (Estep + 1.0) * dQM_E
+                ctmqc_env['Qlk'][irep, iatom] = ctmqc_env['Qlk_tm'][irep, iatom]\
+                    + (Estep + 1.0) * dQlk_E
                 ctmqc_env['adMom'][irep, iatom] = ctmqc_env['adMom_tm'][irep,
                                                                         iatom]\
                     + (Estep + 1.0) * df_E
@@ -280,7 +283,7 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
 
                 # Make X2
                 t1 = time.time()
-                X2 = makeX_adiab_QM(ctmqc_env, pos3, irep, iatom)
+                X2 = makeX_adiab_Qlk(ctmqc_env, pos3, irep, iatom)
                 makeX_time += time.time() - t1
 
                 t1 = time.time()
@@ -299,13 +302,12 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
     allTimes['wf_prop']['prop']['lin. interp'].append(RK4_time)
 
 
-def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
+def makeX_adiab_Qlk(ctmqc_env, pos, irep, iatom):
     """
-    Will make the adiabatic X matrix with QM
+    Will make the adiabatic X matrix with Qlk
     """
     nstates = ctmqc_env['nstate']
     X = np.zeros((nstates, nstates), dtype=complex)
-    Xeh = np.zeros((nstates, nstates), dtype=complex)
     Xqm = np.zeros((nstates, nstates), dtype=complex)
     pos = ctmqc_env['pos']
 
@@ -315,30 +317,22 @@ def makeX_adiab_QM(ctmqc_env, pos, irep, iatom):
     vel = ctmqc_env['vel'][irep, iatom]
 
     # Ehrenfest Part
-    Xeh = (-1j * np.identity(2) * E) - NACV * vel
+    X = (-1j * np.identity(2) * E) - (NACV * vel)
 
-#     QM Part
+    # QM Part
     # Calculate QM, adMom and adPops
     C = ctmqc_env['C'][irep, iatom]  # coeff
 
     adPops = calc_ad_pops(C, ctmqc_env)
-    QM = ctmqc_env['QM'][irep, iatom]
-    adMom = ctmqc_env['adMom'][irep, iatom]
+    Qlk = ctmqc_env['Qlk'][irep, iatom]
+    f = ctmqc_env['adMom'][irep, iatom]
 
     # ammend X
     for l in range(nstates):
-        for k in range(l):
-            Xqm[l, l] += QM * adPops[k] * (adMom[k] - adMom[l])
-        for k in range(l+1, nstates):
-            Xqm[l, l] += QM * adPops[k] * (adMom[k] - adMom[l])
+        for k in range(nstates):
+            Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
 
-    check = np.sum(adPops * np.diagonal(Xqm))
-    if check > 1e-5:
-        print("Something wrong in the electronic propagation")
-        print("(conservation of norm check)")
-
-    X = np.array(Xeh + Xqm)
-    return X
+    return np.array(X + Xqm)
 
 
 def __RK4(coeff, X1, X12, X2, ctmqc_env):

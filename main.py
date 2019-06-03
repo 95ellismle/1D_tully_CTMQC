@@ -23,21 +23,21 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = 'deco |C|^2'
+whichPlot = '|C|^2 deco'
 
 
-velMultiplier = 3
+velMultiplier = 1.6
 
-nRep = 50
+nRep = 100
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
 v_std = 2.5e-4 * 0.3
 
-p_mean = -15
+p_mean = -10
 p_std = np.sqrt(2) * 0.3
 
-s_mean = 0.3
+s_mean = 0.35
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -66,12 +66,12 @@ def setup(pos, vel, coeff, sigma):
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
             'C': coeff,  # Intial WF |nrep, 2| -
             'mass': [2000],  # nuclear mass |nrep| au_m
-            'tullyModel': 3,  # Which model | | -
-            'max_time': 1200,  # Maximum time to simulate to | | au_t
+            'tullyModel': 2,  # Which model | | -
+            'max_time': 2500,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 2,  # The timestep | |au_t
+            'dt': 1,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': False,  # Do the QM force
+            'do_QM_F': True,  # Do the QM force
             'do_QM_C': True,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
@@ -290,7 +290,8 @@ class CTMQC(object):
         self.allH = np.zeros((nstep, nrep, natom, nstate, nstate))
         self.allAdMom = np.zeros((nstep, nrep, natom, nstate))
         self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
-        self.allQM = np.zeros((nstep, nrep, natom))
+#        self.allQM = np.zeros((nstep, nrep, natom))
+        self.allQlk = np.zeros((nstep, nrep, natom, nstate, nstate))
         self.allSigma = np.zeros((nstep, nrep, natom))
 
         # For propagating dynamics
@@ -309,8 +310,10 @@ class CTMQC(object):
         self.ctmqc_env['adPops'] = np.zeros((nrep, natom, nstate))
         self.ctmqc_env['adMom'] = np.zeros((nrep, natom, nstate))
         self.ctmqc_env['adMom_tm'] = np.zeros((nrep, natom, nstate))
-        self.ctmqc_env['QM'] = np.zeros((nrep, natom))
-        self.ctmqc_env['QM_tm'] = np.zeros((nrep, natom))
+#        self.ctmqc_env['QM'] = np.zeros((nrep, natom))
+#        self.ctmqc_env['QM_tm'] = np.zeros((nrep, natom))
+        self.ctmqc_env['Qlk'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
 
     def __init_tully_model(self):
         """
@@ -335,7 +338,7 @@ class CTMQC(object):
         """
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
-        self.ctmqc_env['QM_tm'] = copy.deepcopy(self.ctmqc_env['QM'])
+        self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
@@ -412,8 +415,8 @@ class CTMQC(object):
 
                 # Get the QM quantities
                 if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-                    if any(Ck > 0.9995 for Ck in pop):
-                        adMom = 0.0
+                    if any(Ck > 0.995 for Ck in pop):
+                        adMom = 0.8 * self.ctmqc_env['adMom'][irep, v]
                     else:
 
                         adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, v,
@@ -428,7 +431,7 @@ class CTMQC(object):
 #                for v in range(self.ctmqc_env['natom']):
 #                   QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
 #                   self.ctmqc_env['QM'][irep, v] = QM
-            self.ctmqc_env['QM'] = qUt.calc_Qlk(self.ctmqc_env)
+            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
 
     def __main_loop(self):
         """
@@ -485,9 +488,10 @@ class CTMQC(object):
 
                 Fqm = 0.0
                 if self.ctmqc_env['do_QM_F']:
+                    Qlk = self.ctmqc_env['Qlk'][irep, v, 0, 1]
                     Fqm = nucl_prop.calc_QM_force(
                                              self.ctmqc_env['adPops'][irep, v],
-                                             self.ctmqc_env['QM'][irep, v],
+                                             Qlk,
                                              self.ctmqc_env['adMom'][irep, v],
                                              self.ctmqc_env)
 
@@ -518,9 +522,9 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-            if self.ctmqc_env['iter'] % 30 == 0:
-                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-                                                   self.ctmqc_env['C'])
+            # if self.ctmqc_env['iter'] % 30 == 0:
+            #   self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+            #   self.ctmqc_env['C'])
             u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
                                            self.ctmqc_env['C'],
                                            self.ctmqc_env)
@@ -579,7 +583,8 @@ class CTMQC(object):
         self.allAdMom[istep] = self.ctmqc_env['adMom']
         self.allAdFrc[istep] = self.ctmqc_env['adFrc']
         self.allv[istep] = self.ctmqc_env['vel']
-        self.allQM[istep] = self.ctmqc_env['QM']
+#        self.allQM[istep] = self.ctmqc_env['QM']
+        self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allSigma[istep] = self.ctmqc_env['sigma']
 
         self.allt[istep] = self.ctmqc_env['t']
@@ -604,7 +609,7 @@ class CTMQC(object):
         self.allAdMom = self.allAdMom[:self.ctmqc_env['iter']]
         self.allAdFrc = self.allAdFrc[:self.ctmqc_env['iter']]
         self.allv = self.allv[:self.ctmqc_env['iter']]
-        self.allQM = self.allQM[:self.ctmqc_env['iter']]
+        self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
 
         # Print some useful info
@@ -662,7 +667,7 @@ if isinstance(whichPlot, str):
 
         ax = axes[0]
         fl_fk = (data.allAdMom[:, :, 0, 0] - data.allAdMom[:, :, 0, 1])
-        QM = data.allQM[:, :, 0] * data.ctmqc_env['mass'][0]
+        QM = data.allQlk[:, :, 0, 0, 1] * data.ctmqc_env['mass'][0]
         fl_fk *= QM
 
         def init_QM_fl_fk():

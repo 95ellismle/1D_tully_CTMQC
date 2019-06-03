@@ -197,25 +197,49 @@ def calc_Qlk(ctmqc_env):
     N.B Currently only works for a 2 state system
     """
     nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
+    nState = ctmqc_env['nstate']
 
     # Calculate Rlk
     pops = ctmqc_env['adPops']
     f = ctmqc_env['adMom']
-    bottom_Rlk = pops[:, :, 0] * pops[:, :, 1] * (f[:, :, 0] - f[:, :, 1])
+    bottom_Rlk = np.zeros((nRep, nAtom, nState, nState))
+    for J in range(nRep):
+        for v in range(nAtom):
+            for l in range(nState):
+                Cl = pops[J, v, l]
+                fl = f[J, v, l]
+                for k in range(nState):
+                    Ck = pops[J, v, k]
+                    fk = f[J, v, k]
+                    bottom_Rlk[J, v, l, k] = Ck * Cl * (fk - fl)
+
     sum_Rlk = np.sum(bottom_Rlk, axis=0)
-    if sum_Rlk > 1e-12:
-        Rlk = bottom_Rlk / sum_Rlk
+    if abs(sum_Rlk[0, 0, 1]) > 1e-12:
+        # Then get the weighted pos
+        alpha = calc_all_alpha(ctmqc_env)
+        Ralpha = ctmqc_env['pos'] * alpha
+        Rlk = np.zeros((nAtom, nState, nState))
+        for I in range(nRep):
+            for v in range(nAtom):
+                Rav = Ralpha[I, v]
+                for l in range(nState):
+                    for k in range(l):
+                        Rlk[v, l, k] += Rav * (
+                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+                    for k in range(l+1, nState):
+                        Rlk[v, l, k] += Rav * (
+                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+
+        Qlk = np.zeros_like(bottom_Rlk)
+        for l in range(nState):
+            for k in range(nState):
+                Qlk[:, :, l, k] = Ralpha[:, :] - Rlk[:, l, k]
+
+        for v in range(nAtom):
+            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
+        return Qlk
     else:
-        return np.zeros((nRep, nAtom))
-
-    # Then get the weighted pos
-    alpha = calc_all_alpha(ctmqc_env)
-    Ralpha = ctmqc_env['pos'] * alpha
-
-    Rlk = np.sum(Ralpha * Rlk)
-    Qlk = Ralpha - Rlk
-
-    return Qlk / ctmqc_env['mass'][0]
+        return np.zeros((nRep, nAtom, nState, nState))
 
 
 def test_QM_calc(ctmqc_env):
