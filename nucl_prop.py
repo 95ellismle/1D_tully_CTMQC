@@ -20,7 +20,7 @@ def calc_ehren_adiab_force(irep, v, gradE, adPops, ctmqc_env):
     ctmqc_env['E'][irep, v] = E
     NACV = ctmqc_env['NACV'][irep, v]
 
-    F = -np.sum(adPops * gradE)
+    F = np.sum(adPops * gradE)
     for k in range(nstate):
         for l in range(nstate):
             Cl = np.conjugate(ctmqc_env['C'][irep, v, l])

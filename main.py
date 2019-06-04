@@ -24,22 +24,19 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = '|C|^2 deco'
-velMultiplier = 1
-maxTime = 3500
-model = 2
-mass = 2000
+velMultiplier = 2.5
+maxTime = 2000
+model = 1
+p_mean = -8
+s_mean = 2
 
 
-nRep = 200
+nRep = 30
 natom = 1
-
+mass = 2000
 v_mean = 5e-3 * velMultiplier
 v_std = 0  # 2.5e-4 * 0.7
-
-p_mean = -15
-p_std = 20 / (v_mean * mass)
-
-s_mean = 0.2
+p_std = 10 / (v_mean * mass)
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -73,8 +70,8 @@ def setup(pos, vel, coeff, sigma):
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': 2,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': False,  # Do the QM force
-            'do_QM_C': False,  # Do the QM force
+            'do_QM_F': True,  # Do the QM force
+            'do_QM_C': True,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 12,  # The constant in the sigma calc
@@ -640,6 +637,7 @@ class CTMQC(object):
         plt.plot(t, np.polyval(fit, t))
 
 
+sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
 if redo:
     ctmqc_env = setup(pos, vel, coeff, sigma)
     data = CTMQC(ctmqc_env)
@@ -752,8 +750,8 @@ if isinstance(whichPlot, str):
         plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
                      (10, 0.5), fontsize=24)
 
-#            plt.title("Sigma = %.2f" % s_mean)
-#            plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model3/Qlk/%.2f_pops.png" % s_mean)
+#        plt.title("Sigma = %.2f" % s_mean)
+#        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_pops.png" % s_mean)
 
     if 'deco' in whichPlot:
         # Plot Decoherence
@@ -769,8 +767,8 @@ if isinstance(whichPlot, str):
         plt.ylabel("Decoherence")
         plt.xlabel("Time [au_t]")
 
-#            plt.title("Sigma = %.2f" % s_mean)
-#            plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model3/Qlk/%.2f_deco.png" % s_mean)
+#        plt.title("Sigma = %.2f" % s_mean)
+#        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_deco.png" % s_mean)
 
     if '|u|^2' in whichPlot:
         plt.figure()
@@ -804,4 +802,4 @@ if isinstance(whichPlot, str):
         plot.plot_NACV_all_x(data.ctmqc_env)
 
     plt.show()
-#        plt.close("all")
+#    plt.close("all")
