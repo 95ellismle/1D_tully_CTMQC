@@ -128,45 +128,76 @@ def calc_sigma(ctmqc_env):
             ctmqc_env['sigma'][I, v] = new_var
 
 
-def calc_QM_FD(ctmqc_env, I, v):
+def calc_QM_FD(ctmqc_env):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-    RIv = ctmqc_env['pos'][I, v]
-    dx = ctmqc_env['dx']
-
-    nuclDens_xm = calc_nucl_dens(RIv - dx, v, ctmqc_env)
-    nuclDens = calc_nucl_dens(RIv, v, ctmqc_env)
-    nuclDens_xp = calc_nucl_dens(RIv + dx, v, ctmqc_env)
-
-    gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
-                               dx)[2]
-    if nuclDens < 1e-12:
-        return 0
-
-    QM = -gradNuclDens/(2*nuclDens)
-
+    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
+    QM = np.zeros((nRep, nAtom))
+    for I in range(nRep):
+        for v in range(nAtom):
+            RIv = ctmqc_env['pos'][I, v]
+            dx = ctmqc_env['dx']
+        
+            nuclDens_xm = calc_nucl_dens(RIv - dx, v, ctmqc_env)
+            nuclDens = calc_nucl_dens(RIv, v, ctmqc_env)
+            nuclDens_xp = calc_nucl_dens(RIv + dx, v, ctmqc_env)
+        
+            gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
+                                       dx)[2]
+            if nuclDens < 1e-12:
+                return 0
+        
+            QM[I, v] = -gradNuclDens/(2*nuclDens)
+        
     return QM / ctmqc_env['mass'][v]
 
 
-def calc_QM_analytic(ctmqc_env, I, v):
+def calc_QM_analytic(ctmqc_env):
     """
     Will use the analytic formula provided in SI to calculate the QM.
     """
-    RIv = ctmqc_env['pos'][I, v]
-    WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
-    allGauss = [gaussian(RIv, RJv, sig)
-                for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
-                                      ctmqc_env['sigma'][:, v])]
-    QM = 0.0
-    # Calc WIJ
-    sigma2 = ctmqc_env['sigma'][:, v]**2
-    WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
-
-    # Calc QM
-    QM = np.sum(WIJ * (RIv - ctmqc_env['pos'][:, v]))
-
+    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
+    QM = np.zeros((nRep, nAtom))
+    for I in range(nRep):
+        for v in range(nAtom):
+            RIv = ctmqc_env['pos'][I, v]
+            WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
+            allGauss = [gaussian(RIv, RJv, sig)
+                        for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
+                                              ctmqc_env['sigma'][:, v])]
+            # Calc WIJ
+            sigma2 = ctmqc_env['sigma'][:, v]**2
+            WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+        
+            # Calc QM
+            QM[I, v] = np.sum(WIJ * (RIv - ctmqc_env['pos'][:, v]))
+        
     return QM / ctmqc_env['mass'][v]
+
+
+def calc_prod_gauss(ctmqc_env):
+    """
+    Will calculate the product of the gaussians in a more efficient way than
+    simply brute forcing it.
+    """
+    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
+    
+    # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
+    prefact = np.prod(ctmqc_env['sigma']**(-0.5), axis=1)
+    prefact *= (2 * np.pi)**(-1.5 * nAtom)
+    
+    # Calculate the exponent
+    exponent = np.zeros((nRep, nRep))
+    for I in range(nRep):
+        for v in range(nAtom):
+            RIv = ctmqc_env['pos'][I, v]
+            for J in range(nRep):
+                RJv = ctmqc_env['pos'][J, v]
+                sigJv = ctmqc_env['sigma'][J, v]
+                exponent[I, J] += (RIv - RJv)**2 / (sigJv**2)
+
+    return prefact * np.exp(exponent * 0.5)
 
 
 def calc_all_alpha(ctmqc_env):
@@ -175,29 +206,102 @@ def calc_all_alpha(ctmqc_env):
     """
     nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
     alpha = np.zeros((nRep, nAtom))
+    WIJ = np.zeros((nRep, nRep, nAtom))
+
+    check = np.ones((nRep, nRep))
     for v in range(nAtom):
         for I in range(nRep):
             RIv = ctmqc_env['pos'][I, v]
-            WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
-            allGauss = [gaussian(RIv, RJv, sig)
-                        for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
-                                              ctmqc_env['sigma'][:, v])]
+            for J in range(nRep):
+                RJv = ctmqc_env['pos'][J, v]
+                sigmaJv = ctmqc_env['sigma'][J, v]
+                check[I, J] *= gaussian(RIv, RJv, sigmaJv)
+                
+    allProdGauss2 = calc_prod_gauss(ctmqc_env)
+    print(check - allProdGauss2)
+    raise SystemExit("BREAK")
+    
+    for v in range(nAtom):
+        for I in range(nRep):
+            RIv = ctmqc_env['pos'][I, v]
+            WIJ[I, :, v] = np.zeros(ctmqc_env['nrep'])
+            
             # Calc WIJ and alpha
             sigma2 = ctmqc_env['sigma'][:, v]**2
-            WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+            WIJ[I, :, v] = allGauss / (2. * sigma2 * np.sum(allGauss))
             alpha[I] = np.sum(WIJ)
-    return alpha
+    return alpha, WIJ
+
+
+def calc_R(ctmqc_env):
+    """
+    Will calculate the (effective) intercept for the Quantum Momentum based on
+    the values in the ctmqc_env dict. If this spikes then the R0 will be used,
+    if the Rlk isn't spiking then the Rlk will be used.
+    """
+    # Calculate Rlk -compare it to previous timestep Rlk
+    nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
+    nState = ctmqc_env['nstate']
+
+    # Calculate Rlk
+    pops = ctmqc_env['adPops']
+    f = ctmqc_env['adMom']
+    bottom_Rlk = np.zeros((nRep, nAtom, nState, nState))
+    for J in range(nRep):
+        for v in range(nAtom):
+            for l in range(nState):
+                Cl = pops[J, v, l]
+                fl = f[J, v, l]
+                for k in range(nState):
+                    Ck = pops[J, v, k]
+                    fk = f[J, v, k]
+                    bottom_Rlk[J, v, l, k] = Ck * Cl * (fk - fl)
+
+    sum_Rlk = np.sum(bottom_Rlk, axis=0)
+
+    alpha, WIJ = calc_all_alpha(ctmqc_env)
+    ctmqc_env['alpha'] = alpha
+    Ralpha = ctmqc_env['pos'] * alpha
+
+    if abs(sum_Rlk[0, 0, 1]) > 1e-12:
+        # Then get the weighted pos
+        Rlk = np.zeros((nAtom, nState, nState))
+        for I in range(nRep):
+            for v in range(nAtom):
+                Rav = Ralpha[I, v]
+                for l in range(nState):
+                    for k in range(l):
+                        Rlk[v, l, k] += Rav * (
+                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+                    for k in range(l+1, nState):
+                        Rlk[v, l, k] += Rav * (
+                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+
+        Qlk = np.zeros_like(bottom_Rlk)
+        for l in range(nState):
+            for k in range(nState):
+                Qlk[:, :, l, k] = Ralpha[:, :] - Rlk[:, l, k]
+
+        for v in range(nAtom):
+            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
+        return Qlk
+    else:
+        print(WIJ.shape)
+        
+        raise SystemExit("BREAK")
+        return Ralpha 
 
 
 def calc_Qlk(ctmqc_env):
     """
     Will return an array of size (Nstate, Nstate) containing data for the
     Quantum Momentum with the pairwise states.
-
-    N.B Currently only works for a 2 state system
     """
     nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
     nState = ctmqc_env['nstate']
+
+    calc_R(ctmqc_env)
+
 
     # Calculate Rlk
     pops = ctmqc_env['adPops']
@@ -247,23 +351,16 @@ def test_QM_calc(ctmqc_env):
     Will compare the output of the analytic QM calculation and the finite
     difference one.
     """
-    allDiffs, allPos = [], []
-    for I in range(ctmqc_env['nrep']):
-        for v in range(ctmqc_env['natom']):
-            QM1 = calc_QM_analytic(ctmqc_env, I, v)
-            QM2 = calc_QM_FD(ctmqc_env, I, v)
-            diff = 100*(QM1 - QM2) / QM2
+    allDiffs = calc_QM_analytic(ctmqc_env) - calc_QM_FD(ctmqc_env)
+    allPos = ctmqc_env['pos']
 
-            allDiffs.append(diff)
-            allPos.append(ctmqc_env['pos'][I, v])
-
-    if np.max(np.abs(allDiffs)) > 0.1:
+    print("Avg Abs Diff = %.2g +/- %.2g" % (np.mean(allDiffs),
+                                              np.std(allDiffs)))
+    print("Max Abs Diff = %.2g" % np.max(np.abs(allDiffs)))
+    print("Min Abs Diff = %.2g" % np.min(np.abs(allDiffs)))
+    if np.max(np.abs(allDiffs)) > 1e-5:
         raise SystemExit("Analytic Quantum Momentum != Finite Difference")
 
-    print("Avg Percentage Diff = %.2g%% +/- %.2g" % (np.mean(allDiffs),
-                                                     np.std(allDiffs)))
-    print("Max Percentage Diff = %.2g%%" % np.max(np.abs(allDiffs)))
-    print("Min Percentage Diff = %.2g%%" % np.min(np.abs(allDiffs)))
     return allDiffs, allPos
 
 

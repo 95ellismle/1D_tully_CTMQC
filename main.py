@@ -23,15 +23,15 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = '|C|^2 deco'
-velMultiplier = 2.5
+whichPlot = ''
+velMultiplier = 3
 maxTime = 2000
-model = 1
-p_mean = -8
-s_mean = 2
+model = 3
+p_mean = -15
+s_mean = 0.5
 
 
-nRep = 30
+nRep = 50
 natom = 1
 mass = 2000
 v_mean = 5e-3 * velMultiplier
@@ -311,8 +311,11 @@ class CTMQC(object):
         self.ctmqc_env['adMom_tm'] = np.zeros((nrep, natom, nstate))
 #        self.ctmqc_env['QM'] = np.zeros((nrep, natom))
 #        self.ctmqc_env['QM_tm'] = np.zeros((nrep, natom))
+        self.ctmqc_env['alpha'] = np.zeros((nrep, natom))
         self.ctmqc_env['Qlk'] = np.zeros((nrep, natom, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['Rlk'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['Rlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
 
     def __init_tully_model(self):
         """
@@ -338,6 +341,7 @@ class CTMQC(object):
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
         self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
+        self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
