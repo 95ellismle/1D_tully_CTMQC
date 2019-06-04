@@ -341,7 +341,7 @@ def makeX_adiab_Qlk(ctmqc_env, pos, irep, iatom):
         for k in range(nstates):
             Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
 
-    return np.array(X + Xqm)
+    return np.array(X - Xqm)
 
 
 def __RK4(coeff, X1, X12, X2, ctmqc_env):
