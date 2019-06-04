@@ -16,8 +16,11 @@ def trans_diab_to_adiab(allH, allu, ctmqc_env):
     """
     Will transform the diabatic coefficients to adiabatic ones
     """
-    for irep in range(ctmqc_env['nrep']):
-        for v in range(ctmqc_env['natom']):
+    nrep, natom = ctmqc_env['nrep'], ctmqc_env['natom']
+    nstate = ctmqc_env['nstate']
+    allC = np.zeros((nrep, natom, nstate), dtype=complex)
+    for irep in range(nrep):
+        for v in range(natom):
             u = allu[irep, v, :]
             H = allH[irep, v]
             if len(u) != 2 and len(np.shape(u)) != 1:
@@ -26,15 +29,19 @@ def trans_diab_to_adiab(allH, allu, ctmqc_env):
 
             U = Ham.getEigProps(H, ctmqc_env)[1]
 
-            return np.dot(np.array(U), np.array(u))
+            allC[irep, v] = np.dot(np.array(U), np.array(u))
+    return allC
 
 
 def trans_adiab_to_diab(allH, allC, ctmqc_env):
     """
     Will transform the adiabatic coefficients to diabatic ones
     """
-    for irep in range(ctmqc_env['nrep']):
-        for v in range(ctmqc_env['natom']):
+    nrep, natom = ctmqc_env['nrep'], ctmqc_env['natom']
+    nstate = ctmqc_env['nstate']
+    allu = np.zeros((nrep, natom, nstate), dtype=complex)
+    for irep in range(nrep):
+        for v in range(natom):
             C = allC[irep, v, :]
             H = allH[irep, v]
             if len(C) != 2 and len(np.shape(C)) != 1:
@@ -43,8 +50,8 @@ def trans_adiab_to_diab(allH, allC, ctmqc_env):
 
             U = Ham.getEigProps(H, ctmqc_env)[1]
 
-            return np.dot(np.array(U.T), np.array(C))
-
+            allu[irep, v] = np.dot(np.array(U.T), np.array(C))
+    return allu
 
 def renormalise_all_coeffs(coeff):
     """
@@ -76,26 +83,28 @@ def calc_ad_pops(C, ctmqc_env=False):
     return pops**2
 
 
-def do_diab_prop_ehren(ctmqc_env, irep, iatom):
+def do_diab_prop_ehren(ctmqc_env):
     """
     Will propagate the coefficients in the diabatic basis (without the
     diabatic NACE)
     """
-    dx_E = (ctmqc_env['pos'] - ctmqc_env['pos_tm'])
-    dx_E /= float(ctmqc_env['elec_steps'])
-
-    X1 = makeX_diab(ctmqc_env, ctmqc_env['pos_tm'], irep, iatom)
-    for Estep in range(ctmqc_env['elec_steps']):
-        pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-        pos3 = ctmqc_env['pos_tm'] + (Estep+1) * dx_E
-
-        X12 = makeX_diab(ctmqc_env, pos2, irep, iatom)
-        X2 = makeX_diab(ctmqc_env, pos3, irep, iatom)
-
-        coeff = __RK4(ctmqc_env['u'][irep, iatom], X1, X12, X2, ctmqc_env)
-        ctmqc_env['u'][irep, iatom] = coeff
-
-        X1 = X2[:]
+    for irep in range(ctmqc_env['nrep']):
+        for v in range(ctmqc_env['natom']):
+            dx_E = (ctmqc_env['pos'][irep, v] - ctmqc_env['pos_tm'][irep, v])
+            dx_E /= float(ctmqc_env['elec_steps'])
+        
+            X1 = makeX_diab(ctmqc_env, ctmqc_env['pos_tm'], irep, v)
+            for Estep in range(ctmqc_env['elec_steps']):
+                pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
+                pos3 = ctmqc_env['pos_tm'] + (Estep+1) * dx_E
+        
+                X12 = makeX_diab(ctmqc_env, pos2, irep, v)
+                X2 = makeX_diab(ctmqc_env, pos3, irep, v)
+        
+                coeff = __RK4(ctmqc_env['u'][irep, v], X1, X12, X2, ctmqc_env)
+                ctmqc_env['u'][irep, v] = coeff
+        
+                X1 = X2[:]
 
 
 def makeX_diab(ctmqc_env, pos, irep, iatom):

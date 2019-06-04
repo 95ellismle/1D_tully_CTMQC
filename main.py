@@ -24,20 +24,22 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = '|C|^2 deco'
+velMultiplier = 1
+maxTime = 3500
+model = 2
+mass = 2000
 
 
-velMultiplier = 1.6
-
-nRep = 100
+nRep = 200
 natom = 1
 
 v_mean = 5e-3 * velMultiplier
-v_std = 2.5e-4 * 0.3
+v_std = 0  # 2.5e-4 * 0.7
 
-p_mean = -10
-p_std = np.sqrt(2) * 0.3
+p_mean = -15
+p_std = 20 / (v_mean * mass)
 
-s_mean = 0.35
+s_mean = 0.2
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
@@ -65,14 +67,14 @@ def setup(pos, vel, coeff, sigma):
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
             'C': coeff,  # Intial WF |nrep, 2| -
-            'mass': [2000],  # nuclear mass |nrep| au_m
-            'tullyModel': 2,  # Which model | | -
-            'max_time': 2500,  # Maximum time to simulate to | | au_t
+            'mass': [mass],  # nuclear mass |nrep| au_m
+            'tullyModel': model,  # Which model | | -
+            'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 1,  # The timestep | |au_t
+            'dt': 2,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': True,  # Do the QM force
-            'do_QM_C': True,  # Do the QM force
+            'do_QM_F': False,  # Do the QM force
+            'do_QM_C': False,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 12,  # The constant in the sigma calc
@@ -361,13 +363,11 @@ class CTMQC(object):
         if 'u' in self.ctmqc_env:
             self.ctmqc_env['C'] = np.zeros((nrep, natom, nstate),
                                            dtype=complex)
-            for irep in range(nrep):
-                for v in range(natom):
-                    C = e_prop.trans_diab_to_adiab(
-                                                  self.ctmqc_env['H'][irep, v],
-                                                  self.ctmqc_env['u'][irep, v],
-                                                  self.ctmqc_env)
-                    self.ctmqc_env['C'][irep, v] = C
+            C = e_prop.trans_diab_to_adiab(
+                                          self.ctmqc_env['H'],
+                                          self.ctmqc_env['u'],
+                                          self.ctmqc_env)
+            self.ctmqc_env['C'] = C
         else:
             self.ctmqc_env['u'] = np.zeros((nrep, natom, nstate),
                                            dtype=complex)
@@ -620,7 +620,7 @@ class CTMQC(object):
         msg += "\n\n***\n"
         timeTaken = np.ceil(sumTime)
         timeTaken = str(dt.timedelta(seconds=timeTaken))
-        msg += "Steps = %i   Total Time Taken = %ss" % (nstep, timeTaken)
+        msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
         msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
         msg += "  All Done!\n***\n"
 
