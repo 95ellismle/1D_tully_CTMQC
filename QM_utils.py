@@ -200,7 +200,7 @@ def calc_prod_gauss(ctmqc_env):
     return np.exp(exponent * 0.5) * prefact
 
 
-def calc_WIJ(ctmqc_env):
+def calc_WIJ(ctmqc_env, reps_to_complete=False):
     """
     Will calculate alpha for all replicas and atoms
     """
@@ -208,11 +208,19 @@ def calc_WIJ(ctmqc_env):
     WIJ = np.zeros((nRep, nRep, nAtom))
     allProdGauss_IJ = calc_prod_gauss(ctmqc_env)
     
-    for v in range(nAtom):
-        for I in range(nRep):
-            # Calc WIJ and alpha
-            sigma2 = ctmqc_env['sigma'][:, v]**2
-            WIJ[I, :, v] = allProdGauss_IJ[I, :] \
+    if reps_to_complete is not False:
+        for I in reps_to_complete:
+            for v in range(nAtom):
+                # Calc WIJ and alpha
+                sigma2 = ctmqc_env['sigma'][:, v]**2
+                WIJ[I, :, v] = allProdGauss_IJ[I, :] \
+                                / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
+    else:
+         for I in range(nRep):
+            for v in range(nAtom):
+                # Calc WIJ and alpha
+                sigma2 = ctmqc_env['sigma'][:, v]**2
+                WIJ[I, :, v] = allProdGauss_IJ[I, :] \
                                 / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
     return WIJ
 
@@ -227,63 +235,76 @@ def calc_Qlk(ctmqc_env):
     nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
     nState = ctmqc_env['nstate']
 
+    pops = ctmqc_env['adPops']
+    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, 0, :])
+                        if all(state_pop < 0.995 for state_pop in rep_pops)]
+
     # Calculate WIJ and alpha
     WIJ = calc_WIJ(ctmqc_env)
     alpha = np.sum(WIJ, axis=1)
-
-    # Calculate Rlk
-#    pops = ctmqc_env['adPops']
-#    f = ctmqc_env['adMom']
-    Qlk = np.zeros((nRep, nAtom, nState, nState))
-#    bottom_Rlk = np.zeros((nRep, nAtom, nState, nState))
-#    for J in range(nRep):
-#        for v in range(nAtom):
-#            for l in range(nState):
-#                Cl = pops[J, v, l]
-#                fl = f[J, v, l]
-#                for k in range(nState):
-#                    Ck = pops[J, v, k]
-#                    fk = f[J, v, k]
-#                    bottom_Rlk[J, v, l, k] = Ck * Cl * (fk - fl)
-
-#    sum_Rlk = np.sum(bottom_Rlk, axis=0)
-
-
     ctmqc_env['alpha'] = alpha
     Ralpha = ctmqc_env['pos'] * alpha
 
-#    if abs(sum_Rlk[0, 0, 1]) > 1e-12:
-#        # Then get the weighted pos
-#        Rlk = np.zeros((nAtom, nState, nState))
-#        for I in range(nRep):
-#            for v in range(nAtom):
-#                Rav = Ralpha[I, v]
-#                for l in range(nState):
-#                    for k in range(l):
-#                        Rlk[v, l, k] += Rav * (
-#                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
-#                    for k in range(l+1, nState):
-#                        Rlk[v, l, k] += Rav * (
-#                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
-#
-#        for l in range(nState):
-#            for k in range(nState):
-#                Qlk[:, :, l, k] = Ralpha[:, :] - Rlk[:, l, k]
-#
-#        for v in range(nAtom):
-#            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
-#        return Qlk
-
-    # If we can't use the Rlk then use the normal RI0
-    for I in range(nRep):
+    # Calculate all the Ylk
+    f = ctmqc_env['adMom']
+    Ylk = np.zeros((nRep, nAtom, nState, nState))
+    for J in range(nRep):
         for v in range(nAtom):
             for l in range(nState):
+                Cl = pops[J, v, l]
+                fl = f[J, v, l]
                 for k in range(l):
-                    RI0 = np.sum(WIJ[I, :, v] * ctmqc_env['pos'][:, v])
-                    Qlk[I, v, l, k] = Ralpha[I, v] - RI0
-                    Qlk[I, v, k, l] = Ralpha[I, v] - RI0
+                    Ck = pops[J, v, k]
+                    fk = f[J, v, k]
+                    Ylk[J, v, l, k] = Ck * Cl * (fk - fl)
+                    Ylk[J, v, k, l] = -Ylk[J, v, l, k]
+    sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
+    
+    # Calculate Rlk and Qlk
+    Qlk = np.zeros((nRep, nAtom, nState, nState))
+    if abs(sum_Ylk[0, 0, 1]) > 1e-12:
+        # Calculate the R0 (used if the Rlk spikes)
+        RI0 = np.zeros((nRep, nAtom))
+        for I in range(nRep):
+            for v in range(nAtom):
+                RI0[I, v] = np.sum(WIJ[I, :, v] * ctmqc_env['pos'][:, v])
 
-    return Qlk / ctmqc_env['mass'][0]
+        # Calculate the Rlk
+        Rlk = np.zeros((nAtom, nState, nState))
+        for I in range(nRep):
+            for v in range(nAtom):
+                Rav = Ralpha[I, v]
+                for l in range(nState):
+                    for k in range(l):
+                        Rlk[v, l, k] += Rav * (
+                                     Ylk[I, v, l, k] / sum_Ylk[v, l, k])
+                        Rlk[v, k, l] = Rlk[v, l, k]
+        ctmqc_env['Rlk'] = Rlk
+
+        # Calculate the Quantum Momentum
+        for v in range(nAtom):
+            for l in range(nState):
+                for k in range(nState):
+                    if (ctmqc_env['Rlk_tm'][v, l, k] - Rlk[v, l, k]) < 1:
+                        Qlk[:, v, l, k] = Ralpha[:, v] - Rlk[v, l, k]
+                    else:
+                        Qlk[:, v, l, k] = Ralpha[:, v] - RI0[I, v]
+
+        # Divide by mass
+        for v in range(nAtom):
+            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
+    return Qlk
+
+#    # If we can't use the Rlk then use the normal RI0
+#    for I in reps_to_complete:
+#        for v in range(nAtom):
+#            
+#            for l in range(nState):
+#                for k in range(l):
+#                    Qlk[I, v, l, k] = Ralpha[I, v] - RI0
+#                    Qlk[I, v, k, l] = Ralpha[I, v] - RI0
+#
+#    return Qlk / ctmqc_env['mass'][0]
 
 
 #def calc_Qlk(ctmqc_env):
@@ -300,7 +321,7 @@ def calc_Qlk(ctmqc_env):
 #    # Calculate Rlk
 #    pops = ctmqc_env['adPops']
 #    f = ctmqc_env['adMom']
-#    bottom_Rlk = np.zeros((nRep, nAtom, nState, nState))
+#    Ylk = np.zeros((nRep, nAtom, nState, nState))
 #    for J in range(nRep):
 #        for v in range(nAtom):
 #            for l in range(nState):
@@ -309,9 +330,9 @@ def calc_Qlk(ctmqc_env):
 #                for k in range(nState):
 #                    Ck = pops[J, v, k]
 #                    fk = f[J, v, k]
-#                    bottom_Rlk[J, v, l, k] = Ck * Cl * (fk - fl)
+#                    Ylk[J, v, l, k] = Ck * Cl * (fk - fl)
 #
-#    sum_Rlk = np.sum(bottom_Rlk, axis=0)
+#    sum_Rlk = np.sum(Ylk, axis=0)
 #    if abs(sum_Rlk[0, 0, 1]) > 1e-12:
 #        # Then get the weighted pos
 #        alpha = calc_all_alpha(ctmqc_env)
@@ -323,12 +344,12 @@ def calc_Qlk(ctmqc_env):
 #                for l in range(nState):
 #                    for k in range(l):
 #                        Rlk[v, l, k] += Rav * (
-#                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+#                                     Ylk[I, v, l, k] / sum_Rlk[v, l, k])
 #                    for k in range(l+1, nState):
 #                        Rlk[v, l, k] += Rav * (
-#                                     bottom_Rlk[I, v, l, k] / sum_Rlk[v, l, k])
+#                                     Ylk[I, v, l, k] / sum_Rlk[v, l, k])
 #
-#        Qlk = np.zeros_like(bottom_Rlk)
+#        Qlk = np.zeros_like(Ylk)
 #        for l in range(nState):
 #            for k in range(nState):
 #                Qlk[:, :, l, k] = Ralpha[:, :] - Rlk[:, l, k]

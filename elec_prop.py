@@ -236,9 +236,6 @@ def do_adiab_prop_QM(ctmqc_env, allTimes):
             dv_E = (ctmqc_env['vel'][irep, iatom]
                     - ctmqc_env['vel_tm'][irep, iatom])
             dv_E /= float(ctmqc_env['elec_steps'])
-#            dQM_E = (ctmqc_env['QM'][irep, iatom]
-#                     - ctmqc_env['QM_tm'][irep, iatom])
-#            dQM_E /= float(ctmqc_env['elec_steps'])
             dQlk_E = (ctmqc_env['Qlk'][irep, iatom]
                       - ctmqc_env['Qlk_tm'][irep, iatom])
             dQlk_E /= float(ctmqc_env['elec_steps'])

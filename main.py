@@ -23,26 +23,27 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = '|C|^2 deco'
-velMultiplier = 3
-maxTime = 1500
-model = 3
-p_mean = -15
-s_mean = 1
+whichPlot = 'deco |C|^2 Rlk'
+velMultiplier = 1
+maxTime = 3500
+model = 1
+p_mean = -8
+s_mean = 0.3
 
 
-nRep = 200
+nRep = 30
 natom = 1
 mass = 2000
 v_mean = 5e-3 * velMultiplier
 v_std = 0  # 2.5e-4 * 0.7
-p_std = 10 / (v_mean * mass)
+p_std = 20 / (v_mean * mass)
 s_std = 0
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
 vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
        for I in range(nRep)]
-coeff = [[[complex(1, 0), complex(0, 0)] for v in range(natom)]
+coeff = [[[complex(1, 0), complex(0, 0)]
+          for v in range(natom)]
          for i in range(nRep)]
 
 corrV = 1
@@ -289,8 +290,8 @@ class CTMQC(object):
         self.allH = np.zeros((nstep, nrep, natom, nstate, nstate))
         self.allAdMom = np.zeros((nstep, nrep, natom, nstate))
         self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
-#        self.allQM = np.zeros((nstep, nrep, natom))
         self.allQlk = np.zeros((nstep, nrep, natom, nstate, nstate))
+        self.allRlk = np.zeros((nstep, natom, nstate, nstate))
         self.allSigma = np.zeros((nstep, nrep, natom))
 
         # For propagating dynamics
@@ -309,13 +310,11 @@ class CTMQC(object):
         self.ctmqc_env['adPops'] = np.zeros((nrep, natom, nstate))
         self.ctmqc_env['adMom'] = np.zeros((nrep, natom, nstate))
         self.ctmqc_env['adMom_tm'] = np.zeros((nrep, natom, nstate))
-#        self.ctmqc_env['QM'] = np.zeros((nrep, natom))
-#        self.ctmqc_env['QM_tm'] = np.zeros((nrep, natom))
         self.ctmqc_env['alpha'] = np.zeros((nrep, natom))
         self.ctmqc_env['Qlk'] = np.zeros((nrep, natom, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
-        self.ctmqc_env['Rlk'] = np.zeros((nrep, natom, nstate, nstate))
-        self.ctmqc_env['Rlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
+        self.ctmqc_env['Rlk'] = np.zeros((natom, nstate, nstate))
+        self.ctmqc_env['Rlk_tm'] = np.zeros((natom, nstate, nstate))
 
     def __init_tully_model(self):
         """
@@ -428,10 +427,6 @@ class CTMQC(object):
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
             if self.ctmqc_env['do_sigma_calc']:
                 qUt.calc_sigma(self.ctmqc_env)
-#            for irep in range(self.ctmqc_env['nrep']):
-#                for v in range(self.ctmqc_env['natom']):
-#                   QM = qUt.calc_QM_analytic(ctmqc_env, irep, v)
-#                   self.ctmqc_env['QM'][irep, v] = QM
             self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
 
     def __main_loop(self):
@@ -584,8 +579,8 @@ class CTMQC(object):
         self.allAdMom[istep] = self.ctmqc_env['adMom']
         self.allAdFrc[istep] = self.ctmqc_env['adFrc']
         self.allv[istep] = self.ctmqc_env['vel']
-#        self.allQM[istep] = self.ctmqc_env['QM']
         self.allQlk[istep] = self.ctmqc_env['Qlk']
+        self.allRlk[istep] = self.ctmqc_env['Rlk']
         self.allSigma[istep] = self.ctmqc_env['sigma']
 
         self.allt[istep] = self.ctmqc_env['t']
@@ -611,6 +606,7 @@ class CTMQC(object):
         self.allAdFrc = self.allAdFrc[:self.ctmqc_env['iter']]
         self.allv = self.allv[:self.ctmqc_env['iter']]
         self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
+        self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
 
         # Print some useful info
@@ -768,11 +764,16 @@ if isinstance(whichPlot, str):
         rD = maxD - minD
         plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
                      (10, minD+(rD/2.)), fontsize=24)
-        plt.ylabel("Decoherence")
+        plt.ylabel("Coherence")
         plt.xlabel("Time [au_t]")
 
 #        plt.title("Sigma = %.2f" % s_mean)
 #        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_deco.png" % s_mean)
+
+    if 'rlk' in whichPlot:
+        f, a = plt.subplots()
+        a.plot(data.allt, data.allRlk[:, 0, 0, 1])
+        
 
     if '|u|^2' in whichPlot:
         plt.figure()
