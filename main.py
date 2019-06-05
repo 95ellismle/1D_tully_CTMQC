@@ -23,15 +23,15 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = ''
+whichPlot = '|C|^2 deco'
 velMultiplier = 3
-maxTime = 2000
+maxTime = 1500
 model = 3
 p_mean = -15
-s_mean = 0.5
+s_mean = 1
 
 
-nRep = 50
+nRep = 200
 natom = 1
 mass = 2000
 v_mean = 5e-3 * velMultiplier
