@@ -240,7 +240,7 @@ def calc_Qlk(ctmqc_env):
                         if all(state_pop < 0.995 for state_pop in rep_pops)]
 
     # Calculate WIJ and alpha
-    WIJ = calc_WIJ(ctmqc_env)
+    WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
     alpha = np.sum(WIJ, axis=1)
     ctmqc_env['alpha'] = alpha
     Ralpha = ctmqc_env['pos'] * alpha
@@ -248,7 +248,7 @@ def calc_Qlk(ctmqc_env):
     # Calculate all the Ylk
     f = ctmqc_env['adMom']
     Ylk = np.zeros((nRep, nAtom, nState, nState))
-    for J in range(nRep):
+    for J in reps_to_complete:
         for v in range(nAtom):
             for l in range(nState):
                 Cl = pops[J, v, l]
@@ -260,18 +260,18 @@ def calc_Qlk(ctmqc_env):
                     Ylk[J, v, k, l] = -Ylk[J, v, l, k]
     sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
     
-    # Calculate Rlk and Qlk
+    # Calculate Qlk
     Qlk = np.zeros((nRep, nAtom, nState, nState))
     if abs(sum_Ylk[0, 0, 1]) > 1e-12:
         # Calculate the R0 (used if the Rlk spikes)
         RI0 = np.zeros((nRep, nAtom))
-        for I in range(nRep):
+        for I in reps_to_complete:
             for v in range(nAtom):
                 RI0[I, v] = np.sum(WIJ[I, :, v] * ctmqc_env['pos'][:, v])
 
         # Calculate the Rlk
         Rlk = np.zeros((nAtom, nState, nState))
-        for I in range(nRep):
+        for I in reps_to_complete:
             for v in range(nAtom):
                 Rav = Ralpha[I, v]
                 for l in range(nState):
@@ -279,20 +279,29 @@ def calc_Qlk(ctmqc_env):
                         Rlk[v, l, k] += Rav * (
                                      Ylk[I, v, l, k] / sum_Ylk[v, l, k])
                         Rlk[v, k, l] = Rlk[v, l, k]
+
+        # Save the data
         ctmqc_env['Rlk'] = Rlk
+        ctmqc_env['RI0'] = RI0
 
         # Calculate the Quantum Momentum
-        for v in range(nAtom):
-            for l in range(nState):
-                for k in range(nState):
-                    if (ctmqc_env['Rlk_tm'][v, l, k] - Rlk[v, l, k]) < 1:
-                        Qlk[:, v, l, k] = Ralpha[:, v] - Rlk[v, l, k]
-                    else:
-                        Qlk[:, v, l, k] = Ralpha[:, v] - RI0[I, v]
+        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
+        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
+        for I in reps_to_complete:
+            for v in range(nAtom):
+                for l in range(nState):
+                    for k in range(nState):
+                        if Rlk[v, l, k] > maxRI0 or Rlk[v, l, k] < minRI0:
+                            R = RI0[I, v]
+                        else:
+                            R = Rlk[v, l, k]
+
+                        Qlk[I, v, l, k] = Ralpha[I, v] - R
 
         # Divide by mass
         for v in range(nAtom):
             Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
+
     return Qlk
 
 #    # If we can't use the Rlk then use the normal RI0

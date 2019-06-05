@@ -23,21 +23,21 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = 'deco |C|^2 Rlk'
-velMultiplier = 1
-maxTime = 3500
-model = 1
+whichPlot = '|C|^2, Rlk'
+velMultiplier = 3
+maxTime = 1500
+model = 2
 p_mean = -8
 s_mean = 0.3
 
 
-nRep = 30
+nRep = 200
 natom = 1
 mass = 2000
 v_mean = 5e-3 * velMultiplier
 v_std = 0  # 2.5e-4 * 0.7
 p_std = 20 / (v_mean * mass)
-s_std = 0
+s_std = 0.03
 
 pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
 vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
@@ -292,6 +292,7 @@ class CTMQC(object):
         self.allAdFrc = np.zeros((nstep, nrep, natom, nstate))
         self.allQlk = np.zeros((nstep, nrep, natom, nstate, nstate))
         self.allRlk = np.zeros((nstep, natom, nstate, nstate))
+        self.allRI0 = np.zeros((nstep, nrep, natom))
         self.allSigma = np.zeros((nstep, nrep, natom))
 
         # For propagating dynamics
@@ -314,6 +315,7 @@ class CTMQC(object):
         self.ctmqc_env['Qlk'] = np.zeros((nrep, natom, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, natom, nstate, nstate))
         self.ctmqc_env['Rlk'] = np.zeros((natom, nstate, nstate))
+        self.ctmqc_env['RI0'] = np.zeros((nrep, natom))
         self.ctmqc_env['Rlk_tm'] = np.zeros((natom, nstate, nstate))
 
     def __init_tully_model(self):
@@ -581,6 +583,7 @@ class CTMQC(object):
         self.allv[istep] = self.ctmqc_env['vel']
         self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allRlk[istep] = self.ctmqc_env['Rlk']
+        self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
 
         self.allt[istep] = self.ctmqc_env['t']
@@ -607,6 +610,7 @@ class CTMQC(object):
         self.allv = self.allv[:self.ctmqc_env['iter']]
         self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
         self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
+        self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
 
         # Print some useful info
@@ -772,7 +776,22 @@ if isinstance(whichPlot, str):
 
     if 'rlk' in whichPlot:
         f, a = plt.subplots()
-        a.plot(data.allt, data.allRlk[:, 0, 0, 1])
+        ln_lk = a.plot(data.allt, data.allRlk[:, 0, 0, 1], 'b-', lw=1, alpha=1)
+        ln_I0 = a.plot(data.allt, data.allRI0[:, :, 0],
+                       'k--', lw=0.7, alpha=0.5)
+        
+        avgRI0 = np.average(data.allRI0[:, :, 0], axis=1)
+        stdRI0 = np.std(data.allRI0[:, :, 0], axis=1)
+        minRI0 = np.min(data.allRI0[:, :, 0], axis=1)
+        maxRI0 = np.max(data.allRI0[:, :, 0], axis=1)
+#        a.plot(data.allt, avgRI0, 'k--')
+        a.plot(data.allt, maxRI0 + 2*stdRI0, 'g--')
+        a.plot(data.allt, minRI0 - 2*stdRI0, 'g--')
+        
+        a.set_xlabel("Time [au_t]")
+        a.set_ylabel(r"Rlk [bohr$^{-1}$]")
+        a.legend([ln_lk[0], ln_I0[0]], [r'$\mathbf{R}_{lk, \nu}^{0}$',
+                                        r"$\mathbf{R}_{0, \nu}^{I}$"])
         
 
     if '|u|^2' in whichPlot:
