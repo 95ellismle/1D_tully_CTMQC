@@ -38,6 +38,7 @@ def calc_ad_mom(ctmqc_env, irep, v, ad_frc=False):
     dt = ctmqc_env['dt']
 
     ad_mom += dt * ad_frc
+#    print(ad_mom)
     return ad_mom
 
 
@@ -176,7 +177,7 @@ def calc_QM_analytic(ctmqc_env):
     return QM / ctmqc_env['mass'][v]
 
 
-def calc_prod_gauss(ctmqc_env):
+def calc_all_prod_gauss(ctmqc_env):
     """
     Will calculate the product of the gaussians in a more efficient way than
     simply brute forcing it.
@@ -185,7 +186,6 @@ def calc_prod_gauss(ctmqc_env):
     
     # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
     prefact = np.prod(ctmqc_env['sigma']**(-1), axis=1)
-    
     # Calculate the exponent
     exponent = np.zeros((nRep, nRep))
     for v in range(nAtom):
@@ -196,7 +196,6 @@ def calc_prod_gauss(ctmqc_env):
                 sJv = ctmqc_env['sigma'][J, v]
                 
                 exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
-
     return np.exp(exponent * 0.5) * prefact
 
 
@@ -206,15 +205,16 @@ def calc_WIJ(ctmqc_env, reps_to_complete=False):
     """
     nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
     WIJ = np.zeros((nRep, nRep, nAtom))
-    allProdGauss_IJ = calc_prod_gauss(ctmqc_env)
-    
+    allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env)
+
     if reps_to_complete is not False:
         for I in reps_to_complete:
             for v in range(nAtom):
                 # Calc WIJ and alpha
                 sigma2 = ctmqc_env['sigma'][:, v]**2
                 WIJ[I, :, v] = allProdGauss_IJ[I, :] \
-                                / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
+                                / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
+        WIJ /= 2.
     else:
          for I in range(nRep):
             for v in range(nAtom):
@@ -236,8 +236,9 @@ def calc_Qlk(ctmqc_env):
     nState = ctmqc_env['nstate']
 
     pops = ctmqc_env['adPops']
-    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, 0, :])
-                        if all(state_pop < 0.995 for state_pop in rep_pops)]
+    reps_to_complete = np.arange(nRep)
+    #reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, 0, :])
+    #                    if all(state_pop < 0.995 for state_pop in rep_pops)]
 
     # Calculate WIJ and alpha
     WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
@@ -267,7 +268,7 @@ def calc_Qlk(ctmqc_env):
         RI0 = np.zeros((nRep, nAtom))
         for I in reps_to_complete:
             for v in range(nAtom):
-                RI0[I, v] = np.sum(WIJ[I, :, v] * ctmqc_env['pos'][:, v])
+                RI0[I, v] = np.dot(WIJ[I, :, v], ctmqc_env['pos'][:, v])
 
         # Calculate the Rlk
         Rlk = np.zeros((nAtom, nState, nState))
@@ -279,7 +280,7 @@ def calc_Qlk(ctmqc_env):
                         Rlk[v, l, k] += Rav * (
                                      Ylk[I, v, l, k] / sum_Ylk[v, l, k])
                         Rlk[v, k, l] = Rlk[v, l, k]
-
+            
         # Save the data
         ctmqc_env['Rlk'] = Rlk
         ctmqc_env['RI0'] = RI0
@@ -298,7 +299,7 @@ def calc_Qlk(ctmqc_env):
 
                         Qlk[I, v, l, k] = Ralpha[I, v] - R
 
-        # Divide by mass
+        # Divide by mass2
         for v in range(nAtom):
             Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
 

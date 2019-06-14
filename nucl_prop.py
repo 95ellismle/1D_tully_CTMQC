@@ -27,8 +27,8 @@ def calc_ehren_adiab_force(irep, v, gradE, adPops, ctmqc_env):
             Ck = ctmqc_env['C'][irep, v, k]
             Clk = Cl * Ck
             Ekl = E[k] - E[l]
-
             F -= Clk * Ekl * NACV[l, k]
+#            print(NACV[l, k])
     if F.imag > 1e-12:
         msg = "Something's gone wrong ehrenfest force "
         msg += "-it has a imaginary component!"

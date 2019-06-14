@@ -53,6 +53,7 @@ def trans_adiab_to_diab(allH, allC, ctmqc_env):
             allu[irep, v] = np.dot(np.array(U.T), np.array(C))
     return allu
 
+
 def renormalise_all_coeffs(coeff):
     """
     Will renormalise all the coefficients for replica I, atom v.

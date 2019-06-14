@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import random as rd
 import datetime as dt
-import pickle
 import time
+import os
 import collections
 
 import hamiltonian as Ham
@@ -23,40 +23,24 @@ import plot
 import QM_utils as qUt
 
 redo = True
-whichPlot = '|C|^2, Rlk'
-velMultiplier = 3
-maxTime = 1500
-model = 2
-p_mean = -8
+whichPlot = ''
+all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500]
+all_model = [3, 3, 2, 2, 1, 1]
+all_p_mean = [-15, -15, -8, -8, -8, -8]
 s_mean = 0.3
-
+rootFolder = "/temp/mellis/TullyModels/"
 
 nRep = 200
 natom = 1
 mass = 2000
-v_mean = 5e-3 * velMultiplier
-v_std = 0  # 2.5e-4 * 0.7
-p_std = 20 / (v_mean * mass)
-s_std = 0.03
 
-pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
-vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
-       for I in range(nRep)]
-coeff = [[[complex(1, 0), complex(0, 0)]
+
+nSim = max([len(all_velMultiplier), len(all_maxTime),
+            len(all_model), len(all_p_mean)])
+coeff = [[[complex(1/np.sqrt(2), 0), complex(1/np.sqrt(2), 0)]
           for v in range(natom)]
          for i in range(nRep)]
-
-corrV = 1
-if np.mean(vel) != 0:
-    corrV = v_mean / np.mean(vel)
-vel = np.array(vel) * corrV
-
-corrP = 1
-if np.mean(pos) != 0:
-    corrP = p_mean / np.mean(pos)
-pos = np.array(pos) * corrP
-
-sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
 
 
 def setup(pos, vel, coeff, sigma):
@@ -69,13 +53,13 @@ def setup(pos, vel, coeff, sigma):
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 2,  # The timestep | |au_t
+            'dt': 1,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': True,  # Do the QM force
             'do_QM_C': True,  # Do the QM force
-            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': True,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 12,  # The constant in the sigma calc
+            'const': 15,  # The constant in the sigma calc
                 }
     return ctmqc_env
 
@@ -127,9 +111,13 @@ class CTMQC(object):
     allR = []
     allt = []
 
-    def __init__(self, ctmqc_env):
+    def __init__(self, ctmqc_env, root_folder = False):
+        
         # Set everything up
+        self.root_folder = root_folder
         self.ctmqc_env = ctmqc_env
+
+        self.__create_folderpath()
         self.__init_tully_model()  # Set the correct Hamiltonian function
         self.__init_nsteps()  # Find how many steps to take
         self.__init_pos_vel_wf()  # set pos vel wf as arrays, get nrep & natom
@@ -140,7 +128,35 @@ class CTMQC(object):
         self.__init_step()  # Get things prepared for RK4 (propagate positions)
         self.__main_loop()  # Loop over all steps and propagate
         self.__finalise()  # Finish up and tidy
+    
+    def __create_folderpath(self):
+        """
+        Will determine where to store the data.
+        """
+        if self.root_folder is False:
+            self.root_folder = os.getcwd()
+        self.root_folder = os.path.abspath(self.root_folder)
+        
+        eHStr = "Ehren"
+        if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQC"
+        elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQCF_EhC"
+        elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQCC_EhF"
 
+        modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+        mom = np.round(self.ctmqc_env['vel'][0][0] * self.ctmqc_env['mass'][0])
+        momStr = "Kinit_%i" % int(mom)
+        if self.ctmqc_env['do_sigma_calc']:
+            sigStr = "varSig"
+        else:
+            sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
+        self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                              modelStr, momStr, sigStr)
+        
+        print(self.saveFolder)
+    
     def __init_nsteps(self):
         """
         Will calculate the number of steps from the maximum time needed and the
@@ -342,7 +358,7 @@ class CTMQC(object):
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
         self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
-        self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
+        #self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
@@ -418,7 +434,7 @@ class CTMQC(object):
                 # Get the QM quantities
                 if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                     if any(Ck > 0.995 for Ck in pop):
-                        adMom = 0.8 * self.ctmqc_env['adMom'][irep, v]
+                        adMom = 0  # 0.8 * self.ctmqc_env['adMom'][irep, v]
                     else:
 
                         adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, v,
@@ -520,9 +536,9 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-            # if self.ctmqc_env['iter'] % 30 == 0:
-            #   self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-            #   self.ctmqc_env['C'])
+            if self.ctmqc_env['iter'] % 1 == 0:
+                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+                                                           self.ctmqc_env['C'])
             u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
                                            self.ctmqc_env['C'],
                                            self.ctmqc_env)
@@ -588,13 +604,10 @@ class CTMQC(object):
 
         self.allt[istep] = self.ctmqc_env['t']
 
-    def __finalise(self):
+    def __chop_arrays(self):
         """
-        Will tidy things up, change types of storage arrays to numpy arrays.
+        Will splice the arrays to the appropriate size (to num steps done)
         """
-        self.allR = np.array(self.allR)
-        self.allt = np.array(self.allt)
-
         self.allR = self.allR[:self.ctmqc_env['iter']]
         self.allt = self.allt[:self.ctmqc_env['iter']]
         self.allF = self.allF[:self.ctmqc_env['iter']]
@@ -613,6 +626,34 @@ class CTMQC(object):
         self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
 
+    def __store_data(self):
+        """
+        Will save all the arrays as numpy binary files.
+        """
+        if not os.path.isdir(self.saveFolder):
+            os.makedirs(self.saveFolder)
+
+        names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
+                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma"]
+        arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
+                self.allE, self.allC, self.allu, self.allAdPop, self.allH,
+                self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
+                self.allRlk, self.allRI0, self.allSigma]
+        for name, arr in zip(names, arrs):
+            savepath = "%s/%s" % (self.saveFolder, name)
+            np.save(savepath, arr)
+
+    def __finalise(self):
+        """
+        Will tidy things up, change types of storage arrays to numpy arrays.
+        """
+        self.allR = np.array(self.allR)
+        self.allt = np.array(self.allt)
+        self.__chop_arrays()
+        # Small runs are probably tests
+        if self.ctmqc_env['iter'] > 30:
+            self.__store_data()
+        
         # Print some useful info
         sumTime = np.sum(self.allTimes['step'])
         nstep = self.ctmqc_env['iter']
@@ -641,189 +682,213 @@ class CTMQC(object):
         plt.plot(t, np.polyval(fit, t))
 
 
-sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
-if redo:
+for i in range(nSim):
+    
+    velMultiplier = all_velMultiplier[i]
+    maxTime = all_maxTime[i]
+    model = all_model[i]
+    p_mean = all_p_mean[i]
+    
+    v_mean = 5e-3 * velMultiplier
+    v_std = 0  # 2.5e-4 * 0.7
+    p_std = 20 / (v_mean * mass)
+    s_std = 0
+    
+    pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
+#    pos = [[-0.150001E+02], [-0.153679E+02], [-0.156864E+02],
+#           [-0.152605E+02], [-0.155048E+02]]
+    
+    vel = [[abs(rd.gauss(v_mean, v_std)) for v in range(natom)]
+           for I in range(nRep)]
+    
+    corrV = 1
+    if np.mean(vel) != 0:
+        corrV = v_mean / np.mean(vel)
+    vel = np.array(vel) * corrV
+    
+    corrP = 1
+    if np.mean(pos) != 0:
+        corrP = p_mean / np.mean(pos)
+    pos = np.array(pos) * corrP
+    
+    sigma = [[rd.gauss(s_mean, s_std) for v in range(natom)] for I in range(nRep)]
+
+    # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma)
-    data = CTMQC(ctmqc_env)
-
-    with open('data', 'wb') as f:
-        pickle.dump(data, f)
-
-else:
-    with open('data', 'rb') as f:
-        data = pickle.load(f)
-
-"""
-    ###   Now Plot the Data   ###
-"""
-
-if data.ctmqc_env['iter'] < 30:
-    whichPlot = ""
-
-# Actually do the plotting
-if isinstance(whichPlot, str):
-    whichPlot = whichPlot.lower()
-    if 'qm_fl_fk' in whichPlot:
-        fig, axes = plt.subplots(2)
-        # Plot the QM and adiabatic momentum
-
-        ax = axes[0]
-        fl_fk = (data.allAdMom[:, :, 0, 0] - data.allAdMom[:, :, 0, 1])
-        QM = data.allQlk[:, :, 0, 0, 1] * data.ctmqc_env['mass'][0]
-        fl_fk *= QM
-
-        def init_QM_fl_fk():
+    data = CTMQC(ctmqc_env, rootFolder)
+    
+    
+    """
+        ###   Now Plot the Data   ###
+    """
+    
+    if data.ctmqc_env['iter'] < 30:
+        whichPlot = ""
+    
+    # Actually do the plotting
+    if isinstance(whichPlot, str):
+        whichPlot = whichPlot.lower()
+        if 'qm_fl_fk' in whichPlot:
+            fig, axes = plt.subplots(2)
+            # Plot the QM and adiabatic momentum
+    
+            ax = axes[0]
+            fl_fk = (data.allAdMom[:, :, 0, 0] - data.allAdMom[:, :, 0, 1])
+            QM = data.allQlk[:, :, 0, 0, 1] * data.ctmqc_env['mass'][0]
+            fl_fk *= QM
+    
+            def init_QM_fl_fk():
+                minR, maxR = np.min(data.allR), np.max(data.allR)
+                minflQ, maxflQ = np.min(fl_fk), np.max(fl_fk)
+                minQ, maxQ = np.min(QM), np.max(QM)
+    
+                ln1, = ax.plot(np.linspace(minR, maxR, QM.shape[1]),
+                               np.linspace(minflQ, maxflQ, QM.shape[1]), 'y.')
+                ln2, = ax.plot(np.linspace(minR, maxR, QM.shape[1]),
+                               np.linspace(minQ, maxQ, QM.shape[1]),
+                               '.', color=(1, 0, 1))
+                return ln1, ln2
+    
+            def ani_init_2():
+                return ln1, ln2
+    
+            def animate_QM_fl_fk(i):
+                step = i % len(data.allt)
+                ln1.set_ydata(fl_fk[step, :])  # update the data.
+                ln1.set_xdata(data.allR[step, :, 0])
+                ln2.set_ydata(QM[step, :])  # update the data.
+                ln2.set_xdata(data.allR[step, :, 0])
+                return ln1, ln2
+    
+            ln1, ln2 = init_QM_fl_fk()
+            axes[1].plot(data.allR[:, :, 0], data.allE[:, 0, 0])
+    
+            ani = animation.FuncAnimation(
+                    fig, animate_QM_fl_fk, init_func=ani_init_2,
+                    interval=10, blit=True)
+    
+            plt.show()
+    
+        # Nuclear Density
+        if whichPlot == 'nucl_dens':
+            nstep, nrep, natom = np.shape(data.allR)
+            allND = [qUt.calc_nucl_dens_PP(R, sig)
+                     for R, sig in zip(data.allR, data.allSigma)]
+            allND = np.array(allND)
             minR, maxR = np.min(data.allR), np.max(data.allR)
-            minflQ, maxflQ = np.min(fl_fk), np.max(fl_fk)
-            minQ, maxQ = np.min(QM), np.max(QM)
-
-            ln1, = ax.plot(np.linspace(minR, maxR, QM.shape[1]),
-                           np.linspace(minflQ, maxflQ, QM.shape[1]), 'y.')
-            ln2, = ax.plot(np.linspace(minR, maxR, QM.shape[1]),
-                           np.linspace(minQ, maxQ, QM.shape[1]),
-                           '.', color=(1, 0, 1))
-            return ln1, ln2
-
-        def ani_init_2():
-            return ln1, ln2
-
-        def animate_QM_fl_fk(i):
-            step = i % len(data.allt)
-            ln1.set_ydata(fl_fk[step, :])  # update the data.
-            ln1.set_xdata(data.allR[step, :, 0])
-            ln2.set_ydata(QM[step, :])  # update the data.
-            ln2.set_xdata(data.allR[step, :, 0])
-            return ln1, ln2
-
-        ln1, ln2 = init_QM_fl_fk()
-        axes[1].plot(data.allR[:, :, 0], data.allE[:, 0, 0])
-
-        ani = animation.FuncAnimation(
-                fig, animate_QM_fl_fk, init_func=ani_init_2,
-                interval=10, blit=True)
-
+            minND, maxND = np.min(allND[:, 0]), np.max(allND[:, 0])
+            f, axes = plt.subplots(1)
+    
+            ln, = axes.plot(np.linspace(minR, maxR, nrep),
+                            np.linspace(minND, maxND, nrep),
+                            '.', color=(1., 0., 1.))
+    
+            def ani_init_1():
+                for I in range(nrep):
+                    axes.plot(data.allR[:, I, 0], data.allE[:, I, 0],
+                              lw=0.3, alpha=0.2)
+                return ln,
+    
+            def animate_ND(i):
+                step = i % nstep
+                ln.set_ydata(allND[step][0])
+                ln.set_xdata(allND[step][1])
+                return ln,
+    
+            ani = animation.FuncAnimation(
+                    f, animate_ND, init_func=ani_init_1, interval=10, blit=True)
+    
+            plt.show()
+    
+        R = data.allR[:, 0]
+        if '|c|^2' in whichPlot:
+            plt.figure()
+            # Plot ad coeffs
+            for I in range(data.ctmqc_env['nrep']):
+                params = {'lw': 0.5, 'alpha': 0.1, 'color': 'r'}
+                plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 0], params)
+                params = {'lw': 0.5, 'alpha': 0.1, 'color': 'b'}
+                plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 1], params)
+    
+            avgData = np.mean(data.allAdPop, axis=1)
+            params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'r'}
+            plot.plot_ad_pops(data.allt, avgData[:, 0, 0], params)
+            params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'b'}
+            plot.plot_ad_pops(data.allt, avgData[:, 0, 1], params)
+            plt.xlabel("Time [au_t]")
+            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
+                         (10, 0.5), fontsize=24)
+    
+    #        plt.title("Sigma = %.2f" % s_mean)
+    #        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_pops.png" % s_mean)
+    
+        if 'deco' in whichPlot:
+            # Plot Decoherence
+            plt.figure()
+            allDeco = data.allAdPop[:, :, :, 0] * data.allAdPop[:, :, :, 1]
+            avgDeco = np.mean(allDeco, axis=1)
+            plt.plot(data.allt, avgDeco)
+    
+            minD, maxD = np.min(avgDeco), np.max(avgDeco)
+            rD = maxD - minD
+            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
+                         (10, minD+(rD/2.)), fontsize=24)
+            plt.ylabel("Coherence")
+            plt.xlabel("Time [au_t]")
+    
+    #        plt.title("Sigma = %.2f" % s_mean)
+    #        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_deco.png" % s_mean)
+    
+        if 'rlk' in whichPlot:
+            f, a = plt.subplots()
+            ln_lk = a.plot(data.allt, data.allRlk[:, 0, 0, 1], 'b-', lw=1, alpha=1)
+            ln_I0 = a.plot(data.allt, data.allRI0[:, :, 0],
+                           'k--', lw=0.7, alpha=0.5)
+            
+            avgRI0 = np.average(data.allRI0[:, :, 0], axis=1)
+            stdRI0 = np.std(data.allRI0[:, :, 0], axis=1)
+            minRI0 = np.min(data.allRI0[:, :, 0], axis=1)
+            maxRI0 = np.max(data.allRI0[:, :, 0], axis=1)
+    #        a.plot(data.allt, avgRI0, 'k--')
+            a.plot(data.allt, maxRI0 + 2*stdRI0, 'g--')
+            a.plot(data.allt, minRI0 - 2*stdRI0, 'g--')
+            
+            a.set_xlabel("Time [au_t]")
+            a.set_ylabel(r"Rlk [bohr$^{-1}$]")
+            a.legend([ln_lk[0], ln_I0[0]], [r'$\mathbf{R}_{lk, \nu}^{0}$',
+                                            r"$\mathbf{R}_{0, \nu}^{I}$"])
+            
+    
+        if '|u|^2' in whichPlot:
+            plt.figure()
+            plot.plot_di_pops(data.allt, data.allu, "Time")
+        if 'norm' in whichPlot:
+            norm = np.linalg.norm(data.allC, axis=3)
+            plt.figure()
+            plt.plot(data.allt, norm[:, :, 0], lw=0.7, alpha=0.5)
+            plt.plot(data.allt, np.mean(norm[:, :, 0], axis=1), lw=1.3, ls='--')
+            plt.xlabel("Time [au_t]")
+            plt.ylabel("Norm (adPops)")
+        if 'rabi' in whichPlot:
+            plot.plot_Rabi(data.allt, data.allH[0, 0])
+        if 'ham' in whichPlot:
+            plot.plot_H(data.allt, data.allH, "Time")
+    
+        if 'ham_ax' in whichPlot:
+            plot.plot_H_all_x(data.ctmqc_env)
+    
+        if 'eh_frc_ax' in whichPlot:
+            for i in np.arange(0, 1, 0.1):
+                pops = [1-i, i]
+                data.ctmqc_env['C'] = np.array([[complex(np.sqrt(1-i), 0),
+                                                 complex(np.sqrt(i), 0)]])
+                plot.plot_eh_frc_all_x(data.ctmqc_env, label=r"$|C|^2 = $%.1g" % i)
+        if 'ad_frc_ax' in whichPlot:
+            plot.plot_adFrc_all_x(data.ctmqc_env)
+        if 'ad_ener_ax' in whichPlot:
+            plot.plot_ener_all_x(data.ctmqc_env)
+        if 'nacv_ax' in whichPlot:
+            plot.plot_NACV_all_x(data.ctmqc_env)
+    
         plt.show()
-
-    # Nuclear Density
-    if whichPlot == 'nucl_dens':
-        nstep, nrep, natom = np.shape(data.allR)
-        allND = [qUt.calc_nucl_dens_PP(R, sig)
-                 for R, sig in zip(data.allR, data.allSigma)]
-        allND = np.array(allND)
-        minR, maxR = np.min(data.allR), np.max(data.allR)
-        minND, maxND = np.min(allND[:, 0]), np.max(allND[:, 0])
-        f, axes = plt.subplots(1)
-
-        ln, = axes.plot(np.linspace(minR, maxR, nrep),
-                        np.linspace(minND, maxND, nrep),
-                        '.', color=(1., 0., 1.))
-
-        def ani_init_1():
-            for I in range(nrep):
-                axes.plot(data.allR[:, I, 0], data.allE[:, I, 0],
-                          lw=0.3, alpha=0.2)
-            return ln,
-
-        def animate_ND(i):
-            step = i % nstep
-            ln.set_ydata(allND[step][0])
-            ln.set_xdata(allND[step][1])
-            return ln,
-
-        ani = animation.FuncAnimation(
-                f, animate_ND, init_func=ani_init_1, interval=10, blit=True)
-
-        plt.show()
-
-    R = data.allR[:, 0]
-    if '|c|^2' in whichPlot:
-        plt.figure()
-        # Plot ad coeffs
-        for I in range(data.ctmqc_env['nrep']):
-            params = {'lw': 0.5, 'alpha': 0.1, 'color': 'r'}
-            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 0], params)
-            params = {'lw': 0.5, 'alpha': 0.1, 'color': 'b'}
-            plot.plot_ad_pops(data.allt, data.allAdPop[:, I, 0, 1], params)
-
-        avgData = np.mean(data.allAdPop, axis=1)
-        params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'r'}
-        plot.plot_ad_pops(data.allt, avgData[:, 0, 0], params)
-        params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'b'}
-        plot.plot_ad_pops(data.allt, avgData[:, 0, 1], params)
-        plt.xlabel("Time [au_t]")
-        plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
-                     (10, 0.5), fontsize=24)
-
-#        plt.title("Sigma = %.2f" % s_mean)
-#        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_pops.png" % s_mean)
-
-    if 'deco' in whichPlot:
-        # Plot Decoherence
-        plt.figure()
-        allDeco = data.allAdPop[:, :, :, 0] * data.allAdPop[:, :, :, 1]
-        avgDeco = np.mean(allDeco, axis=1)
-        plt.plot(data.allt, avgDeco)
-
-        minD, maxD = np.min(avgDeco), np.max(avgDeco)
-        rD = maxD - minD
-        plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
-                     (10, minD+(rD/2.)), fontsize=24)
-        plt.ylabel("Coherence")
-        plt.xlabel("Time [au_t]")
-
-#        plt.title("Sigma = %.2f" % s_mean)
-#        plt.savefig("/home/oem/Documents/PhD/Graphs/1D_Tully/Model1/CTMQC_25K/ChangingSigma/%.2f_deco.png" % s_mean)
-
-    if 'rlk' in whichPlot:
-        f, a = plt.subplots()
-        ln_lk = a.plot(data.allt, data.allRlk[:, 0, 0, 1], 'b-', lw=1, alpha=1)
-        ln_I0 = a.plot(data.allt, data.allRI0[:, :, 0],
-                       'k--', lw=0.7, alpha=0.5)
-        
-        avgRI0 = np.average(data.allRI0[:, :, 0], axis=1)
-        stdRI0 = np.std(data.allRI0[:, :, 0], axis=1)
-        minRI0 = np.min(data.allRI0[:, :, 0], axis=1)
-        maxRI0 = np.max(data.allRI0[:, :, 0], axis=1)
-#        a.plot(data.allt, avgRI0, 'k--')
-        a.plot(data.allt, maxRI0 + 2*stdRI0, 'g--')
-        a.plot(data.allt, minRI0 - 2*stdRI0, 'g--')
-        
-        a.set_xlabel("Time [au_t]")
-        a.set_ylabel(r"Rlk [bohr$^{-1}$]")
-        a.legend([ln_lk[0], ln_I0[0]], [r'$\mathbf{R}_{lk, \nu}^{0}$',
-                                        r"$\mathbf{R}_{0, \nu}^{I}$"])
-        
-
-    if '|u|^2' in whichPlot:
-        plt.figure()
-        plot.plot_di_pops(data.allt, data.allu, "Time")
-    if 'norm' in whichPlot:
-        norm = np.linalg.norm(data.allC, axis=3)
-        plt.figure()
-        plt.plot(data.allt, norm[:, :, 0], lw=0.7, alpha=0.5)
-        plt.plot(data.allt, np.mean(norm[:, :, 0], axis=1), lw=1.3, ls='--')
-        plt.xlabel("Time [au_t]")
-        plt.ylabel("Norm (adPops)")
-    if 'rabi' in whichPlot:
-        plot.plot_Rabi(data.allt, data.allH[0, 0])
-    if 'ham' in whichPlot:
-        plot.plot_H(data.allt, data.allH, "Time")
-
-    if 'ham_ax' in whichPlot:
-        plot.plot_H_all_x(data.ctmqc_env)
-
-    if 'eh_frc_ax' in whichPlot:
-        for i in np.arange(0, 1, 0.1):
-            pops = [1-i, i]
-            data.ctmqc_env['C'] = np.array([[complex(np.sqrt(1-i), 0),
-                                             complex(np.sqrt(i), 0)]])
-            plot.plot_eh_frc_all_x(data.ctmqc_env, label=r"$|C|^2 = $%.1g" % i)
-    if 'ad_frc_ax' in whichPlot:
-        plot.plot_adFrc_all_x(data.ctmqc_env)
-    if 'ad_ener_ax' in whichPlot:
-        plot.plot_ener_all_x(data.ctmqc_env)
-    if 'nacv_ax' in whichPlot:
-        plot.plot_NACV_all_x(data.ctmqc_env)
-
-    plt.show()
-#    plt.close("all")
+    #    plt.close("all")

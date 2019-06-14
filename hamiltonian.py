@@ -68,6 +68,31 @@ def getEigProps(H, ctmqc_env):
     return E, U
 
 
+def calcNACVgradPhi(pos, ctmqc_env):
+    """
+    Will use a different method to calculate the NACV. This function will
+    simply use:
+        d = <phil | grad phik>
+    """
+    dx = 1e-5
+
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
+
+    allU = [getEigProps(H, ctmqc_env)[1]
+            for H in (H_xm, H_x, H_xp)]
+
+    gradU = np.gradient(allU, dx, axis=0)
+    
+    NACV = np.zeros((2, 2))
+    for l in range(2):
+        for k in range(2):
+            NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
+
+    return NACV
+
+
 def calcNACV(irep, v, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
