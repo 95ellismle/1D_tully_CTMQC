@@ -211,6 +211,7 @@ def makeX_adiab(ctmqc_env, irep, iatom):
     E, U = Ham.getEigProps(H, ctmqc_env)
     NACV = Ham.calcNACV(irep, iatom, ctmqc_env)
     vel = ctmqc_env['vel'][irep, iatom]
+    
     # First part
     for l in range(nstates):
         X[l, l] = E[l]

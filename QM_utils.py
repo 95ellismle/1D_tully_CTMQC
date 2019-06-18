@@ -12,7 +12,7 @@ import random as rd
 import hamiltonian as Ham
 
 
-def calc_ad_frc(pos, ctmqc_env):
+def calc_gradE(pos, ctmqc_env):
     """
     Will calculate the forces from each adiabatic state (the grad E term)
     """
@@ -23,7 +23,7 @@ def calc_ad_frc(pos, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
     gradE = np.array(np.gradient(allE, dx, axis=0))[2]
-    return -gradE
+    return gradE
 
 
 def calc_ad_mom(ctmqc_env, irep, v, ad_frc=False):
@@ -32,7 +32,7 @@ def calc_ad_mom(ctmqc_env, irep, v, ad_frc=False):
     """
     if ad_frc is False:
         pos = ctmqc_env['pos'][irep, v]
-        ad_frc = calc_ad_frc(pos, ctmqc_env)
+        ad_frc = -calc_gradE(pos, ctmqc_env)
 
     ad_mom = ctmqc_env['adMom'][irep, v]
     dt = ctmqc_env['dt']
@@ -305,70 +305,6 @@ def calc_Qlk(ctmqc_env):
 
     return Qlk
 
-#    # If we can't use the Rlk then use the normal RI0
-#    for I in reps_to_complete:
-#        for v in range(nAtom):
-#            
-#            for l in range(nState):
-#                for k in range(l):
-#                    Qlk[I, v, l, k] = Ralpha[I, v] - RI0
-#                    Qlk[I, v, k, l] = Ralpha[I, v] - RI0
-#
-#    return Qlk / ctmqc_env['mass'][0]
-
-
-#def calc_Qlk(ctmqc_env):
-#    """
-#    Will return an array of size (Nstate, Nstate) containing data for the
-#    Quantum Momentum with the pairwise states.
-#    """
-#    nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
-#    nState = ctmqc_env['nstate']
-#
-#    calc_R(ctmqc_env)
-#
-#
-#    # Calculate Rlk
-#    pops = ctmqc_env['adPops']
-#    f = ctmqc_env['adMom']
-#    Ylk = np.zeros((nRep, nAtom, nState, nState))
-#    for J in range(nRep):
-#        for v in range(nAtom):
-#            for l in range(nState):
-#                Cl = pops[J, v, l]
-#                fl = f[J, v, l]
-#                for k in range(nState):
-#                    Ck = pops[J, v, k]
-#                    fk = f[J, v, k]
-#                    Ylk[J, v, l, k] = Ck * Cl * (fk - fl)
-#
-#    sum_Rlk = np.sum(Ylk, axis=0)
-#    if abs(sum_Rlk[0, 0, 1]) > 1e-12:
-#        # Then get the weighted pos
-#        alpha = calc_all_alpha(ctmqc_env)
-#        Ralpha = ctmqc_env['pos'] * alpha
-#        Rlk = np.zeros((nAtom, nState, nState))
-#        for I in range(nRep):
-#            for v in range(nAtom):
-#                Rav = Ralpha[I, v]
-#                for l in range(nState):
-#                    for k in range(l):
-#                        Rlk[v, l, k] += Rav * (
-#                                     Ylk[I, v, l, k] / sum_Rlk[v, l, k])
-#                    for k in range(l+1, nState):
-#                        Rlk[v, l, k] += Rav * (
-#                                     Ylk[I, v, l, k] / sum_Rlk[v, l, k])
-#
-#        Qlk = np.zeros_like(Ylk)
-#        for l in range(nState):
-#            for k in range(nState):
-#                Qlk[:, :, l, k] = Ralpha[:, :] - Rlk[:, l, k]
-#
-#        for v in range(nAtom):
-#            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
-#        return Qlk
-#    else:
-#        return np.zeros((nRep, nAtom, nState, nState))
 
 
 def test_QM_calc(ctmqc_env):
