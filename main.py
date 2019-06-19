@@ -22,10 +22,10 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1]*5
-all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500]*5
-all_model = [3, 3, 2, 2, 1, 1]*5
-all_p_mean = [-15, -15, -8, -8, -8, -8]*5
+all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1] * 5
+all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500] * 5
+all_model = [3, 3, 2, 2, 1, 1] * 5
+all_p_mean = [-15, -15, -8, -8, -8, -8] * 5
 s_mean = 0.3
 rootFolder = "/temp/mellis/TullyModels/Repeats/Repeat"
 
@@ -131,8 +131,9 @@ class CTMQC(object):
         """
         Will determine where to store the data.
         """
-        if self.root_folder is False:
-            self.root_folder = os.getcwd()
+        if bool(self.root_folder) is False:
+            self.saveFolder = False
+            return
         self.root_folder = os.path.abspath(self.root_folder)
         
         eHStr = "Ehren"
@@ -156,8 +157,9 @@ class CTMQC(object):
         # This should be recursive but I can't be bothered making it work in a
         #   class.
         count = 0
+        rootFold = self.root_folder[:]
         while (os.path.isdir(self.saveFolder)):
-            self.root_folder += "_%i" % count
+            self.root_folder = "%s_%i" % (rootFold, count)
             if self.root_folder is False:
                 self.root_folder = os.getcwd()
             self.root_folder = os.path.abspath(self.root_folder)
@@ -179,8 +181,63 @@ class CTMQC(object):
                 sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
             self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
                                                   modelStr, momStr, sigStr)
-
-        print(self.saveFolder)
+            count += 1
+        
+        try:
+            os.makedirs(self.saveFolder)
+        except OSError:
+            if bool(self.root_folder) is False:
+                self.saveFolder = False
+                return
+            self.root_folder = os.path.abspath(self.root_folder)
+            
+            eHStr = "Ehren"
+            if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQC"
+            elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCF_EhC"
+            elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCC_EhF"
+    
+            modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+            mom = np.round(self.ctmqc_env['vel'][0][0] * self.ctmqc_env['mass'][0])
+            momStr = "Kinit_%i" % int(mom)
+            if self.ctmqc_env['do_sigma_calc']:
+                sigStr = "varSig"
+            else:
+                sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
+            self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                  modelStr, momStr, sigStr)
+            
+            # This should be recursive but I can't be bothered making it work in a
+            #   class.
+            count = 0
+            rootFold = self.root_folder[:]
+            while (os.path.isdir(self.saveFolder)):
+                self.root_folder = "%s_%i" % (rootFold, count)
+                if self.root_folder is False:
+                    self.root_folder = os.getcwd()
+                self.root_folder = os.path.abspath(self.root_folder)
+                
+                eHStr = "Ehren"
+                if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQC"
+                elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQCF_EhC"
+                elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQCC_EhF"
+        
+                modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+                mom = np.round(self.ctmqc_env['vel'][0][0] * self.ctmqc_env['mass'][0])
+                momStr = "Kinit_%i" % int(mom)
+                if self.ctmqc_env['do_sigma_calc']:
+                    sigStr = "varSig"
+                else:
+                    sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
+                self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                      modelStr, momStr, sigStr)
+                count += 1
+        print("\r%s" % self.saveFolder, end="\r")
     
     def __init_nsteps(self):
         """
@@ -301,8 +358,8 @@ class CTMQC(object):
         self.ctmqc_env['nstate'] = nstate
         self.ctmqc_env['natom'] = natom
 
-        print("Number Replicas = %i" % nrep)
-        print("Number Atoms = %i" % natom)
+#        print("Number Replicas = %i" % nrep)
+#        print("Number Atoms = %i" % natom)
         self.__check_pos_vel_QM()  # Just check that the QM will be non-zero
 
     def __init_arrays(self):
@@ -676,24 +733,25 @@ class CTMQC(object):
         self.allt = np.array(self.allt)
         self.__chop_arrays()
         # Small runs are probably tests
-        if self.ctmqc_env['iter'] > 30:
+        if self.ctmqc_env['iter'] > 30 and self.saveFolder:
             self.__store_data()
         
         # Print some useful info
-        sumTime = np.sum(self.allTimes['step'])
-        nstep = self.ctmqc_env['iter']
-        msg = "\r                                                             "
-        msg += "                                                              "
-        msg += "\n\n***\n"
-        timeTaken = np.ceil(sumTime)
-        timeTaken = str(dt.timedelta(seconds=timeTaken))
-        msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
-        msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
-        msg += "  All Done!\n***\n"
-
-        msg += "\n\nAverage Times:"
-        print(msg)
-        print_timings(self.allTimes, 1)
+#        sumTime = np.sum(self.allTimes['step'])
+#        nstep = self.ctmqc_env['iter']
+#        msg = "\r                                                             "
+#        msg += "                                                              "
+#        msg += "\n\n***\n"
+#        timeTaken = np.ceil(sumTime)
+#        timeTaken = str(dt.timedelta(seconds=timeTaken))
+#        msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
+#        msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
+#        msg += "  All Done!\n***\n"
+#
+#        msg += "\n\nAverage Times:"
+#        print(msg)
+        print("Finished. Saving in %s" % self.saveFolder)
+#        print_timings(self.allTimes, 1)
 
     def plot_avg_vel(self):
         """
@@ -746,7 +804,7 @@ def doSim(i):
 if nSim > 1 and nRep > 30:
     import multiprocessing as mp
     
-    nProc = min([nSim, 16])
+    nProc = min([nSim, 20])
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processors" % (nSim, nProc))
     pool.map(doSim, range(nSim))
