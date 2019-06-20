@@ -21,6 +21,7 @@ def calc_ehren_adiab_force(irep, v, adFrc, adPops, ctmqc_env):
     NACV = ctmqc_env['NACV'][irep, v]
 
     F = np.sum(adPops * adFrc)
+
     for k in range(nstate):
         for l in range(nstate):
             Cl = np.conjugate(ctmqc_env['C'][irep, v, l])

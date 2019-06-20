@@ -22,19 +22,19 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1] * 5
-all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500] * 5
-all_model = [3, 3, 2, 2, 1, 1] * 5
-all_p_mean = [-15, -15, -8, -8, -8, -8] * 5
+all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500]
+all_model = [3, 3, 2, 2, 1, 1]
+all_p_mean = [-15, -15, -8, -8, -8, -8]
 s_mean = 0.3
-rootFolder = "/temp/mellis/TullyModels/Repeats/Repeat"
+rootFolder = "/temp/mellis/TullyModels/ConsQuantities"
 
 nRep = 200
 natom = 1
 mass = 2000
 
 
-nSim = max([len(all_velMultiplier), len(all_maxTime),
+nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean)])
 coeff = [[[complex(1, 0), complex(0, 0)]
           for v in range(natom)]
@@ -55,7 +55,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model):
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': False,  # Do the QM force
             'do_QM_C': False,  # Do the QM force
-            'do_sigma_calc': True,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
                 }
@@ -618,9 +618,9 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-            if self.ctmqc_env['iter'] % 1 == 0:
-                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-                                                           self.ctmqc_env['C'])
+#            if self.ctmqc_env['iter'] % 1 == 0:
+#                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+#                                                           self.ctmqc_env['C'])
             u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
                                            self.ctmqc_env['C'],
                                            self.ctmqc_env)
