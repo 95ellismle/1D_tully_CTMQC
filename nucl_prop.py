@@ -23,10 +23,10 @@ def calc_ad_frc(pos, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
     grad = np.array(np.gradient(allE, dx, axis=0))[2]
-    return grad
+    return -grad
 
 
-def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
+def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     """
     Will calculate the ehrenfest force in the adiabatic basis
     """
@@ -34,7 +34,7 @@ def calc_ehren_adiab_force(irep, gradE, adPops, ctmqc_env):
     E = Ham.getEigProps(ctmqc_env['H'][irep], ctmqc_env)[0]
     NACV = Ham.calcNACV(irep, ctmqc_env)
 
-    F = -np.sum(adPops * gradE)
+    F = np.sum(adPops * adFrc)
     for k in range(nstate):
         for l in range(nstate):
             Cl = np.conjugate(ctmqc_env['C'][irep, l])

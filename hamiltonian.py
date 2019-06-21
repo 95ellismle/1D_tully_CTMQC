@@ -61,11 +61,11 @@ def getEigProps(H, ctmqc_env):
     """
     E, U = np.linalg.eigh(H)
 
-    if ctmqc_env['tullyModel'] == 2:
-        E1, _ = np.linalg.eig(H)
-        if E1[0] > E1[1]:
-            U[0, 1] = -U[0, 1]
-            U[1, 1] = -U[1, 1]
+#    if ctmqc_env['tullyModel'] == 2:
+#        E1, _ = np.linalg.eig(H)
+#        if E1[0] > E1[1]:
+#            U[0, 1] = -U[0, 1]
+#            U[1, 1] = -U[1, 1]
     return E, U
 
 
@@ -83,6 +83,7 @@ def calcNACV(irep, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     gradH = np.gradient(allH, axis=0)[1]
     E, U = getEigProps(H_x, ctmqc_env)
+    ctmqc_env['E'] = E
     NACV = np.zeros((nState, nState), dtype=complex)
     for l in range(nState):
         for k in range(nState):
@@ -102,6 +103,29 @@ def calcNACV(irep, ctmqc_env):
                 raise SystemExit("NACV not antisymetric!")
     
     return NACV
+
+
+def calc_NACV_pos(pos, Hfunc, dx=1e-6):
+    """
+    Will calculate the NACV for a given position and Hamiltonian function
+    """
+    H_xm = Hfunc(pos - dx)
+    H_x = Hfunc(pos)
+    H_xp = Hfunc(pos + dx)
+    
+    allU = [np.linalg.eigh(H)[1] for H in (H_xm, H_x, H_xp)]
+    gradPhi = np.gradient(allU, axis=0)[1]
+    phi = allU[1]
+    
+    NACV = np.zeros((2, 2))
+    for l in range(2):
+        for k in range(2):
+            NACV[l, k] = np.dot(phi[l], gradPhi[k])
+
+    return NACV
+    
+    
+
 
 def trans_diab_to_adiab(H, u, ctmqc_env):
     """

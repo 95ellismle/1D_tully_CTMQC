@@ -17,9 +17,9 @@ import nucl_prop
 import elec_prop
 import plot
 
-nRep = 2
-v_mean = 5e-3
-v_std = 5e-4
+nRep = 1
+v_mean = 5e-3 * 1.6
+v_std = 0#5e-4
 
 pos = [-15 for i in range(nRep)]
 vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
@@ -31,11 +31,11 @@ ctmqc_env = {
         'vel': vel,  # Initial Nucl. veloc | nrep |au_v
         'u': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
-        'tullyModel': 2,  # Which model | | -
-        'max_time': 2500,  # How many steps | | -
+        'tullyModel': 3,  # Which model | | -
+        'max_time': 5500,  # How many steps | | -
         'dx': 1e-3,  # The increment for the NACV and grad E calc | | bohr
-        'dt': 4,  # The timestep | |au_t
-        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+        'dt': 0.1,  # The timestep | |au_t
+        'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
             }
 
 elecProp = elec_prop.elecProp(ctmqc_env)
@@ -65,9 +65,8 @@ class main(object):
         """
         max_time = self.ctmqc_env['max_time']
         dt = self.ctmqc_env['dt']
-        nsteps = max_time // dt
-        self.ctmqc_env['nsteps'] = nsteps
-        print(nsteps)
+        nsteps = max_time / dt
+        self.ctmqc_env['nsteps'] = int(nsteps)
 
     def __init_pos_vel_wf(self):
         """
@@ -148,6 +147,7 @@ class main(object):
 
         # For saving the data
         self.allX = np.zeros((nstep, nrep))
+        self.allv = np.zeros((nstep, nrep))
         self.allT = np.zeros((nstep))
         self.allE = np.zeros((nstep, nrep, nstate))
         self.allC = np.zeros((nstep, nrep, nstate), dtype=complex)
@@ -219,14 +219,14 @@ class main(object):
 
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
-            gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
-            self.ctmqc_env['adFrc'][irep] = gradE
+            adFrc = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
+            self.ctmqc_env['adFrc'][irep] = adFrc
 
             pop = elec_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
                                          self.ctmqc_env)
             self.ctmqc_env['adPops'][irep] = pop
 
-            F = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
+            F = nucl_prop.calc_ehren_adiab_force(irep, adFrc, pop, ctmqc_env)
             self.ctmqc_env['F_eh'] = F
             self.ctmqc_env['acc'] = F/ctmqc_env['mass'].astype(float)
 
@@ -296,11 +296,12 @@ class main(object):
         """
         istep = self.ctmqc_env['iter']
         self.allX[istep] = self.ctmqc_env['pos']
-        self.allE[istep] = self.ctmqc_env['E'][:, 0]
+        self.allv[istep] = self.ctmqc_env['vel']
+        self.allE[istep] = self.ctmqc_env['E']
         self.allC[istep] = self.ctmqc_env['C']
         self.allu[istep] = self.ctmqc_env['u']
         self.allAdPop[istep] = self.ctmqc_env['adPops']
-        self.allH[istep] = self.ctmqc_env['H'][:, 0]
+        self.allH[istep] = self.ctmqc_env['H']
 
         self.allT[istep] = self.ctmqc_env['t']
 
@@ -327,8 +328,27 @@ class main(object):
 
 data = main(ctmqc_env)
 
+f, axes = plt.subplots(2)
+
 R = data.allX[:, 0]
-plot.plot_ad_pops(data.allT, data.allAdPop[:, 0, :])
+axes[0].plot(data.allT, data.allAdPop[:, :, 0], 'r')
+axes[0].plot(data.allT, data.allAdPop[:, :, 1], 'b')
+
+
+deco = data.allAdPop[:, :, 0] * data.allAdPop[:, :, 1]
+axes[1].plot(data.allT, deco)
+
+f2, axes2 = plt.subplots(2)
+norm = np.sum(data.allAdPop, axis=2)
+axes2[0].plot(data.allT, norm)
+
+kinE = 0.5 * data.ctmqc_env['mass'][0] * (data.allv**2)
+potE = np.sum(data.allAdPop * data.allE, axis=2)
+axes2[1].plot(data.allT, kinE + potE, 'k')
+axes2[1].plot(data.allT, kinE, 'r')
+axes2[1].plot(data.allT, potE, 'g')
+
+
 #plot.plot_di_pops(data.allT, data.allu, "Time")
 #plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
 #plot.plot_ad_pops(R, data.allAdPop)
