@@ -21,7 +21,7 @@ nRep = 1
 v_mean = 5e-3 * 1.6
 v_std = 0#5e-4
 
-pos = [-15 for i in range(nRep)]
+pos = [-8 for i in range(nRep)]
 vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
 coeff = [[complex(1, 0), complex(0, 0)] for i in range(nRep)]
 
@@ -31,10 +31,10 @@ ctmqc_env = {
         'vel': vel,  # Initial Nucl. veloc | nrep |au_v
         'u': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
-        'tullyModel': 3,  # Which model | | -
-        'max_time': 5500,  # How many steps | | -
-        'dx': 1e-3,  # The increment for the NACV and grad E calc | | bohr
-        'dt': 0.1,  # The timestep | |au_t
+        'tullyModel': 2,  # Which model | | -
+        'max_time': 2500,  # How many steps | | -
+        'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+        'dt': 1,  # The timestep | |au_t
         'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
             }
 
