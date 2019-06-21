@@ -14,8 +14,10 @@ import random as rd
 
 import hamiltonian as Ham
 import nucl_prop
-import elec_prop
-import plot
+import elec_prop as e_prop
+#import plot
+import QM_utils as qUt
+
 
 nRep = 1
 v_mean = 5e-3 * 1.6
@@ -36,9 +38,11 @@ ctmqc_env = {
         'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
         'dt': 1,  # The timestep | |au_t
         'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
+        'do_QM_F': False,
+        'do_QM_C': False,
             }
 
-elecProp = elec_prop.elecProp(ctmqc_env)
+#elecProp = e_prop.elecProp(ctmqc_env)
 
 
 class main(object):
@@ -158,6 +162,9 @@ class main(object):
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
         self.ctmqc_env['F_eh'] = np.zeros((nrep))
+        self.ctmqc_env['F_qm'] = np.zeros((nrep))
+        self.ctmqc_env['NACV'] = np.zeros((nrep, nstate, nstate),
+                                          dtype=complex)
         self.ctmqc_env['F_ctmqc'] = np.zeros((nrep))
         self.ctmqc_env['acc'] = np.zeros((nrep))
         self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
@@ -189,6 +196,108 @@ class main(object):
         """
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
 
+    def __calc_F(self):
+        """
+        Will calculate the force on the nuclei
+        """
+        for irep in range(self.ctmqc_env['nrep']):
+            # Get Ehrenfest Forces
+            Feh = nucl_prop.calc_ehren_adiab_force(
+                                         irep,
+                                         self.ctmqc_env['adFrc'][irep],
+                                         self.ctmqc_env['adPops'][irep],
+                                         self.ctmqc_env)
+
+            Fqm = 0.0
+            if self.ctmqc_env['do_QM_F']:
+                Qlk = self.ctmqc_env['Qlk'][irep, 0, 1]
+                Fqm = nucl_prop.calc_QM_force(
+                                         self.ctmqc_env['adPops'][irep],
+                                         Qlk,
+                                         self.ctmqc_env['adMom'][irep],
+                                         self.ctmqc_env)
+
+            Ftot = float(Feh) + float(Fqm)
+            self.ctmqc_env['F_eh'][irep] = Feh
+            self.ctmqc_env['F_qm'][irep] = Fqm
+            self.ctmqc_env['frc'][irep] = Ftot
+            self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass'][0]
+
+    def __prop_wf(self):
+        """
+        Will propagate the wavefunction in the correct basis and transform the
+        coefficients.
+        """
+        # Propagate WF
+#        if self.ctmqc_env['do_QM_C']:
+#            if self.adiab_diab == 'adiab':
+#                e_prop.do_adiab_prop_QM(self.ctmqc_env)
+#            else:
+#                e_prop.do_diab_prop_QM(self.ctmqc_env)
+#        else:
+#            if self.adiab_diab == 'adiab':
+#                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
+#            else:
+        e_prop.do_diab_prop_ehren(self.ctmqc_env)
+
+        # Transform WF
+        if self.adiab_diab == 'adiab':
+#            if self.ctmqc_env['iter'] % 30 == 0:
+#                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+#                                                           self.ctmqc_env['C'])
+            u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
+                                           self.ctmqc_env['C'],
+                                           self.ctmqc_env)
+            self.ctmqc_env['u'] = u
+        else:
+#            if self.ctmqc_env['iter'] % 30 == 0:
+#                self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
+#                                                   self.ctmqc_env['u'])
+            C = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
+                                           self.ctmqc_env['u'],
+                                           self.ctmqc_env)
+            self.ctmqc_env['C'] = C
+
+    def __calc_quantities(self):
+        """
+        Will calculate the various paramters to feed into the force and
+        electronic propagators. These are then saved in the ctmqc_env dict.
+        """
+        # Do for each rep
+        for irep in range(self.ctmqc_env['nrep']):
+            # Get Hamiltonian
+            pos = self.ctmqc_env['pos'][irep]
+            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+
+            # Get adiabatic forces
+            adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
+            self.ctmqc_env['adFrc'][irep] = adFrc
+
+            # Get adiabatic populations
+            pop = e_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
+                                      self.ctmqc_env)
+            self.ctmqc_env['adPops'][irep] = pop
+
+            # Get adiabatic NACV
+            self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
+                                                           self.ctmqc_env)
+
+            # Get the QM quantities
+            if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
+                if any(Ck > 0.995 for Ck in pop):
+                    adMom = 0  # 0.8 * self.ctmqc_env['adMom'][irep, v]
+                else:
+
+                    adMom = qUt.calc_ad_mom(self.ctmqc_env, irep,
+                                            adFrc)
+                self.ctmqc_env['adMom'][irep] = adMom
+
+        # Do for all reps
+        if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
+            if self.ctmqc_env['do_sigma_calc']:
+                qUt.calc_sigma(self.ctmqc_env)
+            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
+
     def __init_step(self):
         """
         Will carry out the initialisation step (just 1 step without
@@ -217,20 +326,8 @@ class main(object):
                                             self.ctmqc_env)
                 self.ctmqc_env['u'][irep] = u
 
-        for irep in range(nrep):
-            pos = self.ctmqc_env['pos'][irep]
-            adFrc = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
-            self.ctmqc_env['adFrc'][irep] = adFrc
-
-            pop = elec_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
-                                         self.ctmqc_env)
-            self.ctmqc_env['adPops'][irep] = pop
-
-            F = nucl_prop.calc_ehren_adiab_force(irep, adFrc, pop, ctmqc_env)
-            self.ctmqc_env['F_eh'] = F
-            self.ctmqc_env['acc'] = F/ctmqc_env['mass'].astype(float)
-
-            self.ctmqc_env['frc'] = F
+        self.__calc_quantities()
+        self.__calc_F()
 
         self.ctmqc_env['t'] = 0
         self.ctmqc_env['iter'] = 0
@@ -259,28 +356,16 @@ class main(object):
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
+        self.__calc_quantities()
+
         for irep in range(nrep):
-            pos = self.ctmqc_env['pos'][irep]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
 
-            if self.adiab_diab == 'adiab':
-                elecProp.do_adiab_prop(irep)
-            else:
-                elecProp.do_diab_prop(irep)
-                C = Ham.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                            self.ctmqc_env['u'][irep],
-                                            self.ctmqc_env)
-                self.ctmqc_env['C'][irep] = C
+            self.__prop_wf()
 
-            pos = self.ctmqc_env['pos'][irep]
-            gradE = nucl_prop.calc_ad_frc(pos, self.ctmqc_env)
-            self.ctmqc_env['adFrc'][irep] = gradE
-
-            pop = elec_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
-                                         self.ctmqc_env)
-            self.ctmqc_env['adPops'][irep] = pop
-
-            F = nucl_prop.calc_ehren_adiab_force(irep, gradE, pop, ctmqc_env)
+            F = nucl_prop.calc_ehren_adiab_force(irep,
+                                                 ctmqc_env['adFrc'][irep],
+                                                 ctmqc_env['adPops'][irep],
+                                                 ctmqc_env)
             self.ctmqc_env['F_eh'] = F
             self.ctmqc_env['acc'] = F/ctmqc_env['mass'].astype(float)
 
