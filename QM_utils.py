@@ -9,8 +9,6 @@ import numpy as np
 import scipy.integrate as integrate
 import random as rd
 
-import hamiltonian as Ham
-
 
 def calc_ad_frc(pos, ctmqc_env):
     """
@@ -23,7 +21,7 @@ def calc_ad_frc(pos, ctmqc_env):
     H_xp = ctmqc_env['Hfunc'](pos + dx)
 
     allH = [H_xm, H_x, H_xp]
-    allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
+    allE = [np.linalg.eigh(H)[0] for H in allH]
     grad = np.array(np.gradient(allE, dx, axis=0))[2]
     return -grad
 
@@ -296,7 +294,6 @@ def calc_Qlk(ctmqc_env):
 #                        if Rlk[v, l, k] > maxRI0 or Rlk[v, l, k] < minRI0:
 #                            R = RI0[I, v]
 #                        else:
-#                            R = Rlk[v, l, k]
 
                     Qlk[I, l, k] = Ralpha[I] - Rlk[l, k]
 

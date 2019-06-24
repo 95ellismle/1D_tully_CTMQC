@@ -19,9 +19,9 @@ import elec_prop as e_prop
 import QM_utils as qUt
 
 
-nRep = 3
-v_mean = 5e-3 * 3
-p_mean = -15
+nRep = 2
+v_mean = 5e-3 * 1.6
+p_mean = -8
 
 p_std = 20 / (2000 * v_mean)
 v_std = 0#5e-4
@@ -36,13 +36,13 @@ ctmqc_env = {
         'vel': vel,  # Initial Nucl. veloc | nrep |au_v
         'u': coeff,  # Intial WF |nrep, 2| -
         'mass': [2000],  # nuclear mass |nrep| au_m
-        'tullyModel': 3,  # Which model | | -
-        'max_time': 1300,  # How many steps | | -
+        'tullyModel': 2,  # Which model | | -
+        'max_time': 2500,  # How many steps | | -
         'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
         'dt': 1,  # The timestep | |au_t
         'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
         'do_QM_F': False,
-        'do_QM_C': False,
+        'do_QM_C': True,
         'sigma': np.ones(nRep) * 0.3,
             }
 
@@ -198,6 +198,9 @@ class main(object):
         """
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
+        if self.adiab_diab == 'adiab':
+            self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
+            self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         if ctmqc_env['do_QM_C'] or ctmqc_env['do_QM_F']:
             self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
             self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
@@ -242,7 +245,7 @@ class main(object):
                 e_prop.do_diab_prop_QM(self.ctmqc_env)
         else:
             if self.adiab_diab == 'adiab':
-                pass
+                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
             else:
                 e_prop.do_diab_prop_ehren(self.ctmqc_env)
 
@@ -274,6 +277,8 @@ class main(object):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            self.ctmqc_env['E'], self.ctmqc_env['U'] = np.linalg.eigh(
+                                                     self.ctmqc_env['H'][irep])
             # Get adiabatic forces
             adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
             self.ctmqc_env['adFrc'][irep] = adFrc
@@ -405,22 +410,25 @@ data = main(ctmqc_env)
 f, axes = plt.subplots(2)
 
 R = data.allX[:, 0]
-axes[0].plot(data.allT, data.allAdPop[:, :, 0], 'r')
-axes[0].plot(data.allT, data.allAdPop[:, :, 1], 'b')
+axes[0].plot(data.allT, data.allAdPop[:, :, 0], 'r', lw=0.2, alpha=0.3)
+axes[0].plot(data.allT, data.allAdPop[:, :, 1], 'b', lw=0.2, alpha=0.3)
+axes[0].plot(data.allT, np.mean(data.allAdPop[:, :, 0], axis=1), 'r')
+axes[0].plot(data.allT, np.mean(data.allAdPop[:, :, 1], axis=1), 'b')
 
 
 deco = data.allAdPop[:, :, 0] * data.allAdPop[:, :, 1]
-axes[1].plot(data.allT, deco)
+axes[1].plot(data.allT, deco, lw=0.2, alpha=0.3)
+axes[1].plot(data.allT, np.mean(deco, axis=1))
 
 f2, axes2 = plt.subplots(2)
 norm = np.sum(data.allAdPop, axis=2)
-axes2[0].plot(data.allT, norm)
-#
-#kinE = 0.5 * data.ctmqc_env['mass'][0] * (data.allv**2)
-#potE = np.sum(data.allAdPop * data.allE, axis=2)
-#axes2[1].plot(data.allT, kinE + potE, 'k')
-#axes2[1].plot(data.allT, kinE, 'r')
-#axes2[1].plot(data.allT, potE, 'g')
+axes2[0].plot(data.allT, np.mean(norm, axis=1))
+
+kinE = 0.5 * data.ctmqc_env['mass'][0] * (data.allv**2)
+potE = np.sum(data.allAdPop * data.allE, axis=2)
+axes2[1].plot(data.allT, np.mean(kinE + potE, axis=1), 'k')
+axes2[1].plot(data.allT, np.mean(kinE, axis=1), 'r')
+axes2[1].plot(data.allT, np.mean(potE, axis=1), 'g')
 
 plt.show()
 

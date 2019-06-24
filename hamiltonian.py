@@ -54,21 +54,6 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
     return np.matrix([[V11, V12], [V12, V22]])
 
 
-def getEigProps(H, ctmqc_env):
-    """
-    Will return eigen properties (values and vectors) that are usable
-    (corrected) minus signs in the code.
-    """
-    E, U = np.linalg.eigh(H)
-
-#    if ctmqc_env['tullyModel'] == 2:
-#        E1, _ = np.linalg.eig(H)
-#        if E1[0] > E1[1]:
-#            U[0, 1] = -U[0, 1]
-#            U[1, 1] = -U[1, 1]
-    return E, U
-
-
 def calcNACV(irep, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
@@ -82,8 +67,7 @@ def calcNACV(irep, ctmqc_env):
 
     allH = [H_xm, H_x, H_xp]
     gradH = np.gradient(allH, axis=0)[1]
-    E, U = getEigProps(H_x, ctmqc_env)
-    ctmqc_env['E'] = E
+    E, U = np.linalg.eigh(H_x)
     NACV = np.zeros((nState, nState), dtype=complex)
     for l in range(nState):
         for k in range(nState):
@@ -134,7 +118,7 @@ def trans_diab_to_adiab(H, u, ctmqc_env):
     if len(u) != 2 and len(np.shape(u)) != 1:
         raise SystemExit("Incorrect Shape for diab coeff in trans func")
 
-    U = getEigProps(H, ctmqc_env)[1]
+    U = np.linalg.eigh(H)[1]
 
     return np.dot(U.T, u)
 
@@ -146,6 +130,6 @@ def trans_adiab_to_diab(H, C, ctmqc_env):
     if len(C) != 2 and len(np.shape(C)) != 1:
         raise SystemExit("Incorrect Shape for diab coeff in trans func")
 
-    U = getEigProps(H, ctmqc_env)[1]
+    U = np.linalg.eigh(H)[1]
 
     return np.dot(U, C)
