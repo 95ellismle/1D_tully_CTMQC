@@ -129,29 +129,40 @@ def makeX_diab_ehren(ctmqc_env, pos):
     return -1j * H
 
 
+def get_diffVal(var, var_tm, ctmqc_env):
+    """
+    Will get the necessary variables to do the linear interpolation.
+    """
+    dvar_E = (var - var_tm) / float(ctmqc_env['elec_steps'])
+    return dvar_E
+    
+
+
 def do_diab_prop_QM(ctmqc_env):
     """
     Will propagate the coefficients in the diabatic basis (without the
     diabatic NACE)
     """
     for irep in range(ctmqc_env['nrep']):
-        dx_E = (ctmqc_env['pos'][irep] - ctmqc_env['pos_tm'][irep])
-        dx_E /= float(ctmqc_env['elec_steps'])
+        H_tm = np.matrix(ctmqc_env['H_tm'][irep])
+        dH_E = get_diffVal(ctmqc_env['H'][irep], H_tm, ctmqc_env)
         
-        dH_E = (ctmqc_env['H'][irep] - ctmqc_env['H_tm'][irep])
-        dH_E /= float(ctmqc_env['elec_steps'])
-        dH_E = np.matrix(dH_E)
-        Htm = np.matrix(ctmqc_env['H_tm'][irep])
-    
-#        H1 = ctmqc_env[']
-        X1 = makeX_diab_QM(Htm)
+        Qlk_tm = np.matrix(ctmqc_env['Qlk_tm'][irep])
+        dQlk_E = get_diffVal(ctmqc_env['Qlk'][irep], Qlk_tm, ctmqc_env)
+        
+        f_tm = ctmqc_env['adMom_tm'][irep]
+        df_E = get_diffVal(ctmqc_env['adMom'][irep], f_tm, ctmqc_env)
+        
+        X1 = makeX_diab_QM(H_tm, Qlk_tm, f_tm, ctmqc_env['u'][irep])
         for Estep in range(ctmqc_env['elec_steps']):
-#            pos2 = ctmqc_env['pos_tm'][irep] + (Estep + 0.5) * dx_E   
-            H = Htm + (Estep + 0.5) * dH_E
-            X12 = makeX_diab_QM(H)
+            H = H_tm + (Estep + 0.5) * dH_E
+            Qlk = Qlk_tm + (Estep + 0.5) * dQlk_E
+            f = f_tm + (Estep + 0.5) * df_E
+            X12 = makeX_diab_QM(H, Qlk, f, ctmqc_env['u'][irep])
 
-            H = Htm + (Estep + 1.0) * dH_E
-            X2 = makeX_diab_QM(H)
+            H = H_tm + (Estep + 1.0) * dH_E
+            f = f_tm + (Estep + 1.0) * df_E
+            X2 = makeX_diab_QM(H, Qlk, f, ctmqc_env['u'][irep])
     
             ctmqc_env['u'][irep] = __RK4(ctmqc_env,
                                          ctmqc_env['u'][irep], X1, X12, X2)
@@ -160,11 +171,30 @@ def do_diab_prop_QM(ctmqc_env):
             X1 = X2[:]
 
 
-def makeX_diab_QM(H):
+def makeX_diab_QM(H, Qlk, f, u):
     """
     Will make the diabatic X matrix
     """
-    return -1j * H
+    u = np.array(u)
+    U = np.array(np.linalg.eigh(H)[1])
+    nstates = len(H)
+    
+    # Get Ehrenfest X
+    Xeh = -1j * H
+
+    # Calculate the adiabatic populations
+    C = np.matmul(U, u)
+    Cpops = np.conjugate(C) * C
+
+    # ammend X
+    Xqm = np.zeros_like(Xeh)
+    for l in range(nstates):
+        for k in range(nstates):
+            Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * Cpops[k]    
+    
+    Xqm = np.matmul(U.T, np.matmul(Xqm, U))
+    
+    return Xeh + Xqm
 
 
 def makeX_adiab_ehren(ctmqc_env, pos, irep):
@@ -197,10 +227,10 @@ def __RK4(ctmqc_env, coeff, X1, X12, X2):
     """
     dTe = ctmqc_env['dt'] / float(ctmqc_env['elec_steps'])
     
-    K1 = np.array(dTe * np.dot(X1, coeff))[0]
-    K2 = np.array(dTe * np.dot(X12, coeff + K1/2.))[0]
-    K3 = np.array(dTe * np.dot(X12, coeff + K2/2.))[0]
-    K4 = np.array(dTe * np.dot(X2, coeff + K3))[0]
+    K1 = np.array(dTe * np.matmul(X1, coeff))[0]
+    K2 = np.array(dTe * np.matmul(X12, coeff + K1/2.))[0]
+    K3 = np.array(dTe * np.matmul(X12, coeff + K2/2.))[0]
+    K4 = np.array(dTe * np.matmul(X2, coeff + K3))[0]
 
     Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
 
