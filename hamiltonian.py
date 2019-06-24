@@ -107,29 +107,3 @@ def calc_NACV_pos(pos, Hfunc, dx=1e-6):
             NACV[l, k] = np.dot(phi[l], gradPhi[k])
 
     return NACV
-    
-    
-
-
-def trans_diab_to_adiab(H, u, ctmqc_env):
-    """
-    Will transform the diabatic coefficients to adiabatic ones
-    """
-    if len(u) != 2 and len(np.shape(u)) != 1:
-        raise SystemExit("Incorrect Shape for diab coeff in trans func")
-
-    U = np.linalg.eigh(H)[1]
-
-    return np.dot(U.T, u)
-
-
-def trans_adiab_to_diab(H, C, ctmqc_env):
-    """
-    Will transform the adiabatic coefficients to diabatic ones
-    """
-    if len(C) != 2 and len(np.shape(C)) != 1:
-        raise SystemExit("Incorrect Shape for diab coeff in trans func")
-
-    U = np.linalg.eigh(H)[1]
-
-    return np.dot(U, C)

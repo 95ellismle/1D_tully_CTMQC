@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -11,6 +12,10 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import random as rd
+import collections
+import os
+import datetime as dt
+import time
 
 import hamiltonian as Ham
 import nucl_prop
@@ -19,16 +24,17 @@ import elec_prop as e_prop
 import QM_utils as qUt
 
 
-nRep = 2
-v_mean = 5e-3 * 1.6
-p_mean = -8
+nRep = 100
+v_mean = 5e-3 * 3
+p_mean = -15
 
 p_std = 20 / (2000 * v_mean)
 v_std = 0#5e-4
+savePath = "/temp/mellis/TullyModels/Dev"
 
-pos = [rd.gauss(-8, p_std) for i in range(nRep)]
+pos = [rd.gauss(p_mean, p_std) for i in range(nRep)]
 vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
-coeff = [[complex(1, 0), complex(0, 0)] for i in range(nRep)]
+coeff = [[complex(0, 0), complex(1, 0)] for i in range(nRep)]
 
 # All units must be atomic units
 ctmqc_env = {
@@ -40,24 +46,65 @@ ctmqc_env = {
         'max_time': 2500,  # How many steps | | -
         'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
         'dt': 1,  # The timestep | |au_t
-        'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': False,
+        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+        'do_QM_F': True,
         'do_QM_C': True,
         'sigma': np.ones(nRep) * 0.3,
             }
 
 #elecProp = e_prop.elecProp(ctmqc_env)
+def print_timings(timings_dict, ntabs=0, max_len=50, depth=0):
+    """
+    Will print timing data in a pretty way.
+
+    Inputs:
+        * timings_dict  =>  A dictionary containing all the timings data
+        * ntabs         =>  OPTIONAL (not recommended to change). Number of
+                            tabs in the printout.
+    Ouputs:
+        None
+    """
+    bullets = ['*', '>', '#', '-', '+', '=']
+
+    def print_line(line):
+        line = line+" "*(max_len-len(line))
+        print(line)
+
+    tab = "    "
+    for Tkey in timings_dict:
+        if isinstance(timings_dict[Tkey], (dict, collections.OrderedDict)):
+            line = "%s%s %s:" % (tab*ntabs, bullets[depth], Tkey)
+            print_line(line)
+            print_timings(timings_dict[Tkey], ntabs+1, depth=depth+1)
+        elif isinstance(timings_dict[Tkey], (list,)):
+            line = "%s%s %s:" % (tab*ntabs, bullets[depth], Tkey)
+            str_num = "%.3f s" % np.mean(timings_dict[Tkey])
+            line = line + " " * (max_len-26 -
+                                 (len(line) + len(str_num))
+                                 + ntabs*5) + str_num
+            print_line(line)
+        else:
+            line = "%s%s %s:" % (tab*ntabs, bullets[depth], Tkey)
+            str_num = "%.3f s" % timings_dict[Tkey]
+            line = line + " " * (max_len-26 -
+                                 (len(line) + len(str_num))
+                                 + ntabs*5) + str_num
+            print_line(line)
+    return
 
 
 class main(object):
     """
     Will carry out the full propagation from intialisation to end.
     """
-    allX = []
-    allT = []
+    allR = []
+    allt = []
 
-    def __init__(self, ctmqc_env):
+    def __init__(self, ctmqc_env, root_folder = False):
         self.ctmqc_env = ctmqc_env
+        self.root_folder = root_folder
+        
+        self.__create_folderpath()
         self.__init_tully_model()
         self.__init_nsteps()
         self.__init_pos_vel_wf()
@@ -65,6 +112,119 @@ class main(object):
 
         self.__init_step()
         self.__main_loop()
+        self.__finalise()  # Finish up and tidy
+
+    def __create_folderpath(self):
+        """
+        Will determine where to store the data.
+        """
+        if bool(self.root_folder) is False:
+            self.saveFolder = False
+            return
+        self.root_folder = os.path.abspath(self.root_folder)
+        
+        eHStr = "Ehren"
+        if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQC"
+        elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQCF_EhC"
+        elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+            eHStr = "CTMQCC_EhF"
+
+        modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
+        momStr = "Kinit_%i" % int(mom)
+#        if self.ctmqc_env['do_sigma_calc']:
+#            sigStr = "varSig"
+#        else:
+        sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
+        self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                              modelStr, momStr, sigStr)
+        
+        # This should be recursive but I can't be bothered making it work in a
+        #   class.
+        count = 0
+        rootFold = self.root_folder[:]
+        while (os.path.isdir(self.saveFolder)):
+            self.root_folder = "%s_%i" % (rootFold, count)
+            if self.root_folder is False:
+                self.root_folder = os.getcwd()
+            self.root_folder = os.path.abspath(self.root_folder)
+            
+            eHStr = "Ehren"
+            if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQC"
+            elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCF_EhC"
+            elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCC_EhF"
+    
+            modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
+            momStr = "Kinit_%i" % int(mom)
+#            if self.ctmqc_env['do_sigma_calc']:
+#                sigStr = "varSig"
+#            else:
+            sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
+            self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                  modelStr, momStr, sigStr)
+            count += 1
+        
+        try:
+            os.makedirs(self.saveFolder)
+        except OSError:
+            if bool(self.root_folder) is False:
+                self.saveFolder = False
+                return
+            self.root_folder = os.path.abspath(self.root_folder)
+            
+            eHStr = "Ehren"
+            if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQC"
+            elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCF_EhC"
+            elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+                eHStr = "CTMQCC_EhF"
+    
+            modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
+            momStr = "Kinit_%i" % int(mom)
+            if self.ctmqc_env['do_sigma_calc']:
+                sigStr = "varSig"
+            else:
+                sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
+            self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                  modelStr, momStr, sigStr)
+            
+            # This should be recursive but I can't be bothered making it work in a
+            #   class.
+            count = 0
+            rootFold = self.root_folder[:]
+            while (os.path.isdir(self.saveFolder)):
+                self.root_folder = "%s_%i" % (rootFold, count)
+                if self.root_folder is False:
+                    self.root_folder = os.getcwd()
+                self.root_folder = os.path.abspath(self.root_folder)
+                
+                eHStr = "Ehren"
+                if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQC"
+                elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQCF_EhC"
+                elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
+                    eHStr = "CTMQCC_EhF"
+        
+                modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+                mom = np.round(self.ctmqc_env['vel'][0][0] * self.ctmqc_env['mass'][0])
+                momStr = "Kinit_%i" % int(mom)
+                if self.ctmqc_env['do_sigma_calc']:
+                    sigStr = "varSig"
+                else:
+                    sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0][0]
+                self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                      modelStr, momStr, sigStr)
+                count += 1
+        print("\n%s" % self.saveFolder, end="\n")
 
     def __init_nsteps(self):
         """
@@ -154,28 +314,48 @@ class main(object):
             raise SystemExit("Mass not specified in startup")
 
         # For saving the data
-        self.allX = np.zeros((nstep, nrep))
+        self.allR = np.zeros((nstep, nrep))
+        self.allF = np.zeros((nstep, nrep))
+        self.allFeh = np.zeros((nstep, nrep))
+        self.allFqm = np.zeros((nstep, nrep))
+        self.allt = np.zeros((nstep))
         self.allv = np.zeros((nstep, nrep))
-        self.allT = np.zeros((nstep))
         self.allE = np.zeros((nstep, nrep, nstate))
         self.allC = np.zeros((nstep, nrep, nstate), dtype=complex)
         self.allu = np.zeros((nstep, nrep, nstate), dtype=complex)
         self.allAdPop = np.zeros((nstep, nrep, nstate))
         self.allH = np.zeros((nstep, nrep, nstate, nstate))
+        self.allAdMom = np.zeros((nstep, nrep, nstate))
+        self.allAdFrc = np.zeros((nstep, nrep, nstate))
+        self.allQlk = np.zeros((nstep, nrep, nstate, nstate))
+        self.allNACV = np.zeros((nstep, nrep, nstate, nstate), dtype=complex)
+        self.allRlk = np.zeros((nstep, nstate, nstate))
+        self.allAlpha = np.zeros((nstep, nrep))
+        self.allRI0 = np.zeros((nstep, nrep))
+        self.allSigma = np.zeros((nstep, nrep))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
         self.ctmqc_env['F_eh'] = np.zeros((nrep))
         self.ctmqc_env['F_qm'] = np.zeros((nrep))
-        self.ctmqc_env['NACV'] = np.zeros((nrep, nstate, nstate),
-                                          dtype=complex)
         self.ctmqc_env['acc'] = np.zeros((nrep))
         self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
+        self.ctmqc_env['NACV'] = np.zeros((nrep, nstate, nstate),
+                                          dtype=complex)
+        self.ctmqc_env['NACV_tm'] = np.zeros((nrep, nstate, nstate),
+                                             dtype=complex)
         self.ctmqc_env['U'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['E'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adFrc'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adPops'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adMom'] = np.zeros((nrep, nstate))
+        self.ctmqc_env['adMom_tm'] = np.zeros((nrep, nstate))
+        self.ctmqc_env['alpha'] = np.zeros((nrep))
+        self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
+        self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
+        self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
+        self.ctmqc_env['RI0'] = np.zeros((nrep))
+        self.ctmqc_env['Rlk_tm'] = np.zeros((nstate, nstate))
 
     def __init_tully_model(self):
         """
@@ -198,6 +378,7 @@ class main(object):
         """
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
+        self.ctmqc_env['U_tm'] = copy.deepcopy(self.ctmqc_env['U'])
         if self.adiab_diab == 'adiab':
             self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
             self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
@@ -217,18 +398,18 @@ class main(object):
                                          self.ctmqc_env['adPops'][irep],
                                          self.ctmqc_env)
 
-#            Fqm = 0.0
-#            if self.ctmqc_env['do_QM_F']:
-#                Qlk = self.ctmqc_env['Qlk'][irep, 0, 1]
-#                Fqm = nucl_prop.calc_QM_force(
-#                                         self.ctmqc_env['adPops'][irep],
-#                                         Qlk,
-#                                         self.ctmqc_env['adMom'][irep],
-#                                         self.ctmqc_env)
+            Fqm = 0.0
+            if self.ctmqc_env['do_QM_F']:
+                Qlk = self.ctmqc_env['Qlk'][irep, 0, 1]
+                Fqm = nucl_prop.calc_QM_force(
+                                         self.ctmqc_env['adPops'][irep],
+                                         Qlk,
+                                         self.ctmqc_env['adMom'][irep],
+                                         self.ctmqc_env)
 
-            Ftot = float(Feh) #+ float(Fqm)
+            Ftot = float(Feh) + float(Fqm)
             self.ctmqc_env['F_eh'][irep] = Feh
-#            self.ctmqc_env['F_qm'][irep] = Fqm
+            self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
             self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass'][0]
 
@@ -254,18 +435,18 @@ class main(object):
 #            if self.ctmqc_env['iter'] % 30 == 0:
 #                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
 #                                                           self.ctmqc_env['C'])
-            u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
-                                           self.ctmqc_env['C'],
-                                           self.ctmqc_env)
-            self.ctmqc_env['u'] = u
+            for irep in range(ctmqc_env['nrep']):
+                u = np.matmul(np.array(ctmqc_env['U'][irep]),
+                              np.array(ctmqc_env['C'][irep]))
+                self.ctmqc_env['u'][irep] = u
         else:
 #            if self.ctmqc_env['iter'] % 30 == 0:
 #                self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
 #                                                   self.ctmqc_env['u'])
-            C = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
-                                           self.ctmqc_env['u'],
-                                           self.ctmqc_env)
-            self.ctmqc_env['C'] = C
+            for irep in range(ctmqc_env['nrep']):
+                C = np.matmul(np.array(ctmqc_env['U'][irep].T),
+                              np.array(ctmqc_env['u'][irep]))
+                self.ctmqc_env['C'][irep] = C
 
     def __calc_quantities(self):
         """
@@ -277,8 +458,10 @@ class main(object):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
-            self.ctmqc_env['E'], self.ctmqc_env['U'] = np.linalg.eigh(
-                                                     self.ctmqc_env['H'][irep])
+            E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
+            self.ctmqc_env['E'][irep] = E
+            self.ctmqc_env['U'][irep] = U
+
             # Get adiabatic forces
             adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
             self.ctmqc_env['adFrc'][irep] = adFrc
@@ -314,22 +497,25 @@ class main(object):
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
-
+            _, self.ctmqc_env['U'][irep] = np.linalg.eigh(self.ctmqc_env['H'][irep])
         # Transform the coefficieints
-        if 'u' in self.ctmqc_env:
-            self.ctmqc_env['C'] = np.zeros((nrep, 2), dtype=complex)
-            for irep in range(nrep):
-                C = Ham.trans_diab_to_adiab(self.ctmqc_env['H'][irep],
-                                            self.ctmqc_env['u'][irep],
-                                            self.ctmqc_env)
-                self.ctmqc_env['C'][irep] = C
-        else:
-            self.ctmqc_env['u'] = np.zeros((nrep, 2), dtype=complex)
-            for irep in range(nrep):
-                u = Ham.trans_adiab_to_diab(self.ctmqc_env['H'][irep],
-                                            self.ctmqc_env['C'][irep],
-                                            self.ctmqc_env)
+        # Transform WF
+        if self.adiab_diab == 'adiab':
+            self.ctmqc_env['u'] = np.zeros_like(ctmqc_env['C'])
+            self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+                                                           self.ctmqc_env['C'])
+            for irep in range(ctmqc_env['nrep']):
+                u = np.matmul(np.array(ctmqc_env['U'][irep]),
+                              np.array(ctmqc_env['C'][irep]))
                 self.ctmqc_env['u'][irep] = u
+        else:
+            self.ctmqc_env['C'] = np.zeros_like(ctmqc_env['u'])
+            self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
+                                                           self.ctmqc_env['u'])
+            for irep in range(ctmqc_env['nrep']):
+                C = np.matmul(np.array(ctmqc_env['U'][irep].T),
+                              np.array(ctmqc_env['u'][irep]))
+                self.ctmqc_env['C'][irep] = C
 
         self.__calc_quantities()
         self.__calc_F()
@@ -343,13 +529,39 @@ class main(object):
         Will loop over all steps and propagate the dynamics
         """
         nstep = self.ctmqc_env['nsteps']
+        self.allTimes = {'step': [], 'force': [], 'wf_prop': {'prop': {
+                                                             'makeX': [],
+                                                             'RK4': [],
+                                                             'lin. interp': [],
+                                                              },
+                                                              'transform': []},
+                         'prep': []}
         for istep in range(nstep):
-            self.__save_data()
-            self.__ctmqc_step()
-            self.ctmqc_env['t'] += self.ctmqc_env['dt']
-            self.ctmqc_env['iter'] += 1
-            print("\rStep %i/%i" % (self.ctmqc_env['iter'], nstep), end="\r")
-        self.__finalise()
+            try:
+                t1 = time.time()
+                self.__save_data()
+                self.__ctmqc_step()
+                self.ctmqc_env['t'] += self.ctmqc_env['dt']
+                self.ctmqc_env['iter'] += 1
+
+                t2 = time.time()
+
+                # Print some useful info
+                self.allTimes['step'].append(t2 - t1)
+                avgTime = np.mean(self.allTimes['step'])
+                msg = "\rStep %i/%i  Time Taken = %.2gs" % (istep, nstep,
+                                                            avgTime)
+                timeLeft = int((nstep - istep) * avgTime)
+                timeLeft = str(dt.timedelta(seconds=timeLeft))
+                msg += "  Time Left = %s" % (timeLeft)
+                percentComplete = (float(istep) / float(nstep)) * 100
+                msg += "  %i%% Complete" % (percentComplete)
+    #            print(" "*200, end="\r")
+                print(msg,
+                      end="\r")
+            except KeyboardInterrupt:
+                print("\nOk Exiting Safely")
+                return
 
     def __ctmqc_step(self):
         """
@@ -374,29 +586,102 @@ class main(object):
         Will save data to RAM (arrays within this class)
         """
         istep = self.ctmqc_env['iter']
-        self.allX[istep] = self.ctmqc_env['pos']
-        self.allv[istep] = self.ctmqc_env['vel']
+        self.allR[istep] = self.ctmqc_env['pos']
+        self.allF[istep] = self.ctmqc_env['frc']
+        self.allFeh[istep] = self.ctmqc_env['F_eh']
+        self.allFqm[istep] = self.ctmqc_env['F_qm']
         self.allE[istep] = self.ctmqc_env['E']
         self.allC[istep] = self.ctmqc_env['C']
         self.allu[istep] = self.ctmqc_env['u']
         self.allAdPop[istep] = self.ctmqc_env['adPops']
         self.allH[istep] = self.ctmqc_env['H']
+        self.allAdMom[istep] = self.ctmqc_env['adMom']
+        self.allAdFrc[istep] = self.ctmqc_env['adFrc']
+        self.allv[istep] = self.ctmqc_env['vel']
+        self.allQlk[istep] = self.ctmqc_env['Qlk']
+        self.allRlk[istep] = self.ctmqc_env['Rlk']
+        self.allRI0[istep] = self.ctmqc_env['RI0']
+        self.allAlpha[istep] = self.ctmqc_env['alpha']
+        self.allNACV[istep] = self.ctmqc_env['NACV']
+        self.allSigma[istep] = self.ctmqc_env['sigma']
 
-        self.allT[istep] = self.ctmqc_env['t']
+        self.allt[istep] = self.ctmqc_env['t']
+
+    def __chop_arrays(self):
+        """
+        Will splice the arrays to the appropriate size (to num steps done)
+        """
+        self.allR = self.allR[:self.ctmqc_env['iter']]
+        self.allt = self.allt[:self.ctmqc_env['iter']]
+        self.allF = self.allF[:self.ctmqc_env['iter']]
+        self.allFeh = self.allFeh[:self.ctmqc_env['iter']]
+        self.allFqm = self.allFqm[:self.ctmqc_env['iter']]
+        self.allE = self.allE[:self.ctmqc_env['iter']]
+        self.allC = self.allC[:self.ctmqc_env['iter']]
+        self.allu = self.allu[:self.ctmqc_env['iter']]
+        self.allAdPop = self.allAdPop[:self.ctmqc_env['iter']]
+        self.allH = self.allH[:self.ctmqc_env['iter']]
+        self.allAdMom = self.allAdMom[:self.ctmqc_env['iter']]
+        self.allAdFrc = self.allAdFrc[:self.ctmqc_env['iter']]
+        self.allv = self.allv[:self.ctmqc_env['iter']]
+        self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
+        self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
+        self.allNACV = self.allNACV[:self.ctmqc_env['iter']]
+        self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
+        self.allAlpha = self.allAlpha[:self.ctmqc_env['iter']]
+        self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
+
+    def __store_data(self):
+        """
+        Will save all the arrays as numpy binary files.
+        """
+        if not os.path.isdir(self.saveFolder):
+            os.makedirs(self.saveFolder)
+
+        names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
+                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "alpha",]
+        arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
+                self.allE, self.allC, self.allu, self.allAdPop, self.allH,
+                self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
+                self.allRlk, self.allRI0, self.allSigma, self.allAlpha]
+        for name, arr in zip(names, arrs):
+            savepath = "%s/%s" % (self.saveFolder, name)
+            np.save(savepath, arr)
 
     def __finalise(self):
         """
         Will tidy things up, change types of storage arrays to numpy arrays.
         """
-        self.allX = np.array(self.allX)
-        self.allT = np.array(self.allT)
+        self.allR = np.array(self.allR)
+        self.allt = np.array(self.allt)
+        self.__chop_arrays()
+        # Small runs are probably tests
+        if self.ctmqc_env['iter'] > 30 and self.saveFolder:
+            self.__store_data()
+        
+        # Print some useful info
+        sumTime = np.sum(self.allTimes['step'])
+        nstep = self.ctmqc_env['iter']
+        msg = "\r                                                             "
+        msg += "                                                              "
+        msg += "\n\n***\n"
+        timeTaken = np.ceil(sumTime)
+        timeTaken = str(dt.timedelta(seconds=timeTaken))
+        msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
+        msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
+        msg += "  All Done!\n***\n"
+
+        msg += "\n\nAverage Times:"
+        print(msg)
+        print("Finished. Saving in %s" % self.saveFolder)
+        print_timings(self.allTimes, 1)
 
     def plot_avg_vel(self):
         """
         Will plot x vs t and fit a linear line through it to get avg velocity
         """
-        x = self.allX[:, 0, 0]
-        t = self.allT
+        x = self.allR[:, 0, 0]
+        t = self.allt
         fit = np.polyfit(t, x, 1)
         print(fit[0])
         plt.plot(t, x)
@@ -405,37 +690,37 @@ class main(object):
 
 
 
-data = main(ctmqc_env)
+runData = main(ctmqc_env, savePath)
 
 f, axes = plt.subplots(2)
 
-R = data.allX[:, 0]
-axes[0].plot(data.allT, data.allAdPop[:, :, 0], 'r', lw=0.2, alpha=0.3)
-axes[0].plot(data.allT, data.allAdPop[:, :, 1], 'b', lw=0.2, alpha=0.3)
-axes[0].plot(data.allT, np.mean(data.allAdPop[:, :, 0], axis=1), 'r')
-axes[0].plot(data.allT, np.mean(data.allAdPop[:, :, 1], axis=1), 'b')
+#R = runData.allR[:, 0]
+axes[0].plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=0.2, alpha=0.3)
+axes[0].plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=0.2, alpha=0.3)
+axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r')
+axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b')
 
 
-deco = data.allAdPop[:, :, 0] * data.allAdPop[:, :, 1]
-axes[1].plot(data.allT, deco, lw=0.2, alpha=0.3)
-axes[1].plot(data.allT, np.mean(deco, axis=1))
+deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
+axes[1].plot(runData.allt, deco, lw=0.2, alpha=0.3)
+axes[1].plot(runData.allt, np.mean(deco, axis=1))
 
 f2, axes2 = plt.subplots(2)
-norm = np.sum(data.allAdPop, axis=2)
-axes2[0].plot(data.allT, np.mean(norm, axis=1))
+norm = np.sum(runData.allAdPop, axis=2)
+axes2[0].plot(runData.allt, np.mean(norm, axis=1))
 
-kinE = 0.5 * data.ctmqc_env['mass'][0] * (data.allv**2)
-potE = np.sum(data.allAdPop * data.allE, axis=2)
-axes2[1].plot(data.allT, np.mean(kinE + potE, axis=1), 'k')
-axes2[1].plot(data.allT, np.mean(kinE, axis=1), 'r')
-axes2[1].plot(data.allT, np.mean(potE, axis=1), 'g')
+kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+axes2[1].plot(runData.allt, np.mean(kinE + potE, axis=1), 'k')
+axes2[1].plot(runData.allt, np.mean(kinE, axis=1), 'r')
+axes2[1].plot(runData.allt, np.mean(potE, axis=1), 'g')
 
 plt.show()
 
-#plot.plot_di_pops(data.allT, data.allu, "Time")
-#plot.plot_Rabi(data.allT, data.allH[0, 0], ctmqc_env)
-#plot.plot_ad_pops(R, data.allAdPop)
-#plot.plot_H(data.allT, data.allH, "Time")
+#plot.plot_di_pops(runData.allt, runData.allu, "Time")
+#plot.plot_Rabi(runData.allt, runData.allH[0, 0], ctmqc_env)
+#plot.plot_ad_pops(R, runData.allAdPop)
+#plot.plot_H(runData.allt, runData.allH, "Time")
 
 #plot.plot_H_all_x(ctmqc_env)
 #plot.plot_eh_frc_all_x(ctmqc_env)

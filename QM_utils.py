@@ -187,7 +187,6 @@ def calc_all_prod_gauss(ctmqc_env):
     prefact = ctmqc_env['sigma']**(-1)
     # Calculate the exponent
     exponent = np.zeros((nRep, nRep))
-#    for v in range(nAtom):
     for I in range(nRep):
         RIv = ctmqc_env['pos'][I]
         for J in range(nRep):
@@ -195,6 +194,7 @@ def calc_all_prod_gauss(ctmqc_env):
             sJv = ctmqc_env['sigma'][J]
             
             exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
+    
     return np.exp(exponent * 0.5) * prefact
 
 
@@ -206,9 +206,8 @@ def calc_WIJ(ctmqc_env, reps_to_complete=False):
     WIJ = np.zeros((nRep, nRep))
     allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env)
 
-    if reps_to_complete is not False:
+    if type(reps_to_complete) != list:
         for I in reps_to_complete:
-#            for v in range(nAtom):
             # Calc WIJ and alpha
             sigma2 = ctmqc_env['sigma'][:]**2
             WIJ[I, :] = allProdGauss_IJ[I, :] \
@@ -216,7 +215,6 @@ def calc_WIJ(ctmqc_env, reps_to_complete=False):
         WIJ /= 2.
     else:
          for I in range(nRep):
-#            for v in range(nAtom):
             # Calc WIJ and alpha
             sigma2 = ctmqc_env['sigma'][:]**2
             WIJ[I, :] = allProdGauss_IJ[I, :] \
@@ -224,20 +222,100 @@ def calc_WIJ(ctmqc_env, reps_to_complete=False):
     return WIJ
 
 
+def calc_omega(pops, f, reps_to_complete, ctmqc_env):
+    """
+    Will calculate the omega psuedo-weight in the expression for Rlk.
+    """
+    nRep = ctmqc_env['nrep']
+    nState = ctmqc_env['nstate']
+    
+    Ylk = np.zeros((nRep, nState, nState))
+    for J in reps_to_complete:
+        for l in range(nState):
+            Cl = pops[J, l]
+            fl = f[J, l]
+            for k in range(l):
+                Ck = pops[J, k]
+                fk = f[J, k]
+                Ylk[J, l, k] = Ck * Cl * (fk - fl)
+                Ylk[J, k, l] = -Ylk[J, l, k]
+    sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
+    
+    omega = np.zeros_like(Ylk)
+    for I in reps_to_complete:
+        for l in range(nState):
+            for k in range(l):
+                omega[I, l, k] = Ylk[I, l, k] / sum_Ylk[l, k]
+                omega[I, k, l] = omega[I, l, k]
+    return omega
+
+
+#def calc_Qlk_new(ctmqc_env):
+#    """
+#    Will calculate the state dependent Quantum Momentum using the Effective R
+#    intercept. That is if Rlk spikes the R0 will be used, else Rlk will be
+#    used.
+#    """
+#    nRep = ctmqc_env['nrep']
+#    nState = ctmqc_env['nstate']
+#
+#    pops = ctmqc_env['adPops']
+#    reps_to_complete = np.arange(nRep)
+##    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
+##                        if all(state_pop < 0.995 for state_pop in rep_pops)]
+#    
+#    Qlk = np.zeros((nRep, nState, nState))
+#    
+#    if len(reps_to_complete) > 0:
+#        WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
+#        alpha = np.sum(WIJ, axis=1)
+#        ctmqc_env['alpha'] = alpha
+#        Ralpha = ctmqc_env['pos'] * alpha
+#
+#        # Calculate R0
+#        RI0 = np.zeros((nRep))
+#        for I in reps_to_complete:
+#            RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
+#        ctmqc_env['RI0'] = RI0
+#
+#        # Calculate Rlk
+#        f = ctmqc_env['adMom']
+#        omega = calc_omega(pops, f, reps_to_complete, ctmqc_env)
+#        Rlk = np.zeros((nState, nState))
+#        for I in reps_to_complete:
+#            Rlk = Ralpha[I] * omega[I, :, :]
+#        
+#        ctmqc_env['Rlk'] = Rlk
+#        
+#        # Calculate the Quantum Momentum
+##        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
+##        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
+#        for I in reps_to_complete:
+##            for l in range(nState):
+##                for k in range(nState):
+##                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+##                        R = RI0[I]
+##                       
+##                    else:
+##                        R = Rlk[l, k]
+#
+#            Qlk[I, :, :] = Ralpha[I] - RI0[I]
+#            Qlk[I, :, :] = Ralpha[I] - RI0[I]
+#    
+#    return Qlk / ctmqc_env['mass'][0]
+
+
 def calc_Qlk(ctmqc_env):
     """
-    Will calculate the (effective) intercept for the Quantum Momentum based on
-    the values in the ctmqc_env dict. If this spikes then the R0 will be used,
-    if the Rlk isn't spiking then the Rlk will be used.
+    Will calculate the pairwise state dependent quantum momentum.
     """
     # Calculate Rlk -compare it to previous timestep Rlk
     nRep = ctmqc_env['nrep']
     nState = ctmqc_env['nstate']
 
     pops = ctmqc_env['adPops']
-    reps_to_complete = np.arange(nRep)
-    #reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, 0, :])
-    #                    if all(state_pop < 0.995 for state_pop in rep_pops)]
+    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
+                        if all(state_pop < 0.995 for state_pop in rep_pops)]
 
     # Calculate WIJ and alpha
     WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
@@ -283,19 +361,21 @@ def calc_Qlk(ctmqc_env):
         # Save the data
         ctmqc_env['Rlk'] = Rlk
         ctmqc_env['RI0'] = RI0
+        
 
         # Calculate the Quantum Momentum
-#        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
-#        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
+        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
+        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
         for I in reps_to_complete:
-#            for v in range(nAtom):
             for l in range(nState):
                 for k in range(nState):
-#                        if Rlk[v, l, k] > maxRI0 or Rlk[v, l, k] < minRI0:
-#                            R = RI0[I, v]
-#                        else:
+                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+                        R = RI0[I]
+                    else:
+                        R = Rlk[l, k]
 
-                    Qlk[I, l, k] = Ralpha[I] - Rlk[l, k]
+                    Qlk[I, l, k] = Ralpha[I] - R
+#                    Qlk[I, k, l] = Ralpha[I] - Rlk[l, k]
 
         # Divide by mass2
 #        for v in range(nAtom):
