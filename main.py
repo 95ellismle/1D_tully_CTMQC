@@ -23,9 +23,9 @@ import QM_utils as qUt
 redo = True
 whichPlot = ''
 all_velMultiplier = [3]#, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [2]#, 5500, 1500, 2500, 2000, 3500]
+all_maxTime = [30]#, 5500, 1500, 2500, 2000, 3500]
 all_model = [3]#, 3, 2, 2, 1, 1]
-all_p_mean = [-0]#, -15, -8, -8, -8, -8]
+all_p_mean = [-5]#, -15, -8, -8, -8, -8]
 s_mean = 0.3
 rootFolder = "/temp/mellis/TullyModels/ConsQuantities"
 
@@ -53,8 +53,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model):
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': 1,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': False,  # Do the QM force
-            'do_QM_C': False,  # Do the QM force
+            'do_QM_F': True,  # Do the QM force
+            'do_QM_C': True,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
@@ -808,7 +808,7 @@ def doSim(i):
 
     # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model)
-    CTMQC(ctmqc_env, rootFolder)
+    return CTMQC(ctmqc_env, rootFolder)
     
 
 if nSim > 1 and nRep > 30:
@@ -820,4 +820,19 @@ if nSim > 1 and nRep > 30:
     pool.map(doSim, range(nSim))
 else:
     for iSim in range(nSim):
-        doSim(iSim)
+        runData = doSim(iSim)
+
+
+
+def plotQlk(runData):
+    plt.figure()
+    plt.plot(runData.allt, runData.allQlk[:, :, 0, 0, 1], 'k', lw=0.4)
+    plt.plot(runData.allt, runData.allQlk[:, :, 0, 0, 0], 'g', lw=0.4)
+    plt.plot(runData.allt, runData.allQlk[:, :, 0, 1, 1], 'r', lw=0.4)
+    plt.plot(runData.allt, runData.allQlk[:, :, 0, 1, 0], 'b', lw=0.4)
+    
+def plotPops(runData):
+    plt.plot(runData.allt, runData.allAdPop[:, :, 0, 1], 'b', lw=0.4)
+    plt.plot(runData.allt, runData.allAdPop[:, :, 0, 0], 'r', lw=0.4)
+    plt.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0, 0], axis=1), 'r')
+    plt.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0, 1], axis=1), 'b')

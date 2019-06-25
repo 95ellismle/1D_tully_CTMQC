@@ -260,7 +260,6 @@ def calc_Qlk(ctmqc_env):
                     Ylk[J, v, l, k] = Ck * Cl * (fk - fl)
                     Ylk[J, v, k, l] = -Ylk[J, v, l, k]
     sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
-    
     # Calculate Qlk
     Qlk = np.zeros((nRep, nAtom, nState, nState))
     if abs(sum_Ylk[0, 0, 1]) > 1e-12:
