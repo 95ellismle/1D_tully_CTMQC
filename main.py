@@ -39,7 +39,7 @@ savePath = False # "/temp/mellis/TullyModels/SmallerPosRepeats/Repeat"
 
 
 dT = 1
-elecSteps = 1
+elecSteps = 5
 doCTMQC = False
 
 doCTMQC_C = doCTMQC
@@ -710,7 +710,7 @@ for isim in range(nSim):
             'mass': [2000],  # nuclear mass |nrep| au_m
             'tullyModel': all_models[isim],  # Which model | | -
             'max_time': all_max_times[isim],  # How many steps | | -
-            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+            'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': dT,  # The timestep | |au_t
             'elec_steps': elecSteps,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,
