@@ -23,7 +23,7 @@ import QM_utils as qUt
 redo = True
 whichPlot = ''
 all_velMultiplier = [3]#, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [30]#, 5500, 1500, 2500, 2000, 3500]
+all_maxTime = [100]#, 5500, 1500, 2500, 2000, 3500]
 all_model = [3]#, 3, 2, 2, 1, 1]
 all_p_mean = [-5]#, -15, -8, -8, -8, -8]
 s_mean = 0.3
