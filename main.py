@@ -24,33 +24,26 @@ import elec_prop as e_prop
 import QM_utils as qUt
 
 
-nRep = 100
-v_mean = 5e-3 * 3
-p_mean = -15
+all_nReps = [1]# * 6 * 5
+all_vel_mults = [2.5]#, 1, 3, 1.6, 2.5, 1] * 5
+all_p_means = [-8]#, -15, -8, -8, -8, -8] * 5
+all_models = [1]#, 3, 2, 2, 1, 1] * 5
+all_max_times = [2500]#, 5500, 1500, 2500, 2000, 3500] * 5
 
-p_std = 20 / (2000 * v_mean)
-v_std = 0#5e-4
-savePath = "/temp/mellis/TullyModels/Dev"
+all_v_means = [5e-3 * i for i in all_vel_mults]
+nSim = np.min([len(i) for i in (all_nReps, all_v_means,
+                                all_p_means, all_models,
+                                all_max_times)])
 
-pos = [rd.gauss(p_mean, p_std) for i in range(nRep)]
-vel = [rd.gauss(v_mean, v_std) for i in range(nRep)]
-coeff = [[complex(0, 0), complex(1, 0)] for i in range(nRep)]
+savePath = False # "/temp/mellis/TullyModels/SmallerPosRepeats/Repeat"
 
-# All units must be atomic units
-ctmqc_env = {
-        'pos': pos,  # Intial Nucl. pos | nrep |in bohr
-        'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-        'u': coeff,  # Intial WF |nrep, 2| -
-        'mass': [2000],  # nuclear mass |nrep| au_m
-        'tullyModel': 2,  # Which model | | -
-        'max_time': 2500,  # How many steps | | -
-        'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
-        'dt': 1,  # The timestep | |au_t
-        'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-        'do_QM_F': True,
-        'do_QM_C': True,
-        'sigma': np.ones(nRep) * 0.3,
-            }
+
+dT = 0.5
+elecSteps = 1
+doCTMQC = False
+
+doCTMQC_C = doCTMQC
+doCTMQC_F = doCTMQC
 
 #elecProp = e_prop.elecProp(ctmqc_env)
 def print_timings(timings_dict, ntabs=0, max_len=50, depth=0):
@@ -420,33 +413,33 @@ class main(object):
         """
         # Propagate WF
         if self.ctmqc_env['do_QM_C']:
-            if self.adiab_diab == 'adiab':
-                pass
-            else:
-                e_prop.do_diab_prop_QM(self.ctmqc_env)
+#            if self.adiab_diab == 'adiab':
+#                e_prop.do_adiab_prop_QM(self.ctmqc_env, self.allTimes)
+#            else:
+            e_prop.do_diab_prop_QM(self.ctmqc_env)
         else:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
-            else:
-                e_prop.do_diab_prop_ehren(self.ctmqc_env)
+#            if self.adiab_diab == 'adiab':
+#                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
+#            else:
+            e_prop.do_diab_prop_ehren(self.ctmqc_env)
 
         # Transform WF
-        if self.adiab_diab == 'adiab':
-#            if self.ctmqc_env['iter'] % 30 == 0:
-#                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-#                                                           self.ctmqc_env['C'])
-            for irep in range(ctmqc_env['nrep']):
-                u = np.matmul(np.array(ctmqc_env['U'][irep]),
-                              np.array(ctmqc_env['C'][irep]))
-                self.ctmqc_env['u'][irep] = u
-        else:
+#        if self.adiab_diab == 'adiab':
+##            if self.ctmqc_env['iter'] % 30 == 0:
+##                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+##                                                           self.ctmqc_env['C'])
+#            for irep in range(ctmqc_env['nrep']):
+#                u = np.matmul(np.array(ctmqc_env['U'][irep]),
+#                              np.array(ctmqc_env['C'][irep]))
+#                self.ctmqc_env['u'][irep] = u
+#        else:
 #            if self.ctmqc_env['iter'] % 30 == 0:
 #                self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
 #                                                   self.ctmqc_env['u'])
-            for irep in range(ctmqc_env['nrep']):
-                C = np.matmul(np.array(ctmqc_env['U'][irep].T),
-                              np.array(ctmqc_env['u'][irep]))
-                self.ctmqc_env['C'][irep] = C
+        for irep in range(ctmqc_env['nrep']):
+            C = np.matmul(np.array(ctmqc_env['U'][irep].T),
+                          np.array(ctmqc_env['u'][irep]))
+            self.ctmqc_env['C'][irep] = C
 
     def __calc_quantities(self):
         """
@@ -484,7 +477,12 @@ class main(object):
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
 #            if self.ctmqc_env['do_sigma_calc']:
 #                qUt.calc_sigma(self.ctmqc_env)
+            self.ctmqc_env['Qlk'] = np.zeros((self.ctmqc_env['nrep'],
+                                              self.ctmqc_env['nstate'],
+                                              self.ctmqc_env['nstate']))
             self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
+#             = QM
+#            self.ctmqc_env['Qlk'][:, 1, 0] = QM
 
     def __init_step(self):
         """
@@ -687,43 +685,112 @@ class main(object):
         plt.plot(t, x)
         plt.plot(t, np.polyval(fit, t))
 
+for isim in range(nSim):
+    p_std = 10 / (2000 * all_v_means[isim])
+    v_std = 0#5e-4
+    pos = [rd.gauss(all_p_means[isim], p_std) for i in range(all_nReps[isim])]
+#    pos = [
+#        -16.054, -14.035, -14.369, -15.661, -14.884, -15.211, -14.389, -14.506, 
+#        -14.591, -14.688, -14.45, -15.151, -14.848, -15.097, -14.304, -15.213, 
+#        -15.925, -15.778, -14.472, -15.466, -14.947, -15.643, -15.239, -16.611, 
+#        -15.958, -14.28, -15.197, -14.83, -14.809, -14.574, -13.126, -15.65, 
+#        -14.712, -14.167, -14.71, -14.104, -14.478, -16.195, -15.313, -14.382, 
+#        -16.042, -15.603, -15.293, -15.732, -14.927, -13.336, -15.039, -14.262, 
+#        -14.18, -15.077, -16.097, -15.253, -14.935, -15.292, -14.763, -15.687, 
+#        -15.21, -14.621, -14.574, -14.832, -16.41, -15.499, -14.484, -15.391, 
+#        -14.113, -13.065, -16.928, -14.155, -15.665, -14.256, -14.989, -14.636, 
+#        -13.524, -14.445, -14.265, -15.267, -14.712, -15.531, -14.879, -16.825, 
+#        -14.376, -15.595, -15.075, -14.443, -15.161, -14.428, -14.553, -14.77, 
+#        -16.082, -15.321, -14.444, -16.362, -15.359, -15.168, -15.817, -14.09, 
+#        -13.84, -14.297, -14.551 ][:all_nReps[isim]]
+    vel = [rd.gauss(all_v_means[isim], v_std) for i in range(all_nReps[isim])]
+    coeff = [[complex(1, 0), complex(0, 0)] for i in range(all_nReps[isim])]
+    
+    # All units must be atomic units
+    ctmqc_env = {
+            'pos': pos,  # Intial Nucl. pos | nrep |in bohr
+            'vel': vel,  # Initial Nucl. veloc | nrep |au_v
+            'C': coeff,  # Intial WF |nrep, 2| -
+            'mass': [2000],  # nuclear mass |nrep| au_m
+            'tullyModel': all_models[isim],  # Which model | | -
+            'max_time': all_max_times[isim],  # How many steps | | -
+            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+            'dt': dT,  # The timestep | |au_t
+            'elec_steps': elecSteps,  # Num elec. timesteps per nucl. one | | -
+            'do_QM_F': doCTMQC_F,
+            'do_QM_C': doCTMQC_C,
+            'sigma': np.ones(all_nReps[isim]) * 0.3,
+                }
+    
+    runData = main(ctmqc_env, savePath)
 
 
 
-runData = main(ctmqc_env, savePath)
 
-f, axes = plt.subplots(2)
+# Test the adiabatic momentum
+if runData.ctmqc_env['do_QM_F'] or runData.ctmqc_env['do_QM_C']:
+    adMom = runData.allAdMom
+    adFrc = runData.allAdFrc
+    adFrcDiff = np.gradient(adMom, runData.ctmqc_env['dt'], axis=0)
+    if np.mean(np.abs(adFrcDiff - adFrc)) > 1e-5:
+        print("The time derivative of the adiabatic momentum doesn't give " +
+              "the adiabatic force.")
+        print("\n")
+        print("Plotting the adiabtic force calculated in the code and the " +
+              "adiabatic force calculated from the time-derivative of the " +
+              "momentum. The yellow and black lines should be on top of each" +
+              "other.")
+        plt.plot(runData.allt, adFrc[:, :, 0], 'k')
+        plt.plot(runData.allt, adFrc[:, :, 1], 'k')
+        plt.plot(runData.allt, adFrcDiff[:, :, 0], 'y')
+        plt.plot(runData.allt, adFrcDiff[:, :, 1], 'y')
+        raise SystemExit("BREAK")
 
-#R = runData.allR[:, 0]
-axes[0].plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=0.2, alpha=0.3)
-axes[0].plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=0.2, alpha=0.3)
-axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r')
-axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b')
 
 
-deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-axes[1].plot(runData.allt, deco, lw=0.2, alpha=0.3)
-axes[1].plot(runData.allt, np.mean(deco, axis=1))
 
-f2, axes2 = plt.subplots(2)
-norm = np.sum(runData.allAdPop, axis=2)
-axes2[0].plot(runData.allt, np.mean(norm, axis=1))
-
-kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
-potE = np.sum(runData.allAdPop * runData.allE, axis=2)
-axes2[1].plot(runData.allt, np.mean(kinE + potE, axis=1), 'k')
-axes2[1].plot(runData.allt, np.mean(kinE, axis=1), 'r')
-axes2[1].plot(runData.allt, np.mean(potE, axis=1), 'g')
-
-plt.show()
-
-#plot.plot_di_pops(runData.allt, runData.allu, "Time")
-#plot.plot_Rabi(runData.allt, runData.allH[0, 0], ctmqc_env)
-#plot.plot_ad_pops(R, runData.allAdPop)
-#plot.plot_H(runData.allt, runData.allH, "Time")
-
-#plot.plot_H_all_x(ctmqc_env)
-#plot.plot_eh_frc_all_x(ctmqc_env)
-#plot.plot_adFrc_all_x(ctmqc_env)
-#plot.plot_ener_all_x(ctmqc_env)
-#plot.plot_NACV_all_x(ctmqc_env)
+if runData.ctmqc_env['iter'] > 30:
+    f, axes = plt.subplots(2)
+    
+    #R = runData.allR[:, 0]
+    axes[0].plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=0.2, alpha=0.3)
+    axes[0].plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=0.2, alpha=0.3)
+    axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
+                 label="Ground")
+    axes[0].plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
+                 label="Excited")
+    axes[0].set_ylabel("Populations (ad)")
+    axes[0].legend()
+    
+    deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
+    axes[1].plot(runData.allt, deco, lw=0.2, alpha=0.3)
+    axes[1].plot(runData.allt, np.mean(deco, axis=1))
+    axes[1].set_ylabel("Coherence")
+    axes[1].set_xlabel("Time [au]")
+    
+    f2, axes2 = plt.subplots(2)
+    norm = np.sum(runData.allAdPop, axis=2)
+    axes2[0].plot(runData.allt, np.mean(norm, axis=1))
+    axes2[0].set_ylabel("Norm")
+    
+    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+    axes2[1].plot(runData.allt, np.mean(kinE + potE, axis=1), 'k',
+                  label="Total")
+    axes2[1].plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kinetic")
+    axes2[1].plot(runData.allt, np.mean(potE, axis=1), 'g', label="Potential")
+    axes2[1].set_ylabel("Energy [au]")
+    axes2[1].set_xlabel("Time [au]")
+    axes2[1].legend()
+    plt.show()
+    
+    #plot.plot_di_pops(runData.allt, runData.allu, "Time")
+    #plot.plot_Rabi(runData.allt, runData.allH[0, 0], ctmqc_env)
+    #plot.plot_ad_pops(R, runData.allAdPop)
+    #plot.plot_H(runData.allt, runData.allH, "Time")
+    
+    #plot.plot_H_all_x(ctmqc_env)
+    #plot.plot_eh_frc_all_x(ctmqc_env)
+    #plot.plot_adFrc_all_x(ctmqc_env)
+    #plot.plot_ener_all_x(ctmqc_env)
+    #plot.plot_NACV_all_x(ctmqc_env)

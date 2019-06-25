@@ -89,7 +89,7 @@ def calc_nucl_dens_PP(R, sigma):
     return nuclDens, R[:, 0]
 
 
-def calc_nucl_dens(RIv, v, ctmqc_env):
+def calc_nucl_dens(RIv, ctmqc_env):
     """
     Will calculate the nuclear density on replica I (for 1 atom)
 
@@ -99,8 +99,8 @@ def calc_nucl_dens(RIv, v, ctmqc_env):
         * sigma => the width of the gaussian on replica J atom v
         * ctmqc_env => the ctmqc environment
     """
-    RJv = ctmqc_env['pos'][:, v]
-    sigma = ctmqc_env['sigma'][:, v]
+    RJv = ctmqc_env['pos'][:]
+    sigma = ctmqc_env['sigma'][:]
     allGauss = [gaussian(RIv, RJ, sig) for sig, RJ in zip(sigma, RJv)]
     return np.mean(allGauss)
 
@@ -133,33 +133,32 @@ def calc_QM_FD(ctmqc_env):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
-    QM = np.zeros((nRep, nAtom))
+    nRep = ctmqc_env['nrep']
+    QM = np.zeros((nRep))
     for I in range(nRep):
-        for v in range(nAtom):
-            RIv = ctmqc_env['pos'][I, v]
-            dx = ctmqc_env['dx']
+        RIv = ctmqc_env['pos'][I]
+        dx = ctmqc_env['dx']
+    
+        nuclDens_xm = calc_nucl_dens(RIv - dx, ctmqc_env)
+        nuclDens = calc_nucl_dens(RIv, ctmqc_env)
+        nuclDens_xp = calc_nucl_dens(RIv + dx, ctmqc_env)
+    
+        gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
+                                   dx)[2]
+        if nuclDens < 1e-12:
+            return 0
+    
+        QM[I] = -gradNuclDens/(2*nuclDens)
         
-            nuclDens_xm = calc_nucl_dens(RIv - dx, v, ctmqc_env)
-            nuclDens = calc_nucl_dens(RIv, v, ctmqc_env)
-            nuclDens_xp = calc_nucl_dens(RIv + dx, v, ctmqc_env)
-        
-            gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
-                                       dx)[2]
-            if nuclDens < 1e-12:
-                return 0
-        
-            QM[I, v] = -gradNuclDens/(2*nuclDens)
-        
-    return QM / ctmqc_env['mass'][v]
+    return QM / ctmqc_env['mass'][0]
 
 
 def calc_QM_analytic(ctmqc_env):
     """
     Will use the analytic formula provided in SI to calculate the QM.
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
-    QM = np.zeros((nRep, nAtom))
+    nRep = ctmqc_env['nrep']#, ctmqc_env['natom']
+    QM = np.zeros(nRep)
     for I in range(nRep):
         RIv = ctmqc_env['pos'][I]
         WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
@@ -245,143 +244,148 @@ def calc_omega(pops, f, reps_to_complete, ctmqc_env):
     for I in reps_to_complete:
         for l in range(nState):
             for k in range(l):
-                omega[I, l, k] = Ylk[I, l, k] / sum_Ylk[l, k]
+                if abs(sum_Ylk[l, k]) > 1e-12:
+                    omega[I, l, k] = Ylk[I, l, k] / sum_Ylk[l, k]
                 omega[I, k, l] = omega[I, l, k]
     return omega
 
 
-#def calc_Qlk_new(ctmqc_env):
-#    """
-#    Will calculate the state dependent Quantum Momentum using the Effective R
-#    intercept. That is if Rlk spikes the R0 will be used, else Rlk will be
-#    used.
-#    """
-#    nRep = ctmqc_env['nrep']
-#    nState = ctmqc_env['nstate']
-#
-#    pops = ctmqc_env['adPops']
-#    reps_to_complete = np.arange(nRep)
-##    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
-##                        if all(state_pop < 0.995 for state_pop in rep_pops)]
-#    
-#    Qlk = np.zeros((nRep, nState, nState))
-#    
-#    if len(reps_to_complete) > 0:
-#        WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
-#        alpha = np.sum(WIJ, axis=1)
-#        ctmqc_env['alpha'] = alpha
-#        Ralpha = ctmqc_env['pos'] * alpha
-#
-#        # Calculate R0
-#        RI0 = np.zeros((nRep))
-#        for I in reps_to_complete:
-#            RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
-#        ctmqc_env['RI0'] = RI0
-#
-#        # Calculate Rlk
-#        f = ctmqc_env['adMom']
-#        omega = calc_omega(pops, f, reps_to_complete, ctmqc_env)
-#        Rlk = np.zeros((nState, nState))
-#        for I in reps_to_complete:
-#            Rlk = Ralpha[I] * omega[I, :, :]
-#        
-#        ctmqc_env['Rlk'] = Rlk
-#        
-#        # Calculate the Quantum Momentum
-##        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
-##        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
-#        for I in reps_to_complete:
-##            for l in range(nState):
-##                for k in range(nState):
-##                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
-##                        R = RI0[I]
-##                       
-##                    else:
-##                        R = Rlk[l, k]
-#
-#            Qlk[I, :, :] = Ralpha[I] - RI0[I]
-#            Qlk[I, :, :] = Ralpha[I] - RI0[I]
-#    
-#    return Qlk / ctmqc_env['mass'][0]
-
-
 def calc_Qlk(ctmqc_env):
     """
-    Will calculate the pairwise state dependent quantum momentum.
+    Will calculate the state dependent Quantum Momentum using the Effective R
+    intercept. That is if Rlk spikes the R0 will be used, else Rlk will be
+    used.
     """
-    # Calculate Rlk -compare it to previous timestep Rlk
     nRep = ctmqc_env['nrep']
     nState = ctmqc_env['nstate']
 
     pops = ctmqc_env['adPops']
-    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
-                        if all(state_pop < 0.995 for state_pop in rep_pops)]
-
-    # Calculate WIJ and alpha
-    WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
-    alpha = np.sum(WIJ, axis=1)
-    ctmqc_env['alpha'] = alpha
-    Ralpha = ctmqc_env['pos'] * alpha
-
-    # Calculate all the Ylk
-    f = ctmqc_env['adMom']
-    Ylk = np.zeros((nRep, nState, nState))
-    for J in reps_to_complete:
-#        for v in range(nAtom):
-        for l in range(nState):
-            Cl = pops[J, l]
-            fl = f[J, l]
-            for k in range(l):
-                Ck = pops[J, k]
-                fk = f[J, k]
-                Ylk[J, l, k] = Ck * Cl * (fk - fl)
-                Ylk[J, k, l] = -Ylk[J, l, k]
-    sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
+    reps_to_complete = np.arange(nRep)
+#    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
+#                        if all(state_pop < 0.995 for state_pop in rep_pops)]
     
-    # Calculate Qlk
     Qlk = np.zeros((nRep, nState, nState))
-    if abs(sum_Ylk[0, 1]) > 1e-12:
-        # Calculate the R0 (used if the Rlk spikes)
+    
+    if len(reps_to_complete) > 1:
+        WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
+        alpha = np.sum(WIJ, axis=1)
+        ctmqc_env['alpha'] = alpha
+        Ralpha = ctmqc_env['pos'] * alpha
+
+        # Calculate R0
         RI0 = np.zeros((nRep))
         for I in reps_to_complete:
-#            for v in range(nAtom):
             RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
+        ctmqc_env['RI0'] = RI0
 
-        # Calculate the Rlk
+        # Calculate Rlk
+        f = ctmqc_env['adMom']
+        omega = calc_omega(pops, f, reps_to_complete, ctmqc_env)
         Rlk = np.zeros((nState, nState))
         for I in reps_to_complete:
-#            for v in range(nAtom):
-            Rav = Ralpha[I]
-            for l in range(nState):
-                for k in range(l):
-                    Rlk[l, k] += Rav * (
-                                 Ylk[I, l, k] / sum_Ylk[l, k])
-                    Rlk[k, l] = Rlk[l, k]
-            
-        # Save the data
-        ctmqc_env['Rlk'] = Rlk
-        ctmqc_env['RI0'] = RI0
+            Rlk = Ralpha[I] * omega[I, :, :]
         
-
+        ctmqc_env['Rlk'] = Rlk
+        
         # Calculate the Quantum Momentum
-        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
-        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
+#        maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
+#        minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
         for I in reps_to_complete:
             for l in range(nState):
-                for k in range(nState):
-                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
-                        R = RI0[I]
-                    else:
-                        R = Rlk[l, k]
+                for k in range(l):
+#                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+#                        R = RI0[I]
+#                       
+#                    else:
+#                        R = Rlk[l, k]
 
-                    Qlk[I, l, k] = Ralpha[I] - R
-#                    Qlk[I, k, l] = Ralpha[I] - Rlk[l, k]
+                    Qlk[I, l, k] = Ralpha[I] - Rlk[l, k]
+                    Qlk[I, k, l] = Ralpha[I] - Rlk[l, k]
+#                    Qlk[I, :, :] = Ralpha[I] - RI0[I]
+    
+    return Qlk / ctmqc_env['mass'][0]
 
-        # Divide by mass2
-#        for v in range(nAtom):
-        Qlk /= ctmqc_env['mass'][0]
 
-    return Qlk
+#def calc_Qlk(ctmqc_env):
+#    """
+#    Will calculate the pairwise state dependent quantum momentum.
+#    """
+#    # Calculate Rlk -compare it to previous timestep Rlk
+#    nRep = ctmqc_env['nrep']
+#    nState = ctmqc_env['nstate']
+#
+#    pops = ctmqc_env['adPops']
+#    reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, :])
+#                        if all(state_pop < 0.995 for state_pop in rep_pops)]
+#
+#    # Calculate WIJ and alpha
+#    WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
+#    alpha = np.sum(WIJ, axis=1)
+#    ctmqc_env['alpha'] = alpha
+#    Ralpha = ctmqc_env['pos'] * alpha
+#
+#    # Calculate all the Ylk
+#    f = ctmqc_env['adMom']
+#    Ylk = np.zeros((nRep, nState, nState))
+#    for J in reps_to_complete:
+##        for v in range(nAtom):
+#        for l in range(nState):
+#            Cl = pops[J, l]
+#            fl = f[J, l]
+#            for k in range(l):
+#                Ck = pops[J, k]
+#                fk = f[J, k]
+#                Ylk[J, l, k] = Ck * Cl * (fk - fl)
+#                Ylk[J, k, l] = -Ylk[J, l, k]
+#    sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
+#    
+#    # Calculate Qlk
+#    Qlk = np.zeros((nRep, nState, nState))
+#    if abs(sum_Ylk[0, 1]) > 1e-12:
+#        # Calculate the R0 (used if the Rlk spikes)
+#        RI0 = np.zeros((nRep))
+#        for I in reps_to_complete:
+##            for v in range(nAtom):
+#            RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
+#
+#        # Calculate the Rlk
+#        Rlk = np.zeros((nState, nState))
+#        for I in reps_to_complete:
+##            for v in range(nAtom):
+#            Rav = Ralpha[I]
+#            for l in range(nState):
+#                for k in range(l):
+#                    Rlk[l, k] += Rav * (
+#                                 Ylk[I, l, k] / sum_Ylk[l, k])
+#                    Rlk[k, l] = Rlk[l, k]
+#            
+#        # Save the data
+#        ctmqc_env['Rlk'] = Rlk
+#        ctmqc_env['RI0'] = RI0
+#        
+#
+#        # Calculate the Quantum Momentum
+#        nonZeroRI0 = RI0[np.abs(RI0) > 0]
+#        if len(nonZeroRI0) > 0:
+#            maxRI0 = np.max(nonZeroRI0, axis=0)
+#            minRI0 = np.min(nonZeroRI0, axis=0)
+#        for I in reps_to_complete:
+#            for l in range(nState):
+#                for k in range(l):
+#                    R = Rlk[l, k]
+#                    if len(nonZeroRI0) > 0:
+#                        if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+#                            R = RI0[I]
+#
+#                    Qlk[I, l, k] = Ralpha[I] - R
+#                    Qlk[I, k, l] = Ralpha[I] - R
+##                    Qlk[I, k, l] = Ralpha[I] - Rlk[l, k]
+#
+#        # Divide by mass2
+##        for v in range(nAtom):
+#        Qlk /= ctmqc_env['mass'][0]
+#
+#    return Qlk
 
 
 
