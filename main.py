@@ -27,7 +27,7 @@ all_maxTime = [30]#, 5500, 1500, 2500, 2000, 3500]
 all_model = [3]#, 3, 2, 2, 1, 1]
 all_p_mean = [-5]#, -15, -8, -8, -8, -8]
 s_mean = 0.3
-rootFolder = "/temp/mellis/TullyModels/ConsQuantities"
+rootFolder = "/temp/mellis/TullyModels/Dev"
 
 nRep = 10
 natom = 1
