@@ -93,16 +93,16 @@ def calcNACVgradPhi(pos, ctmqc_env):
     return NACV
 
 
-def calcNACV(irep, v, ctmqc_env):
+def calcNACV(irep, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
     dx = ctmqc_env['dx']
     nState = ctmqc_env['nstate']
 
-    H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v] - dx)
-    H_x = ctmqc_env['H'][irep, v]
-    H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v] + dx)
+    H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] - dx)
+    H_x = ctmqc_env['H'][irep]
+    H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
 
     allH = [H_xm, H_x, H_xp]
     gradH = np.gradient(allH, dx, axis=0)[1]

@@ -10,22 +10,22 @@ import numpy as np
 import hamiltonian as Ham
 
 
-def calc_ehren_adiab_force(irep, v, adFrc, adPops, ctmqc_env):
+def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     """
     Will calculate the ehrenfest force in the adiabatic basis
     """
     nstate = ctmqc_env['nstate']
-    ctmqc_env['H'][irep, v] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep, v])
-    E = Ham.getEigProps(ctmqc_env['H'][irep, v], ctmqc_env)[0]
-    ctmqc_env['E'][irep, v] = E
-    NACV = ctmqc_env['NACV'][irep, v]
+    ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
+    E = Ham.getEigProps(ctmqc_env['H'][irep], ctmqc_env)[0]
+    ctmqc_env['E'][irep] = E
+    NACV = ctmqc_env['NACV'][irep]
 
     F = np.sum(adPops * adFrc)
 
     for k in range(nstate):
         for l in range(nstate):
-            Cl = np.conjugate(ctmqc_env['C'][irep, v, l])
-            Ck = ctmqc_env['C'][irep, v, k]
+            Cl = np.conjugate(ctmqc_env['C'][irep, l])
+            Ck = ctmqc_env['C'][irep, k]
             Clk = Cl * Ck
             Ekl = E[k] - E[l]
             F -= Clk * Ekl * NACV[l, k]

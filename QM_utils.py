@@ -22,19 +22,19 @@ def calc_gradE(pos, ctmqc_env):
     H_xp = ctmqc_env['Hfunc'](pos + dx)
     allH = [H_xm, H_x, H_xp]
     allE = [Ham.getEigProps(H, ctmqc_env)[0] for H in allH]
-    gradE = np.array(np.gradient(allE, dx, axis=0))[2]
+    gradE = np.array(np.gradient(allE, dx, axis=0))[1]
     return gradE
 
 
-def calc_ad_mom(ctmqc_env, irep, v, ad_frc=False):
+def calc_ad_mom(ctmqc_env, irep, ad_frc=False):
     """
     Will calculate the adiabatic momenta (time-integrated adiab force)
     """
     if ad_frc is False:
-        pos = ctmqc_env['pos'][irep, v]
+        pos = ctmqc_env['pos'][irep]
         ad_frc = -calc_gradE(pos, ctmqc_env)
 
-    ad_mom = ctmqc_env['adMom'][irep, v]
+    ad_mom = ctmqc_env['adMom'][irep]
     dt = ctmqc_env['dt']
 
     ad_mom += dt * ad_frc
@@ -74,22 +74,22 @@ def calc_nucl_dens_PP(R, sigma):
     Will calculate the nuclear density post-production
 
     Inputs:
-        * R => the positions for 1 step <np.array (nrep, natom)>
-        * sigma => the nuclear widths for 1 step <np.array (nrep, natom)>
+        * R => the positions for 1 step <np.array (nrep)>
+        * sigma => the nuclear widths for 1 step <np.array (nrep)>
     """
-    nRep, nAtom = np.shape(R)
+    nRep = np.shape(R)
     nuclDens = np.zeros(nRep)
 
     for I in range(nRep):
-        RIv = R[I, 0]
-        allGauss = [gaussian(RIv, RJv, sigma[I, 0])
-                    for RJv in R[:, 0]]
+        RIv = R[I]
+        allGauss = [gaussian(RIv, RJv, sigma[I])
+                    for RJv in R]
         nuclDens[I] = np.mean(allGauss)
 
-    return nuclDens, R[:, 0]
+    return nuclDens, R
 
 
-def calc_nucl_dens(RIv, v, ctmqc_env):
+def calc_nucl_dens(RIv, ctmqc_env):
     """
     Will calculate the nuclear density on replica I (for 1 atom)
 
@@ -99,8 +99,8 @@ def calc_nucl_dens(RIv, v, ctmqc_env):
         * sigma => the width of the gaussian on replica J atom v
         * ctmqc_env => the ctmqc environment
     """
-    RJv = ctmqc_env['pos'][:, v]
-    sigma = ctmqc_env['sigma'][:, v]
+    RJv = ctmqc_env['pos']
+    sigma = ctmqc_env['sigma']
     allGauss = [gaussian(RIv, RJ, sig) for sig, RJ in zip(sigma, RJv)]
     return np.mean(allGauss)
 
@@ -113,68 +113,65 @@ def calc_sigma(ctmqc_env):
     seems to blow up. To fix discontinuities a weighted stddev might work.
     """
     for I in range(ctmqc_env['nrep']):
-        for v in range(ctmqc_env['natom']):
-            cnst = ctmqc_env['const']
-            sigma_tm = ctmqc_env['sigma_tm'][I, v]
-            cutoff_rad = cnst * sigma_tm
-            sig_thresh = cnst/ctmqc_env['nrep'] * np.min(ctmqc_env['sigma_tm'])
+        cnst = ctmqc_env['const']
+        sigma_tm = ctmqc_env['sigma_tm'][I]
+        cutoff_rad = cnst * sigma_tm
+        sig_thresh = cnst/ctmqc_env['nrep'] * np.min(ctmqc_env['sigma_tm'])
 
-            distances = ctmqc_env['pos'] - ctmqc_env['pos'][I, v]
-            distMask = distances < cutoff_rad
-            if any(distMask):
-                new_var = np.std(distances[distances < cutoff_rad])
-            else:
-                print(cutoff_rad)
-                new_var = sig_thresh
-            ctmqc_env['sigma'][I, v] = new_var
+        distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
+        distMask = distances < cutoff_rad
+        if any(distMask):
+            new_var = np.std(distances[distances < cutoff_rad])
+        else:
+            print(cutoff_rad)
+            new_var = sig_thresh
+        ctmqc_env['sigma'][I] = new_var
 
 
 def calc_QM_FD(ctmqc_env):
     """
     Will calculate the quantum momentum (only for 1 atom currently)
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
-    QM = np.zeros((nRep, nAtom))
+    nRep = ctmqc_env['nrep']
+    QM = np.zeros(nRep)
     for I in range(nRep):
-        for v in range(nAtom):
-            RIv = ctmqc_env['pos'][I, v]
-            dx = ctmqc_env['dx']
+        RIv = ctmqc_env['pos'][I]
+        dx = ctmqc_env['dx']
+    
+        nuclDens_xm = calc_nucl_dens(RIv - dx, ctmqc_env)
+        nuclDens = calc_nucl_dens(RIv, ctmqc_env)
+        nuclDens_xp = calc_nucl_dens(RIv + dx, ctmqc_env)
+    
+        gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
+                                   dx)[2]
+        if nuclDens < 1e-12:
+            return 0
+    
+        QM[I] = -gradNuclDens/(2*nuclDens)
         
-            nuclDens_xm = calc_nucl_dens(RIv - dx, v, ctmqc_env)
-            nuclDens = calc_nucl_dens(RIv, v, ctmqc_env)
-            nuclDens_xp = calc_nucl_dens(RIv + dx, v, ctmqc_env)
-        
-            gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
-                                       dx)[2]
-            if nuclDens < 1e-12:
-                return 0
-        
-            QM[I, v] = -gradNuclDens/(2*nuclDens)
-        
-    return QM / ctmqc_env['mass'][v]
+    return QM / ctmqc_env['mass'][0]
 
 
 def calc_QM_analytic(ctmqc_env):
     """
     Will use the analytic formula provided in SI to calculate the QM.
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
-    QM = np.zeros((nRep, nAtom))
+    nRep = ctmqc_env['nrep']
+    QM = np.zeros(nRep)
     for I in range(nRep):
-        for v in range(nAtom):
-            RIv = ctmqc_env['pos'][I, v]
-            WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
-            allGauss = [gaussian(RIv, RJv, sig)
-                        for (RJv, sig) in zip(ctmqc_env['pos'][:, v],
-                                              ctmqc_env['sigma'][:, v])]
-            # Calc WIJ
-            sigma2 = ctmqc_env['sigma'][:, v]**2
-            WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+        RIv = ctmqc_env['pos'][I]
+        WIJ = np.zeros(ctmqc_env['nrep'])  # Only calc WIJ for rep I
+        allGauss = [gaussian(RIv, RJv, sig)
+                    for (RJv, sig) in zip(ctmqc_env['pos'],
+                                          ctmqc_env['sigma'])]
+        # Calc WIJ
+        sigma2 = ctmqc_env['sigma']**2
+        WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
+    
+        # Calc QM
+        QM[I] = np.sum(WIJ * (RIv - ctmqc_env['pos']))
         
-            # Calc QM
-            QM[I, v] = np.sum(WIJ * (RIv - ctmqc_env['pos'][:, v]))
-        
-    return QM / ctmqc_env['mass'][v]
+    return QM / ctmqc_env['mass'][0]
 
 
 def calc_all_prod_gauss(ctmqc_env):
@@ -182,20 +179,19 @@ def calc_all_prod_gauss(ctmqc_env):
     Will calculate the product of the gaussians in a more efficient way than
     simply brute forcing it.
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
+    nRep = ctmqc_env['nrep']
     
     # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
-    prefact = np.prod(ctmqc_env['sigma']**(-1), axis=1)
+    prefact = ctmqc_env['sigma']**(-1)
     # Calculate the exponent
     exponent = np.zeros((nRep, nRep))
-    for v in range(nAtom):
-        for I in range(nRep):
-            RIv = ctmqc_env['pos'][I, v]
-            for J in range(nRep):
-                RJv = ctmqc_env['pos'][J, v]
-                sJv = ctmqc_env['sigma'][J, v]
-                
-                exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
+    for I in range(nRep):
+        RIv = ctmqc_env['pos'][I]
+        for J in range(nRep):
+            RJv = ctmqc_env['pos'][J]
+            sJv = ctmqc_env['sigma'][J]
+            
+            exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
     return np.exp(exponent * 0.5) * prefact
 
 
@@ -203,25 +199,23 @@ def calc_WIJ(ctmqc_env, reps_to_complete=False):
     """
     Will calculate alpha for all replicas and atoms
     """
-    nRep, nAtom = ctmqc_env['nrep'], ctmqc_env['natom']
-    WIJ = np.zeros((nRep, nRep, nAtom))
+    nRep = ctmqc_env['nrep']
+    WIJ = np.zeros((nRep, nRep))
     allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env)
 
     if reps_to_complete is not False:
         for I in reps_to_complete:
-            for v in range(nAtom):
-                # Calc WIJ and alpha
-                sigma2 = ctmqc_env['sigma'][:, v]**2
-                WIJ[I, :, v] = allProdGauss_IJ[I, :] \
-                                / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
+            # Calc WIJ and alpha
+            sigma2 = ctmqc_env['sigma']**2
+            WIJ[I, :] = allProdGauss_IJ[I, :] \
+                            / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
         WIJ /= 2.
     else:
          for I in range(nRep):
-            for v in range(nAtom):
-                # Calc WIJ and alpha
-                sigma2 = ctmqc_env['sigma'][:, v]**2
-                WIJ[I, :, v] = allProdGauss_IJ[I, :] \
-                                / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
+            # Calc WIJ and alpha
+            sigma2 = ctmqc_env['sigma']**2
+            WIJ[I, :] = allProdGauss_IJ[I, :] \
+                            / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
     return WIJ
 
 
@@ -232,7 +226,7 @@ def calc_Qlk(ctmqc_env):
     if the Rlk isn't spiking then the Rlk will be used.
     """
     # Calculate Rlk -compare it to previous timestep Rlk
-    nRep, nAtom, = ctmqc_env['nrep'], ctmqc_env['natom']
+    nRep = ctmqc_env['nrep']
     nState = ctmqc_env['nstate']
 
     pops = ctmqc_env['adPops']
@@ -248,37 +242,34 @@ def calc_Qlk(ctmqc_env):
 
     # Calculate all the Ylk
     f = ctmqc_env['adMom']
-    Ylk = np.zeros((nRep, nAtom, nState, nState))
+    Ylk = np.zeros((nRep, nState, nState))
     for J in reps_to_complete:
-        for v in range(nAtom):
-            for l in range(nState):
-                Cl = pops[J, v, l]
-                fl = f[J, v, l]
-                for k in range(l):
-                    Ck = pops[J, v, k]
-                    fk = f[J, v, k]
-                    Ylk[J, v, l, k] = Ck * Cl * (fk - fl)
-                    Ylk[J, v, k, l] = -Ylk[J, v, l, k]
+        for l in range(nState):
+            Cl = pops[J, l]
+            fl = f[J, l]
+            for k in range(l):
+                Ck = pops[J, k]
+                fk = f[J, k]
+                Ylk[J, l, k] = Ck * Cl * (fk - fl)
+                Ylk[J, k, l] = -Ylk[J, l, k]
     sum_Ylk = np.sum(Ylk, axis=0)  # sum over replicas
     # Calculate Qlk
-    Qlk = np.zeros((nRep, nAtom, nState, nState))
-    if abs(sum_Ylk[0, 0, 1]) > 1e-12:
+    Qlk = np.zeros((nRep, nState, nState))
+    if abs(sum_Ylk[0, 1]) > 1e-12:
         # Calculate the R0 (used if the Rlk spikes)
-        RI0 = np.zeros((nRep, nAtom))
+        RI0 = np.zeros((nRep))
         for I in reps_to_complete:
-            for v in range(nAtom):
-                RI0[I, v] = np.dot(WIJ[I, :, v], ctmqc_env['pos'][:, v])
+            RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
 
         # Calculate the Rlk
-        Rlk = np.zeros((nAtom, nState, nState))
+        Rlk = np.zeros((nState, nState))
         for I in reps_to_complete:
-            for v in range(nAtom):
-                Rav = Ralpha[I, v]
-                for l in range(nState):
-                    for k in range(l):
-                        Rlk[v, l, k] += Rav * (
-                                     Ylk[I, v, l, k] / sum_Ylk[v, l, k])
-                        Rlk[v, k, l] = Rlk[v, l, k]
+            Rav = Ralpha[I]
+            for l in range(nState):
+                for k in range(l):
+                    Rlk[l, k] += Rav * (
+                                 Ylk[I, l, k] / sum_Ylk[l, k])
+                    Rlk[k, l] = Rlk[l, k]
             
         # Save the data
         ctmqc_env['Rlk'] = Rlk
@@ -288,19 +279,21 @@ def calc_Qlk(ctmqc_env):
         maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
         minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
         for I in reps_to_complete:
-            for v in range(nAtom):
-                for l in range(nState):
-                    for k in range(nState):
-                        if Rlk[v, l, k] > maxRI0 or Rlk[v, l, k] < minRI0:
-                            R = RI0[I, v]
-                        else:
-                            R = Rlk[v, l, k]
+            R = np.zeros((nState, nState))
+            for l in range(nState):
+                for k in range(l):
+                    if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+                        R[l, k] = RI0[I]
+                        R[k, l] = RI0[I]
+                    else:
+                        R[l, k] = Rlk[l, k]
+                        R[k, l] = Rlk[k, l]
 
-                        Qlk[I, v, l, k] = Ralpha[I, v] - R
+            Qlk[I, :, :] = Ralpha[I] - R
+            Qlk[I, :, :] = Ralpha[I] - R
 
         # Divide by mass2
-        for v in range(nAtom):
-            Qlk[:, v, :, :] /= ctmqc_env['mass'][v]
+        Qlk[:, :, :] /= ctmqc_env['mass'][0]
 
     return Qlk
 
