@@ -22,14 +22,14 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500]
-all_model = [3, 3, 2, 2, 1, 1]
-all_p_mean = [-15, -15, -8, -8, -8, -8]
+all_velMultiplier = [3]#, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [2]#, 5500, 1500, 2500, 2000, 3500]
+all_model = [3]#, 3, 2, 2, 1, 1]
+all_p_mean = [-0]#, -15, -8, -8, -8, -8]
 s_mean = 0.3
 rootFolder = "/temp/mellis/TullyModels/ConsQuantities"
 
-nRep = 200
+nRep = 10
 natom = 1
 mass = 2000
 
@@ -778,6 +778,16 @@ def doSim(i):
     s_std = 0
     
     pos = [[rd.gauss(p_mean, p_std) for v in range(natom)] for I in range(nRep)]
+    pos = np.array([[-15.132850264953916],
+                    [-15.035537944937454],
+                    [-15.06041110960171],
+                    [-14.779522321356895],
+                    [-15.170942986492186],
+                    [-14.894703237836561],
+                    [-15.113117117232768],
+                    [-14.583949369412588],
+                    [-15.372026580963544],
+                    [-14.591394891547226]])
 #    pos = [[-0.150001E+02], [-0.153679E+02], [-0.156864E+02],
 #           [-0.152605E+02], [-0.155048E+02]]
     
