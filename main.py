@@ -22,24 +22,27 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3]#, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [1300]#, 5500, 1500, 2500, 2000, 3500]
-all_model = [3]#, 3, 2, 2, 1, 1]
-all_p_mean = [-15]#, -15, -8, -8, -8, -8]
+all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1] * 12
+all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500] * 12
+all_model = [3, 3, 2, 2, 1, 1] * 12
+all_p_mean = [-15, -15, -8, -8, -8, -8] * 12
+all_doCTMQC_C = [True] * 36 + [False] * 36
+all_doCTMQC_F = [True] * 36 + [False] * 36
 s_mean = 0.3
-rootFolder = "/temp/mellis/TullyModels/Dev"
+rootFolder = "/temp/mellis/TullyModels/CTMQC_RepeatsNew/Repeat"
 
-nRep = 100
+nRep = 200
 mass = 2000
 
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
-            len(all_model), len(all_p_mean)])
+            len(all_model), len(all_p_mean), len(all_doCTMQC_C),
+            len(all_doCTMQC_F)])
 coeff = [[complex(1, 0), complex(0, 0)]
          for i in range(nRep)]
 
 
-def setup(pos, vel, coeff, sigma, maxTime, model):
+def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     # All units must be atomic units
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
@@ -51,8 +54,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model):
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
             'dt': 1,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
-            'do_QM_F': True,  # Do the QM force
-            'do_QM_C': True,  # Do the QM force
+            'do_QM_F': doCTMQC_F,  # Do the QM force
+            'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
@@ -235,7 +238,7 @@ class CTMQC(object):
                 self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
                                                       modelStr, momStr, sigStr)
                 count += 1
-        print("\r%s" % self.saveFolder, end="\r")
+#        print("\r%s" % self.saveFolder, end="\r")
     
     def __init_nsteps(self):
         """
@@ -342,7 +345,7 @@ class CTMQC(object):
         self.ctmqc_env['nrep'] = nrep
         self.ctmqc_env['nstate'] = nstate
 
-        print("\n\nNumber Replicas = %i\n\n" % nrep)
+#        print("\n\nNumber Replicas = %i\n\n" % nrep)
         self.__check_pos_vel_QM()  # Just check that the QM will be non-zero
 
     def __init_arrays(self):
@@ -632,14 +635,14 @@ class CTMQC(object):
         self.__prop_wf()
         t3 = time.time()
         self.__calc_F()
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
         t4 = time.time()
-
+        
         self.allTimes['prep'].append(t2 - t1)
 #        self.allTimes['wf_prop'].append(t3 - t2)
         self.allTimes['force'].append(t4 - t3)
         self.__update_vars_step()  # Save old positions
 
-        self.__update_vars_step()  # Save old positions
 
     def __save_data(self):
         """
@@ -750,25 +753,15 @@ def doSim(i):
     maxTime = all_maxTime[i]
     model = all_model[i]
     p_mean = all_p_mean[i]
+    doCTMQC_C = all_doCTMQC_C[i]
+    doCTMQC_F = all_doCTMQC_F[i]
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 20 / (v_mean * mass)
+    p_std = 10 / (v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
-#    pos = np.array([[-15.132850264953916],
-#                    [-15.035537944937454],
-#                    [-15.06041110960171],
-#                    [-14.779522321356895],
-#                    [-15.170942986492186],
-#                    [-14.894703237836561],
-#                    [-15.113117117232768],
-#                    [-14.583949369412588],
-#                    [-15.372026580963544],
-#                    [-14.591394891547226]])[:, 0]
-#    pos = [[-0.150001E+02], [-0.153679E+02], [-0.156864E+02],
-#           [-0.152605E+02], [-0.155048E+02]]
     
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
     
@@ -785,7 +778,8 @@ def doSim(i):
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
     # Now run the simulation
-    ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model)
+    ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
+                      doCTMQC_C, doCTMQC_F)
     return CTMQC(ctmqc_env, rootFolder)
     
 
@@ -830,5 +824,8 @@ def plotDeco(runData):
     plt.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
     plt.plot(runData.allt, np.mean(deco, axis=1), 'k')
 
-plotPops(runData)
-plotDeco(runData)
+
+
+if nSim == 1 and runData.ctmqc_env['iter'] < 50:
+    plotPops(runData)
+    plotDeco(runData)

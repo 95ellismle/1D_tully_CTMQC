@@ -56,16 +56,9 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
 
 def getEigProps(H, ctmqc_env):
     """
-    Will return eigen properties (values and vectors) that are usable
-    (corrected) minus signs in the code.
+    Wrapper function, this really needs taking out it when I have time.
     """
-    E, U = np.linalg.eigh(H)
-    if ctmqc_env['tullyModel'] == 2:
-        E1, _ = np.linalg.eig(H)
-        if E1[0] > E1[1]:
-            U[0, 1] = -U[0, 1]
-            U[1, 1] = -U[1, 1]
-    return E, U
+    return np.linalg.eigh(H)
 
 
 def calcNACVgradPhi(pos, ctmqc_env):
