@@ -26,8 +26,8 @@ all_velMultiplier = [3]  #, 1, 3, 1.6, 2.5, 1]
 all_maxTime = [1300]  #, 5500, 1500, 2500, 2000, 3500]
 all_model = [3]  #, 3, 2, 2, 1, 1]
 all_p_mean = [-15]  #, -15, -8, -8, -8, -8]
-all_doCTMQC_C = [True]
-all_doCTMQC_F = [True]
+all_doCTMQC_C = [False]
+all_doCTMQC_F = [False]
 s_mean = 0.3
 rootFolder = False
 
@@ -426,7 +426,7 @@ class CTMQC(object):
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
         self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
-        #self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
+        self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
@@ -470,22 +470,24 @@ class CTMQC(object):
         Will calculate the various paramters to feed into the force and
         electronic propagators. These are then saved in the ctmqc_env dict.
         """
+        # Get adiabatic populations
+        self.ctmqc_env['adPops'] = np.conjugate(self.ctmqc_env['C']) * self.ctmqc_env['C']
+        self.ctmqc_env['adPops'] = self.ctmqc_env['adPops'].astype(float)
+        
         # Do for each rep
         for irep in range(self.ctmqc_env['nrep']):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+
+            # Get Eigen properties
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
             self.ctmqc_env['E'][irep], self.ctmqc_env['U'][irep] = E, U
 
             # Get adiabatic forces
-            gradE = qUt.calc_gradE(pos, self.ctmqc_env)
-            self.ctmqc_env['adFrc'][irep] = -gradE
+            adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
+            self.ctmqc_env['adFrc'][irep] = adFrc
 
-            # Get adiabatic populations
-            pop = e_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
-                                      self.ctmqc_env)
-            self.ctmqc_env['adPops'][irep] = pop
 
             # Get adiabatic NACV
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
@@ -496,8 +498,7 @@ class CTMQC(object):
                 if any(Ck > 0.995 for Ck in pop):
                     adMom = 0.0  # 0.8 * self.ctmqc_env['adMom'][irep]
                 else:
-                    adMom = qUt.calc_ad_mom(self.ctmqc_env, irep,
-                                            -gradE)
+                    adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
 
         # Do for all reps
@@ -594,15 +595,9 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-            if self.ctmqc_env['iter'] % 1 == 0:
-                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-                                                 self.ctmqc_env['C'])
             e_prop.trans_adiab_to_diab(self.ctmqc_env)
         else:
-            if self.ctmqc_env['iter'] % 30 == 0:
-                self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
-                                                   self.ctmqc_env['u'])
-            e_prop.trans_adiab_to_diab(self.ctmqc_env)
+            e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
         self.allTimes['wf_prop']['transform'].append(t3 - t2)
@@ -762,7 +757,17 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    
+    pos = np.array([[-15.132850264953916],
+                [-15.035537944937454],
+                [-15.06041110960171],
+                [-14.779522321356895],
+                [-15.170942986492186],
+                [-14.894703237836561],
+                [-15.113117117232768],
+                [-14.583949369412588],
+                [-15.372026580963544],
+                [-14.591394891547226]])[:, 0]
+
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
     # Now run the simulation
@@ -798,7 +803,7 @@ def plotQlk(runData):
 
     
 def plotPops(runData):
-    lw = 0.1
+    lw = 0.5
     alpha = 0.5
     plt.figure()
     plt.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)

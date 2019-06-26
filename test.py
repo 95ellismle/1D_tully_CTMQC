@@ -9,11 +9,15 @@ def vel_is_diff_x(runData):
     vel = runData.allv
     maxDiff = np.max(velDiff - vel)
     avgDiff = np.mean(velDiff - vel)
-    print("max vel diff = ", maxDiff)
-    print("avg vel diff = ", avgDiff)
     if maxDiff > 1e-4:
+        print("max vel diff = ", maxDiff)
+        print("avg vel diff = ", avgDiff)
+        print("\n\n\nERROR: Vel not same as dx/dt. Check velocity verlet!")
         return False
     if avgDiff > 1e-8:
+        print("max vel diff = ", maxDiff)
+        print("avg vel diff = ", avgDiff)
+        print("\n\n\nERROR: Vel not same as dx/dt. Check velocity verlet!")
         return False
     return True
 

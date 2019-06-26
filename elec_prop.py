@@ -21,7 +21,7 @@ def trans_diab_to_adiab(ctmqc_env):
     for irep in range(nrep):
         u = ctmqc_env['u'][irep]
         U = ctmqc_env['U'][irep]
-        ctmqc_env['C'][irep] = np.matmul(np.array(U),
+        ctmqc_env['C'][irep] = np.matmul(np.array(U.T),
                                          np.array(u))
 
 
@@ -35,7 +35,7 @@ def trans_adiab_to_diab(ctmqc_env):
         C = ctmqc_env['C'][irep]
         U = ctmqc_env['U'][irep]
 
-        ctmqc_env['u'][irep] = np.matmul(np.array(U.T),
+        ctmqc_env['u'][irep] = np.matmul(np.array(U),
                                          np.array(C))
 
 
@@ -68,36 +68,42 @@ def calc_ad_pops(C, ctmqc_env=False):
     return pops**2
 
 
+def get_diffVal(var, var_tm, ctmqc_env):
+    """
+    Will get the necessary variables to do the linear interpolation.
+    """
+    dvar_E = (var - var_tm) / float(ctmqc_env['elec_steps'])
+    return dvar_E
+
+
+def makeX_diab_ehren(H):
+    """
+    Will make the diabatic X matrix
+    """
+    return -1j * H
+
+
 def do_diab_prop_ehren(ctmqc_env):
     """
     Will propagate the coefficients in the diabatic basis (without the
     diabatic NACE)
     """
     for irep in range(ctmqc_env['nrep']):
-        dx_E = (ctmqc_env['pos'][irep] - ctmqc_env['pos_tm'][irep])
-        dx_E /= float(ctmqc_env['elec_steps'])
-    
-        X1 = makeX_diab(ctmqc_env, ctmqc_env['pos_tm'], irep)
+        H_tm = np.matrix(ctmqc_env['H_tm'][irep])
+        dH_E = get_diffVal(ctmqc_env['H'][irep], H_tm, ctmqc_env)
+
+        X1 = makeX_diab_ehren(H_tm)
         for Estep in range(ctmqc_env['elec_steps']):
-            pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-            pos3 = ctmqc_env['pos_tm'] + (Estep+1) * dx_E
-    
-            X12 = makeX_diab(ctmqc_env, pos2, irep)
-            X2 = makeX_diab(ctmqc_env, pos3, irep)
-    
-            coeff = __RK4(ctmqc_env['u'][irep], X1, X12, X2, ctmqc_env)
-            ctmqc_env['u'][irep] = coeff
-    
+            H = H_tm + (Estep + 0.5) * dH_E
+            X12 = makeX_diab_ehren(H)
+
+            X2 = makeX_diab_ehren(H)
+
+            H = H_tm + (Estep + 1.0) * dH_E
+            ctmqc_env['u'][irep] = __RK4_2(ctmqc_env,
+                                         ctmqc_env['u'][irep], X1, X12, X2)
+
             X1 = X2[:]
-
-
-def makeX_diab(ctmqc_env, pos, irep):
-    """
-    Will make the diabatic X matrix
-    """
-    H = ctmqc_env['Hfunc'](pos[irep])
-
-    return -1j * H
 
 
 def do_diab_prop_QM(ctmqc_env, irep):
@@ -316,6 +322,25 @@ def makeX_adiab_Qlk(ctmqc_env, pos, irep):
             Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
 
     return np.array(X - Xqm)
+
+
+def __RK4_2(ctmqc_env, coeff, X1, X12, X2):
+    """
+    Will carry out the RK4 algorithm to propagate the coefficients
+    """
+    dTe = ctmqc_env['dt'] / float(ctmqc_env['elec_steps'])
+    coeff = np.array(coeff)
+
+    K1 = np.array(dTe * np.matmul(X1, coeff))[0]
+    K2 = np.array(dTe * np.matmul(X12, coeff + K1/2.))[0]
+    K3 = np.array(dTe * np.matmul(X12, coeff + K2/2.))[0]
+    K4 = np.array(dTe * np.matmul(X2, coeff + K3))[0]
+
+    Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
+
+    coeff = coeff + Ktot
+
+    return coeff
 
 
 def __RK4(coeff, X1, X12, X2, ctmqc_env):
