@@ -66,7 +66,7 @@ def calcNACV(irep, ctmqc_env):
     H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
 
     allH = [H_xm, H_x, H_xp]
-    gradH = np.gradient(allH, axis=0)[1]
+    gradH = np.gradient(allH, dx, axis=0)[1]
     E, U = np.linalg.eigh(H_x)
     NACV = np.zeros((nState, nState), dtype=complex)
     for l in range(nState):

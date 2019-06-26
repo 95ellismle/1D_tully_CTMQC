@@ -25,17 +25,17 @@ import QM_utils as qUt
 
 
 all_nReps = [10]# * 6 * 5
-all_vel_mults = [3]#, 1, 3, 1.6, 2.5, 1] * 5
-all_p_means = [-5]#, -15, -8, -8, -8, -8] * 5
-all_models = [3]#, 3, 2, 2, 1, 1] * 5
-all_max_times = [30]#, 5500, 1500, 2500, 2000, 3500] * 5
+all_vel_mults = [1.6]#, 1, 3, 1.6, 2.5, 1] * 5
+all_p_means = [-8]#, -15, -8, -8, -8, -8] * 5
+all_models = [2]#, 3, 2, 2, 1, 1] * 5
+all_max_times = [2500]#, 5500, 1500, 2500, 2000, 3500] * 5
 
 all_v_means = [5e-3 * i for i in all_vel_mults]
 nSim = np.min([len(i) for i in (all_nReps, all_v_means,
                                 all_p_means, all_models,
                                 all_max_times)])
 
-savePath = False # "/temp/mellis/TullyModels/SmallerPosRepeats/Repeat"
+savePath = "/temp/mellis/TullyModels/Dev"
 
 
 dT = 1
@@ -229,19 +229,35 @@ class main(object):
         nsteps = max_time / dt
         self.ctmqc_env['nsteps'] = int(nsteps)
 
+    def __check_pos_vel_QM(self):
+        """
+        Checks whether there is any variation in the positions and velocities
+        if the quantum momentum term is being used because if all positions are
+        the same then the QM is 0.
+        """
+        if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
+            v_std = np.std(self.ctmqc_env['vel'])
+            p_std = np.std(self.ctmqc_env['pos'])
+            if p_std == 0 and v_std == 0:
+                print("\n\n\nWARNING\n\n")
+                print("The initial positions and velocities are all the same,")
+                print(" meaning that the quantum momentum will be 0. If this ")
+                print("is OK then ignore this warning.\n\n")
+                print("WARNING\n\n\n")
+
     def __init_pos_vel_wf(self):
         """
         Will get the number of replicas and atoms from the size of the R, v
         and u arrays. Will also check they are there and convert them to numpy
         arrays
         """
-        changes = {'replicas': False}
+        changes = False
         # Check coeff array
         if 'u' in self.ctmqc_env:
             self.adiab_diab = "diab"
             self.ctmqc_env['u'] = np.array(self.ctmqc_env['u'])
             nrep, nstate = np.shape(self.ctmqc_env['u'])
-        elif 'C' in ctmqc_env:
+        elif 'C' in self.ctmqc_env:
             self.adiab_diab = "adiab"
             self.ctmqc_env['C'] = np.array(self.ctmqc_env['C'])
             nrep, nstate = np.shape(self.ctmqc_env['C'])
@@ -256,12 +272,12 @@ class main(object):
         if 'pos' in self.ctmqc_env:
             self.ctmqc_env['pos'] = np.array(self.ctmqc_env['pos'],
                                              dtype=np.float64)
-            nrep1 = len(self.ctmqc_env['pos'])
+            nrep1, = np.shape(self.ctmqc_env['pos'])
             nrep = np.min([nrep1, nrep])
             if nrep != nrep1:
-                changes['replicas'] = 'coeff & pos'
+                changes = True
         else:
-            msg = "Can't find initial positionss\n\t"
+            msg = "Can't find initial positions\n\t"
             msg += "(specify this as 'pos')"
             raise SystemExit(msg)
 
@@ -269,30 +285,32 @@ class main(object):
         if 'vel' in self.ctmqc_env:
             self.ctmqc_env['vel'] = np.array(self.ctmqc_env['vel'],
                                              dtype=np.float64)
-            nrep1 = len(self.ctmqc_env['vel'])
+            nrep1, = np.shape(self.ctmqc_env['vel'])
+
             nrep = np.min([nrep1, nrep])
             if nrep != nrep1:
-                changes['replicas'] = 'velocity & pos'
+                changes = True
         else:
-            msg = "Can't find initial positionss\n\t"
-            msg += "(specify this as 'pos')"
+            msg = "Can't find initial velocities\n\t"
+            msg += "(specify this as 'vel')"
             raise SystemExit(msg)
-
-        for T in changes:
-            if changes[T] is not False:
-                print("\n\nWARNING: Not all arrays have same num of replicas")
-                print("Changing size of arrays so num rep is consistent\n\n")
-                self.ctmqc_env['pos'] = self.ctmqc_env['pos'][:nrep]
-                self.ctmqc_env['vel'] = self.ctmqc_env['vel'][:nrep]
-                if self.adiab_diab == 'adiab':
-                    self.ctmqc_env['C'] = self.ctmqc_env['C'][:nrep]
-                else:
-                    self.ctmqc_env['u'] = self.ctmqc_env['u'][:nrep]
+        
+        if changes:
+            print("\n\nWARNING: Not all arrays have same num of replicas")
+            print("Changing size of arrays so num of replicas is consistent\n")
+            print("\n")
+            self.ctmqc_env['pos'] = self.ctmqc_env['pos'][:nrep]
+            self.ctmqc_env['vel'] = self.ctmqc_env['vel'][:nrep]
+            if 'u' in self.ctmqc_env:
+                self.ctmqc_env['u'] = self.ctmqc_env['u'][:nrep, :]
+            else:
+                self.ctmqc_env['C'] = self.ctmqc_env['C'][:nrep, :]
 
         self.ctmqc_env['nrep'] = nrep
         self.ctmqc_env['nstate'] = nstate
 
-        print("Number Replicas = %i" % nrep)
+        print("\n\nNumber Replicas = %i\n\n" % nrep)
+        self.__check_pos_vel_QM()  # Just check that the QM will be non-zero
 
     def __init_arrays(self):
         """
@@ -390,7 +408,6 @@ class main(object):
                                          self.ctmqc_env['adFrc'][irep],
                                          self.ctmqc_env['adPops'][irep],
                                          self.ctmqc_env)
-
             Fqm = 0.0
             if self.ctmqc_env['do_QM_F']:
                 Qlk = self.ctmqc_env['Qlk'][irep, 0, 1]
@@ -399,7 +416,6 @@ class main(object):
                                          Qlk,
                                          self.ctmqc_env['adMom'][irep],
                                          self.ctmqc_env)
-
             Ftot = float(Feh) + float(Fqm)
             self.ctmqc_env['F_eh'][irep] = Feh
             self.ctmqc_env['F_qm'][irep] = Fqm
@@ -436,9 +452,9 @@ class main(object):
 #            if self.ctmqc_env['iter'] % 30 == 0:
 #                self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
 #                                                   self.ctmqc_env['u'])
-        for irep in range(ctmqc_env['nrep']):
-            C = np.matmul(np.array(ctmqc_env['U'][irep].T),
-                          np.array(ctmqc_env['u'][irep]))
+        for irep in range(self.ctmqc_env['nrep']):
+            C = np.matmul(np.array(self.ctmqc_env['U'][irep].T),
+                          np.array(self.ctmqc_env['u'][irep]))
             self.ctmqc_env['C'][irep] = C
 
     def __calc_quantities(self):
@@ -458,17 +474,20 @@ class main(object):
             # Get adiabatic forces
             adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
             self.ctmqc_env['adFrc'][irep] = adFrc
+            
             # Get adiabatic populations
             pop = e_prop.calc_ad_pops(self.ctmqc_env['C'][irep],
                                       self.ctmqc_env)
             self.ctmqc_env['adPops'][irep] = pop
+
             # Get adiabatic NACV
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
                                                            self.ctmqc_env)
+
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in pop):
-                    adMom = 0.0
+                    adMom = 0.8 * self.ctmqc_env['adMom'][irep]
                 else:
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep,
                                             adFrc)
@@ -477,12 +496,7 @@ class main(object):
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
 #            if self.ctmqc_env['do_sigma_calc']:
 #                qUt.calc_sigma(self.ctmqc_env)
-            self.ctmqc_env['Qlk'] = np.zeros((self.ctmqc_env['nrep'],
-                                              self.ctmqc_env['nstate'],
-                                              self.ctmqc_env['nstate']))
             self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
-#             = QM
-#            self.ctmqc_env['Qlk'][:, 1, 0] = QM
 
     def __init_step(self):
         """
@@ -496,24 +510,26 @@ class main(object):
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
             _, self.ctmqc_env['U'][irep] = np.linalg.eigh(self.ctmqc_env['H'][irep])
+
         # Transform the coefficieints
         # Transform WF
         if self.adiab_diab == 'adiab':
-            self.ctmqc_env['u'] = np.zeros_like(ctmqc_env['C'])
-            self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-                                                           self.ctmqc_env['C'])
-            for irep in range(ctmqc_env['nrep']):
-                u = np.matmul(np.array(ctmqc_env['U'][irep]),
-                              np.array(ctmqc_env['C'][irep]))
+            self.ctmqc_env['u'] = np.zeros_like(self.ctmqc_env['C'])
+#            self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+#                                                           self.ctmqc_env['C'])
+            for irep in range(self.ctmqc_env['nrep']):
+                u = np.matmul(np.array(self.ctmqc_env['U'][irep].T),
+                              np.array(self.ctmqc_env['C'][irep]))
                 self.ctmqc_env['u'][irep] = u
         else:
-            self.ctmqc_env['C'] = np.zeros_like(ctmqc_env['u'])
-            self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
-                                                           self.ctmqc_env['u'])
-            for irep in range(ctmqc_env['nrep']):
-                C = np.matmul(np.array(ctmqc_env['U'][irep].T),
-                              np.array(ctmqc_env['u'][irep]))
+            self.ctmqc_env['C'] = np.zeros_like(self.ctmqc_env['u'])
+#            self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
+#                                                           self.ctmqc_env['u'])
+            for irep in range(self.ctmqc_env['nrep']):
+                C = np.matmul(np.array(self.ctmqc_env['U'][irep]),
+                              np.array(self.ctmqc_env['u'][irep]))
                 self.ctmqc_env['C'][irep] = C
+            
 
         self.__calc_quantities()
         self.__calc_F()
@@ -569,7 +585,6 @@ class main(object):
 
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
         self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
-
 
         self.__calc_quantities()
         self.__prop_wf()
@@ -698,7 +713,7 @@ for isim in range(nSim):
                     [-15.113117117232768],
                     [-14.583949369412588],
                     [-15.372026580963544],
-                    [-14.591394891547226]])
+                    [-14.591394891547226]])[:, 0]
     vel = [rd.gauss(all_v_means[isim], v_std) for i in range(all_nReps[isim])]
     coeff = [[complex(1, 0), complex(0, 0)] for i in range(all_nReps[isim])]
     

@@ -10,20 +10,20 @@ import numpy as np
 import hamiltonian as Ham
 
 
-def calc_ad_frc(pos, ctmqc_env):
-    """
-    Will calculate the forces from each adiabatic state (the grad E term)
-    """
-    dx = ctmqc_env['dx']
-
-    H_xm = ctmqc_env['Hfunc'](pos - dx)
-    H_x = ctmqc_env['Hfunc'](pos)
-    H_xp = ctmqc_env['Hfunc'](pos + dx)
-
-    allH = [H_xm, H_x, H_xp]
-    allE = [np.linalg.eigh(H)[0] for H in allH]
-    grad = np.array(np.gradient(allE, dx, axis=0))[2]
-    return -grad
+#def calc_ad_frc(pos, ctmqc_env):
+#    """
+#    Will calculate the forces from each adiabatic state (the grad E term)
+#    """
+#    dx = ctmqc_env['dx']
+#
+#    H_xm = ctmqc_env['Hfunc'](pos - dx)
+#    H_x = ctmqc_env['Hfunc'](pos)
+#    H_xp = ctmqc_env['Hfunc'](pos + dx)
+#
+#    allH = [H_xm, H_x, H_xp]
+#    allE = [np.linalg.eigh(H)[0] for H in allH]
+#    grad = np.array(np.gradient(allE, dx, axis=0))[2]
+#    return -grad
 
 
 def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
@@ -31,8 +31,8 @@ def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     Will calculate the ehrenfest force in the adiabatic basis
     """
     nstate = ctmqc_env['nstate']
-    E = np.linalg.eigh(ctmqc_env['H'][irep])[0]
-    NACV = Ham.calcNACV(irep, ctmqc_env)
+    E = ctmqc_env['E'][irep]
+    NACV = ctmqc_env['NACV'][irep]
 
     F = np.sum(adPops * adFrc)
     for k in range(nstate):
