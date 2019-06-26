@@ -26,8 +26,8 @@ all_velMultiplier = [3]  #, 1, 3, 1.6, 2.5, 1]
 all_maxTime = [1300]  #, 5500, 1500, 2500, 2000, 3500]
 all_model = [3]  #, 3, 2, 2, 1, 1]
 all_p_mean = [-15]  #, -15, -8, -8, -8, -8]
-all_doCTMQC_C = [False]
-all_doCTMQC_F = [False]
+all_doCTMQC_C = [True]
+all_doCTMQC_F = [True]
 s_mean = 0.3
 rootFolder = False
 
@@ -495,7 +495,7 @@ class CTMQC(object):
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-                if any(Ck > 0.995 for Ck in pop):
+                if any(Ck > 0.995 for Ck in self.ctmqc_env['adPops'][irep]):
                     adMom = 0.0  # 0.8 * self.ctmqc_env['adMom'][irep]
                 else:
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
