@@ -22,16 +22,16 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3, 1, 3, 1.6, 2.5, 1] * 12
-all_maxTime = [1300, 5500, 1500, 2500, 2000, 3500] * 12
-all_model = [3, 3, 2, 2, 1, 1] * 12
-all_p_mean = [-15, -15, -8, -8, -8, -8] * 12
-all_doCTMQC_C = [True] * 36 + [False] * 36
-all_doCTMQC_F = [True] * 36 + [False] * 36
+all_velMultiplier = [3]  #, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [1300]  #, 5500, 1500, 2500, 2000, 3500]
+all_model = [3]  #, 3, 2, 2, 1, 1]
+all_p_mean = [-15]  #, -15, -8, -8, -8, -8]
+all_doCTMQC_C = [True]
+all_doCTMQC_F = [True]
 s_mean = 0.3
-rootFolder = "/temp/mellis/TullyModels/CTMQC_RepeatsNew/Repeat"
+rootFolder = False
 
-nRep = 200
+nRep = 10
 mass = 2000
 
 
@@ -52,8 +52,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 1,  # The timestep | |au_t
-            'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+            'dt': 0.5,  # The timestep | |au_t
+            'elec_steps': 1,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
@@ -443,30 +443,23 @@ class CTMQC(object):
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
+            self.ctmqc_env['E'][irep], self.ctmqc_env['U'][irep] = E, U
 
         # Transform the coefficieints
         if 'u' in self.ctmqc_env:
             self.ctmqc_env['C'] = np.zeros((nrep, nstate),
                                            dtype=complex)
-            C = e_prop.trans_diab_to_adiab(
-                                          self.ctmqc_env['H'],
-                                          self.ctmqc_env['u'],
-                                          self.ctmqc_env)
-            self.ctmqc_env['C'] = C
+            e_prop.trans_diab_to_adiab(self.ctmqc_env)
         else:
             self.ctmqc_env['u'] = np.zeros((nrep, nstate),
                                            dtype=complex)
-
-            u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
-                                           self.ctmqc_env['u'],
-                                           self.ctmqc_env)
-            self.ctmqc_env['u'] = u
+            e_prop.trans_adiab_to_diab(self.ctmqc_env)
 
         # Calculate the QM, adMom, adPop, adFrc.
         self.__calc_quantities()
-        for irep in range(nrep):
-            # Calculate the forces
-            self.__calc_F()
+        # Calculate the forces
+        self.__calc_F()
 
         self.ctmqc_env['t'] = 0
         self.ctmqc_env['iter'] = 0
@@ -482,6 +475,8 @@ class CTMQC(object):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
+            self.ctmqc_env['E'][irep], self.ctmqc_env['U'][irep] = E, U
 
             # Get adiabatic forces
             gradE = qUt.calc_gradE(pos, self.ctmqc_env)
@@ -499,9 +494,8 @@ class CTMQC(object):
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in pop):
-                    adMom = 0.8 * self.ctmqc_env['adMom'][irep]
+                    adMom = 0.0  # 0.8 * self.ctmqc_env['adMom'][irep]
                 else:
-
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep,
                                             -gradE)
                 self.ctmqc_env['adMom'][irep] = adMom
@@ -600,21 +594,15 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-#            if self.ctmqc_env['iter'] % 1 == 0:
-#                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
-#                                                           self.ctmqc_env['C'])
-            u = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
-                                           self.ctmqc_env['C'],
-                                           self.ctmqc_env)
-            self.ctmqc_env['u'] = u
+            if self.ctmqc_env['iter'] % 1 == 0:
+                self.ctmqc_env['C'] = e_prop.renormalise_all_coeffs(
+                                                 self.ctmqc_env['C'])
+            e_prop.trans_adiab_to_diab(self.ctmqc_env)
         else:
             if self.ctmqc_env['iter'] % 30 == 0:
                 self.ctmqc_env['u'] = e_prop.renormalise_all_coeffs(
                                                    self.ctmqc_env['u'])
-            C = e_prop.trans_adiab_to_diab(self.ctmqc_env['H'],
-                                           self.ctmqc_env['u'],
-                                           self.ctmqc_env)
-            self.ctmqc_env['C'] = C
+            e_prop.trans_adiab_to_diab(self.ctmqc_env)
         t3 = time.time()
 
         self.allTimes['wf_prop']['transform'].append(t3 - t2)
@@ -791,8 +779,11 @@ if nSim > 1 and nRep > 30:
     print("Doing %i sims with %i processors" % (nSim, nProc))
     pool.map(doSim, range(nSim))
 else:
+    import test
     for iSim in range(nSim):
         runData = doSim(iSim)
+
+        test.vel_is_diff_x(runData)
 
 
 
@@ -826,6 +817,9 @@ def plotDeco(runData):
 
 
 
-if nSim == 1 and runData.ctmqc_env['iter'] < 50:
+
+
+if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plotPops(runData)
     plotDeco(runData)
+    plt.show()

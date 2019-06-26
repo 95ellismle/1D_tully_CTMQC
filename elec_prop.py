@@ -12,52 +12,39 @@ import hamiltonian as Ham
 import QM_utils as qUt
 
 
-def trans_diab_to_adiab(allH, allu, ctmqc_env):
+def trans_diab_to_adiab(ctmqc_env):
     """
     Will transform the diabatic coefficients to adiabatic ones
     """
     nrep = ctmqc_env['nrep']
-    nstate = ctmqc_env['nstate']
-    allC = np.zeros((nrep, nstate), dtype=complex)
+
     for irep in range(nrep):
-        u = allu[irep, :]
-        H = allH[irep]
-        if len(u) != 2 and len(np.shape(u)) != 1:
-            msg = "Incorrect Shape for diab coeff in trans func"
-            raise SystemExit(msg)
-
-        U = Ham.getEigProps(H, ctmqc_env)[1]
-
-        allC[irep] = np.dot(np.array(U), np.array(u))
-    return allC
+        u = ctmqc_env['u'][irep]
+        U = ctmqc_env['U'][irep]
+        ctmqc_env['C'][irep] = np.matmul(np.array(U),
+                                         np.array(u))
 
 
-def trans_adiab_to_diab(allH, allC, ctmqc_env):
+def trans_adiab_to_diab(ctmqc_env):
     """
     Will transform the adiabatic coefficients to diabatic ones
     """
     nrep = ctmqc_env['nrep']
-    nstate = ctmqc_env['nstate']
-    allu = np.zeros((nrep, nstate), dtype=complex)
+
     for irep in range(nrep):
-        C = allC[irep, :]
-        H = allH[irep]
-        if len(C) != 2 and len(np.shape(C)) != 1:
-            msg = "Incorrect Shape for adiab coeff in trans func"
-            raise SystemExit(msg)
+        C = ctmqc_env['C'][irep]
+        U = ctmqc_env['U'][irep]
 
-        U = Ham.getEigProps(H, ctmqc_env)[1]
-
-        allu[irep] = np.dot(np.array(U.T), np.array(C))
-    return allu
+        ctmqc_env['u'][irep] = np.matmul(np.array(U.T),
+                                         np.array(C))
 
 
 def renormalise_all_coeffs(coeff):
     """
     Will renormalise all the coefficients for replica I, atom v.
     """
-    nrep, nstate = np.shape(coeff)
-    norms = np.linalg.norm(coeff, axis=2)
+    nrep, _ = np.shape(coeff)
+    norms = np.linalg.norm(coeff, axis=1)
     for I in range(nrep):
         coeff[I, :] = coeff[I, :] / norms[I]
 

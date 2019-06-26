@@ -15,13 +15,13 @@ def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     Will calculate the ehrenfest force in the adiabatic basis
     """
     nstate = ctmqc_env['nstate']
-    ctmqc_env['H'][irep] = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
-    E = Ham.getEigProps(ctmqc_env['H'][irep], ctmqc_env)[0]
-    ctmqc_env['E'][irep] = E
+    E = ctmqc_env['E'][irep]
     NACV = ctmqc_env['NACV'][irep]
 
+    # Population Weighted Sum
     F = np.sum(adPops * adFrc)
-
+    
+    # NACV bit
     for k in range(nstate):
         for l in range(nstate):
             Cl = np.conjugate(ctmqc_env['C'][irep, l])
@@ -29,7 +29,7 @@ def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
             Clk = Cl * Ck
             Ekl = E[k] - E[l]
             F -= Clk * Ekl * NACV[l, k]
-#            print(NACV[l, k])
+
     if F.imag > 1e-12:
         msg = "Something's gone wrong ehrenfest force "
         msg += "-it has a imaginary component!"
