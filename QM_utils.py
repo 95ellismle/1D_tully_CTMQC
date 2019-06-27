@@ -9,8 +9,6 @@ import numpy as np
 import scipy.integrate as integrate
 import random as rd
 
-import hamiltonian as Ham
-
 
 def calc_ad_frc(pos, ctmqc_env):
     """
@@ -32,7 +30,7 @@ def calc_ad_mom(ctmqc_env, irep, ad_frc=False):
     """
     if ad_frc is False:
         pos = ctmqc_env['pos'][irep]
-        ad_frc = -calc_gradE(pos, ctmqc_env)
+        ad_frc = calc_ad_frc(pos, ctmqc_env)
 
     ad_mom = ctmqc_env['adMom'][irep]
     dt = ctmqc_env['dt']
@@ -297,6 +295,11 @@ def calc_Qlk(ctmqc_env):
 
     return Qlk
 
+
+def calc_sigmal(ctmqc_env):
+    """
+    Will calculate the sigmal term.
+    """
 
 
 def test_QM_calc(ctmqc_env):

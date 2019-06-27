@@ -31,7 +31,7 @@ all_doCTMQC_F = [True]
 s_mean = 0.3
 rootFolder = False
 
-nRep = 10
+nRep = 100
 mass = 2000
 
 

@@ -238,6 +238,10 @@ def do_adiab_prop_QM(ctmqc_env):
 
         for Estep in range(ctmqc_env['elec_steps']):
             # Linear Interpolationprint(check)
+            H_tm = H_tm + (Estep + 0.5) * dH_E
+            E_tm = E_tm + (Estep + 0.5) * dE_E
+            NACV_tm = NACV_tm + (Estep + 0.5) * dNACV_E
+            v_tm = v_tm + (Estep + 0.5) * dv_E
             ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]\
                 + (Estep + 0.5) * dQlk_E
             ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]\
@@ -251,6 +255,10 @@ def do_adiab_prop_QM(ctmqc_env):
                 + (Estep + 1.0) * dQlk_E
             ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]\
                 + (Estep + 1.0) * df_E
+            H_tm = H_tm + (Estep + 1.0) * dH_E
+            E_tm = E_tm + (Estep + 1.0) * dE_E
+            NACV_tm = NACV_tm + (Estep + 1.0) * dNACV_E
+            v_tm = v_tm + (Estep + 1.0) * dv_E
 
             # Make X2
             X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
