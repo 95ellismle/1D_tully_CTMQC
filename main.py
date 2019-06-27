@@ -334,6 +334,7 @@ class CTMQC(object):
         if changes:
             print("\n\nWARNING: Not all arrays have same num of replicas")
             print("Changing size of arrays so num of replicas is consistent\n")
+            print("New Num Rep = %i" % nrep)
             print("\n")
             self.ctmqc_env['pos'] = self.ctmqc_env['pos'][:nrep]
             self.ctmqc_env['vel'] = self.ctmqc_env['vel'][:nrep]
@@ -427,6 +428,7 @@ class CTMQC(object):
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
         self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
         self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
+        self.ctmqc_env['E_tm'] = copy.deepcopy(self.ctmqc_env['E'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
         self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
         self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
@@ -583,7 +585,7 @@ class CTMQC(object):
 #        t1 = time.time()
         if self.ctmqc_env['do_QM_C']:
             if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_QM(self.ctmqc_env, self.allTimes)
+                e_prop.do_adiab_prop_QM(self.ctmqc_env)
             else:
                 e_prop.do_diab_prop_QM(self.ctmqc_env)
         else:
@@ -757,16 +759,16 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    pos = np.array([[-15.132850264953916],
-                [-15.035537944937454],
-                [-15.06041110960171],
-                [-14.779522321356895],
-                [-15.170942986492186],
-                [-14.894703237836561],
-                [-15.113117117232768],
-                [-14.583949369412588],
-                [-15.372026580963544],
-                [-14.591394891547226]])[:, 0]
+    #pos = np.array([[-15.132850264953916],
+    #            [-15.035537944937454],
+    #            [-15.06041110960171],
+    #            [-14.779522321356895],
+    #            [-15.170942986492186],
+    #            [-14.894703237836561],
+    #            [-15.113117117232768],
+    #            [-14.583949369412588],
+    #            [-15.372026580963544],
+    #            [-14.591394891547226]])[:, 0]
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -784,11 +786,11 @@ if nSim > 1 and nRep > 30:
     print("Doing %i sims with %i processors" % (nSim, nProc))
     pool.map(doSim, range(nSim))
 else:
-    import test
+    #import test
     for iSim in range(nSim):
         runData = doSim(iSim)
 
-        test.vel_is_diff_x(runData)
+        #test.vel_is_diff_x(runData)
 
 
 
