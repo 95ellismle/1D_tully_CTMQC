@@ -29,9 +29,9 @@ all_p_mean = [-15]  #, -15, -8, -8, -8, -8]
 all_doCTMQC_C = [True]
 all_doCTMQC_F = [True]
 s_mean = 0.3
-rootFolder = False
+rootFolder = '/temp/mellis/TullyModels/Dev'
 
-nRep = 100
+nRep = 50
 mass = 2000
 
 
@@ -376,9 +376,11 @@ class CTMQC(object):
         self.allAdMom = np.zeros((nstep, nrep, nstate))
         self.allAdFrc = np.zeros((nstep, nrep, nstate))
         self.allQlk = np.zeros((nstep, nrep, nstate, nstate))
+        self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
         self.allRI0 = np.zeros((nstep, nrep))
         self.allSigma = np.zeros((nstep, nrep))
+        self.allSigmal = np.zeros((nstep, nstate))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
@@ -397,6 +399,7 @@ class CTMQC(object):
         self.ctmqc_env['adMom'] = np.zeros((nrep, nstate))
         self.ctmqc_env['adMom_tm'] = np.zeros((nrep, nstate))
         self.ctmqc_env['alpha'] = np.zeros((nrep))
+        self.ctmqc_env['alphal'] = 0.0
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
@@ -508,6 +511,7 @@ class CTMQC(object):
             if self.ctmqc_env['do_sigma_calc']:
                 qUt.calc_sigma(self.ctmqc_env)
             self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
+#            self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
 
     def __main_loop(self):
         """
@@ -650,6 +654,8 @@ class CTMQC(object):
         self.allRlk[istep] = self.ctmqc_env['Rlk']
         self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
+        self.allSigmal[istep] = self.ctmqc_env['sigmal']
+        self.allAlphal[istep] = self.ctmqc_env['alphal']
 
         self.allt[istep] = self.ctmqc_env['t']
 
@@ -674,6 +680,8 @@ class CTMQC(object):
         self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
         self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
+        self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
+        self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
 
     def __store_data(self):
         """

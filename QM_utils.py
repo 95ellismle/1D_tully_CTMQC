@@ -229,8 +229,15 @@ def calc_Qlk(ctmqc_env):
 
     pops = ctmqc_env['adPops']
     reps_to_complete = np.arange(nRep)
-    #reps_to_complete = [irep for irep, rep_pops in enumerate(pops[:, 0, :])
-    #                    if all(state_pop < 0.995 for state_pop in rep_pops)]
+    ctmqc_env['QM_reps'] = [irep for irep, rep_pops in enumerate(pops[:, :])
+                            if all(state_pop < 0.995 for state_pop in rep_pops)]
+    calc_sigmal(ctmqc_env)
+    sig = np.mean(ctmqc_env['sigmal'])
+    if sig < 0.1:
+        sig = 0.1
+    ctmqc_env['sigma'][:] = sig
+    
+#    print(ctmqc_env['sigma'])
 
     # Calculate WIJ and alpha
     WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
@@ -296,11 +303,63 @@ def calc_Qlk(ctmqc_env):
     return Qlk
 
 
+def calc_Qlk_2state(ctmqc_env):
+    """
+    Will calculate the quantum momentum for 2 states exactly as given in
+    Frederica's paper.
+    """
+    nState, nRep = ctmqc_env['nstate'], ctmqc_env['nrep']
+    pops = ctmqc_env['adPops']
+    ctmqc_env['QM_reps'] = [irep for irep, rep_pops in enumerate(pops)
+                           if all(state_pop < 0.995 for state_pop in rep_pops)]
+    calc_sigmal(ctmqc_env)
+    
+    if not all(ctmqc_env['sigmal'] > 0):
+        return np.zeros((nRep, nState, nState))
+    else:
+        alpha = np.sum(ctmqc_env['adPops'][0] / ctmqc_env['sigmal'])
+        ctmqc_env['alphal'] = alpha
+        
+        rho11 = ctmqc_env['adPops'][ctmqc_env['QM_reps'], 0]
+        rho22 = ctmqc_env['adPops'][ctmqc_env['QM_reps'], 0]
+        f1 = ctmqc_env['adMom'][ctmqc_env['QM_reps'], 0]
+        f2 = ctmqc_env['adMom'][ctmqc_env['QM_reps'], 1]
+        allBottomRlk = rho11 * rho22 * (f1 - f2)
+        Rlk = np.sum(allBottomRlk / np.sum(allBottomRlk))
+        
+        Qlk = np.zeros((nRep, nState, nState))
+        for I in ctmqc_env['QM_reps']:
+            Qlk[I, 0, 1] = ctmqc_env['pos'][irep] - Rlk        
+            Qlk[I, 1, 0] = ctmqc_env['pos'][irep] - Rlk        
+        Qlk = alpha * Qlk / ctmqc_env['mass'][0]
+        
+        return Qlk
+
+
 def calc_sigmal(ctmqc_env):
     """
-    Will calculate the sigmal term.
+    Will calculate the state dependant sigma l term.
     """
-
+    nState = ctmqc_env['nstate']
+    pops = ctmqc_env['adPops']
+    sumPops = np.sum(ctmqc_env['adPops'], axis=0)
+    if all(sumPops > 0):
+        sumInvPops = 1. / sumPops
+        Rl = np.zeros(nState)
+        for irep in ctmqc_env['QM_reps']:
+            Rl += ctmqc_env['pos'][irep] * pops[irep] * sumInvPops
+    
+        sigmal = np.zeros(nState)
+        for irep in ctmqc_env['QM_reps']:
+            squaredDist = (ctmqc_env['pos'][irep] - Rl)**2
+            sigmal += squaredDist * pops[irep] * sumInvPops
+        if np.sum(sigmal) == 0.0:
+            sigmal = np.ones(nState) * 10000
+        
+        ctmqc_env['sigmal'] = sigmal
+    else:
+        ctmqc_env['sigmal'] = np.ones(nState) * 10000
+    
 
 def test_QM_calc(ctmqc_env):
     """
