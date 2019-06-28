@@ -228,19 +228,19 @@ def calc_Qlk(ctmqc_env):
     nState = ctmqc_env['nstate']
 
     pops = ctmqc_env['adPops']
-    reps_to_complete = np.arange(nRep)
+#    reps_to_complete = np.arange(nRep)
     ctmqc_env['QM_reps'] = [irep for irep, rep_pops in enumerate(pops[:, :])
                             if all(state_pop < 0.995 for state_pop in rep_pops)]
-    calc_sigmal(ctmqc_env)
-    sig = np.mean(ctmqc_env['sigmal'])
-    if sig < 0.1:
-        sig = 0.1
-    ctmqc_env['sigma'][:] = sig
+#    calc_sigmal(ctmqc_env)
+#    sig = np.mean(ctmqc_env['sigmal'])
+#    if sig < 0.1:
+#        sig = 0.1
+#    ctmqc_env['sigma'][:] = sig
     
 #    print(ctmqc_env['sigma'])
 
     # Calculate WIJ and alpha
-    WIJ = calc_WIJ(ctmqc_env, reps_to_complete)
+    WIJ = calc_WIJ(ctmqc_env, ctmqc_env['QM_reps'])
     alpha = np.sum(WIJ, axis=1)
     ctmqc_env['alpha'] = alpha
     Ralpha = ctmqc_env['pos'] * alpha
@@ -248,7 +248,7 @@ def calc_Qlk(ctmqc_env):
     # Calculate all the Ylk
     f = ctmqc_env['adMom']
     Ylk = np.zeros((nRep, nState, nState))
-    for J in reps_to_complete:
+    for J in ctmqc_env['QM_reps']:
         for l in range(nState):
             Cl = pops[J, l]
             fl = f[J, l]
@@ -263,12 +263,12 @@ def calc_Qlk(ctmqc_env):
     if abs(sum_Ylk[0, 1]) > 1e-12:
         # Calculate the R0 (used if the Rlk spikes)
         RI0 = np.zeros((nRep))
-        for I in reps_to_complete:
+        for I in ctmqc_env['QM_reps']:
             RI0[I] = np.dot(WIJ[I, :], ctmqc_env['pos'][:])
 
         # Calculate the Rlk
         Rlk = np.zeros((nState, nState))
-        for I in reps_to_complete:
+        for I in ctmqc_env['QM_reps']:
             Rav = Ralpha[I]
             for l in range(nState):
                 for k in range(l):
@@ -283,22 +283,26 @@ def calc_Qlk(ctmqc_env):
         # Calculate the Quantum Momentum
         maxRI0 = np.max(RI0[np.abs(RI0) > 0], axis=0)
         minRI0 = np.min(RI0[np.abs(RI0) > 0], axis=0)
-        for I in reps_to_complete:
+        for I in ctmqc_env['QM_reps']:
             R = np.zeros((nState, nState))
             for l in range(nState):
                 for k in range(l):
                     if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
+#                        Qlk[I] = ctmqc_env['Qlk_tm'][I] * ctmqc_env['mass'][0]
                         R[l, k] = RI0[I]
                         R[k, l] = RI0[I]
                     else:
                         R[l, k] = Rlk[l, k]
-                        R[k, l] = Rlk[k, l]
+                        R[l, k] = Rlk[k, l]
+            
+            Qlk[I, :, :] = Ralpha[I] - R
 
-            Qlk[I, :, :] = Ralpha[I] - R
-            Qlk[I, :, :] = Ralpha[I] - R
+            ctmqc_env['EffR'][I, :, :] = R
 
         # Divide by mass2
         Qlk[:, :, :] /= ctmqc_env['mass'][0]
+    
+#        for I in ctmqc_env['QM_reps']
 
     return Qlk
 

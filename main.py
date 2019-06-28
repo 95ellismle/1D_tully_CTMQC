@@ -22,10 +22,10 @@ import QM_utils as qUt
 
 redo = True
 whichPlot = ''
-all_velMultiplier = [3]  #, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [1300]  #, 5500, 1500, 2500, 2000, 3500]
-all_model = [3]  #, 3, 2, 2, 1, 1]
-all_p_mean = [-15]  #, -15, -8, -8, -8, -8]
+all_velMultiplier = [1.6]  #, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [2500]  #, 5500, 1500, 2500, 2000, 3500]
+all_model = [2]  #, 3, 2, 2, 1, 1]
+all_p_mean = [-8]  #, -15, -8, -8, -8, -8]
 all_doCTMQC_C = [True]
 all_doCTMQC_F = [True]
 s_mean = 0.3
@@ -379,6 +379,7 @@ class CTMQC(object):
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
         self.allRI0 = np.zeros((nstep, nrep))
+        self.allEffR = np.zeros((nstep, nrep, nstate, nstate))
         self.allSigma = np.zeros((nstep, nrep))
         self.allSigmal = np.zeros((nstep, nstate))
 
@@ -400,8 +401,10 @@ class CTMQC(object):
         self.ctmqc_env['adMom_tm'] = np.zeros((nrep, nstate))
         self.ctmqc_env['alpha'] = np.zeros((nrep))
         self.ctmqc_env['alphal'] = 0.0
+        self.ctmqc_env['sigmal'] = np.zeros(nstate)
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
+        self.ctmqc_env['EffR'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
         self.ctmqc_env['RI0'] = np.zeros((nrep))
         self.ctmqc_env['Rlk_tm'] = np.zeros((nstate, nstate))
@@ -430,6 +433,7 @@ class CTMQC(object):
         self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
         self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
         self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
+        self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
         self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
         self.ctmqc_env['E_tm'] = copy.deepcopy(self.ctmqc_env['E'])
         self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
@@ -476,8 +480,7 @@ class CTMQC(object):
         electronic propagators. These are then saved in the ctmqc_env dict.
         """
         # Get adiabatic populations
-        self.ctmqc_env['adPops'] = np.conjugate(self.ctmqc_env['C']) * self.ctmqc_env['C']
-        self.ctmqc_env['adPops'] = self.ctmqc_env['adPops'].astype(float)
+        self.ctmqc_env['adPops'] = (np.conjugate(self.ctmqc_env['C']) * self.ctmqc_env['C']).real
         
         # Do for each rep
         for irep in range(self.ctmqc_env['nrep']):
@@ -652,6 +655,7 @@ class CTMQC(object):
         self.allv[istep] = self.ctmqc_env['vel']
         self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allRlk[istep] = self.ctmqc_env['Rlk']
+        self.allEffR[istep] = self.ctmqc_env['EffR']
         self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
@@ -679,6 +683,7 @@ class CTMQC(object):
         self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
         self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
         self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
+        self.allEffR = self.allEffR[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
         self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
         self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
@@ -813,7 +818,7 @@ def plotQlk(runData):
 
     
 def plotPops(runData):
-    lw = 0.5
+    lw = 0.25
     alpha = 0.5
     plt.figure()
     plt.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)

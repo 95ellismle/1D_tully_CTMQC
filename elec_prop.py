@@ -229,12 +229,14 @@ def do_adiab_prop_QM(ctmqc_env):
         df_E = (ctmqc_env['adMom'][irep]
                 - ctmqc_env['adMom_tm'][irep])
         df_E /= float(ctmqc_env['elec_steps'])
-
+        
         # Make X_{1}
         ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]
         ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]
-
-        X1 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
+        if (irep in ctmqc_env['QM_reps']):
+            X1 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
+        else:
+            X1 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
 
         for Estep in range(ctmqc_env['elec_steps']):
             # Linear Interpolationprint(check)
@@ -248,7 +250,11 @@ def do_adiab_prop_QM(ctmqc_env):
                 + (Estep + 0.5) * df_E
 
             # Make X12
-            X12 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
+            if (irep in ctmqc_env['QM_reps']):
+                X12 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
+            else:
+                X12 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
+#            X12 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
 
             # Linear Interpolation
             ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]\
@@ -261,7 +267,11 @@ def do_adiab_prop_QM(ctmqc_env):
             v_tm = v_tm + (Estep + 1.0) * dv_E
 
             # Make X2
-            X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
+            if (irep in ctmqc_env['QM_reps']):
+                X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
+            else:
+                X2 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
+#            X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
 
             # RK4
             coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
