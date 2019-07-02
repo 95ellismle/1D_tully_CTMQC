@@ -20,18 +20,19 @@ import nucl_prop
 import elec_prop as e_prop
 import QM_utils as qUt
 
-redo = True
-whichPlot = ''
-all_velMultiplier = [1.6]  #, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [2500]  #, 5500, 1500, 2500, 2000, 3500]
-all_model = [2]  #, 3, 2, 2, 1, 1]
-all_p_mean = [-8]  #, -15, -8, -8, -8, -8]
-all_doCTMQC_C = [True]
-all_doCTMQC_F = [True]
-s_mean = 0.3
-rootFolder = '/temp/mellis/TullyModels/Dev'
+numRepeats = 6
 
-nRep = 50
+#whichPlot = ''
+all_velMultiplier = [2.5, 1] * numRepeats  #, 1, 3, 1.6, 2.5, 1]
+all_maxTime = [2000, 3500] * numRepeats  #, 5500, 1500, 2500, 2000, 3500]
+all_model = [1, 1] * numRepeats  #, 3, 2, 2, 1, 1]
+all_p_mean = [-8, -8] * numRepeats  #, -15, -8, -8, -8, -8]
+all_doCTMQC_C = [True] * 2 * numRepeats
+all_doCTMQC_F = [True] * 2 * numRepeats
+s_mean = 0.3
+rootFolder = '/temp/mellis/TullyModels/Model1_5Spread/Repeat'
+
+nRep = 200
 mass = 2000
 
 
@@ -52,8 +53,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 0.5,  # The timestep | |au_t
-            'elec_steps': 1,  # Num elec. timesteps per nucl. one | | -
+            'dt': 2,  # The timestep | |au_t
+            'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
@@ -424,22 +425,6 @@ class CTMQC(object):
             msg = "Incorrect tully model chosen. Only 1, 2 and 3 available"
             raise SystemExit(msg)
 
-    def __update_vars_step(self):
-        """
-        Will update the time-dependant variables in the ctmqc environment
-
-        N.B. Only pos needs saving as the rest are re-calculated on the fly.
-        """
-        self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
-        self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
-        self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
-        self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
-        self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
-        self.ctmqc_env['E_tm'] = copy.deepcopy(self.ctmqc_env['E'])
-        self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
-        self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
-        self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
-
     def __init_step(self):
         """
         Will carry out the initialisation step (just 1 step without
@@ -513,8 +498,8 @@ class CTMQC(object):
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
             if self.ctmqc_env['do_sigma_calc']:
                 qUt.calc_sigma(self.ctmqc_env)
-            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
-#            self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
+#            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
+            self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
 
     def __main_loop(self):
         """
@@ -572,10 +557,10 @@ class CTMQC(object):
             if self.ctmqc_env['do_QM_F']:
                 Qlk = self.ctmqc_env['Qlk'][irep, 0, 1]
                 Fqm = nucl_prop.calc_QM_force(
-                                         self.ctmqc_env['adPops'][irep],
-                                         Qlk,
-                                         self.ctmqc_env['adMom'][irep],
-                                         self.ctmqc_env)
+                                         C=self.ctmqc_env['adPops'][irep],
+                                         QM=Qlk,
+                                         f=self.ctmqc_env['adMom'][irep],
+                                         ctmqc_env=self.ctmqc_env)
 
             Ftot = float(Feh) + float(Fqm)
             self.ctmqc_env['F_eh'][irep] = Feh
@@ -635,6 +620,22 @@ class CTMQC(object):
         self.allTimes['force'].append(t4 - t3)
         self.__update_vars_step()  # Save old positions
 
+    def __update_vars_step(self):
+        """
+        Will update the time-dependant variables in the ctmqc environment
+        """
+#        self.ctmqc_env['pos_tm'] = copy.deepcopy(self.ctmqc_env['pos'])
+        self.ctmqc_env['H_tm'] = copy.deepcopy(self.ctmqc_env['H'])
+        self.ctmqc_env['U_tm'] = copy.deepcopy(self.ctmqc_env['U'])
+        if self.adiab_diab == "adiab":
+            self.ctmqc_env['vel_tm'] = copy.deepcopy(self.ctmqc_env['vel'])
+            self.ctmqc_env['NACV_tm'] = copy.deepcopy(self.ctmqc_env['NACV'])
+            self.ctmqc_env['E_tm'] = copy.deepcopy(self.ctmqc_env['E'])
+        if self.ctmqc_env['do_QM_C']:
+            self.ctmqc_env['Qlk_tm'] = copy.deepcopy(self.ctmqc_env['Qlk'])
+            self.ctmqc_env['Rlk_tm'] = copy.deepcopy(self.ctmqc_env['Rlk'])
+            self.ctmqc_env['adMom_tm'] = copy.deepcopy(self.ctmqc_env['adMom'])
+            self.ctmqc_env['sigma_tm'] = np.array(self.ctmqc_env['sigma'])
 
     def __save_data(self):
         """
@@ -696,14 +697,35 @@ class CTMQC(object):
             os.makedirs(self.saveFolder)
 
         names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
-                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma"]
+                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "sigmal"]
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
-                self.allRlk, self.allRI0, self.allSigma]
+                self.allRlk, self.allRI0, self.allSigma, self.allSigmal]
         for name, arr in zip(names, arrs):
             savepath = "%s/%s" % (self.saveFolder, name)
             np.save(savepath, arr)
+
+    def __checkVV(self):
+        """
+        Will check the velocity verlet algorithm propagated the dynamics
+        correctly by comparing the velocities with the time-derivative
+        positions.
+        """
+        dx_dt = np.gradient(self.allR, self.ctmqc_env['dt'], axis=0)
+        diff = np.abs(self.allv - dx_dt)
+        worstCase = np.max(diff)
+        avgCase = np.mean(diff)
+        bestCase = np.min(diff)
+        std = np.std(diff)
+        if worstCase > 1e-6 and bestCase > 1e-18 or worstCase > 1e-5:
+            msg = "ERROR: Velocity Verlet gives bad velocities / positions"
+            msg += "\n\t-Time differentiated positions are different to "
+            msg += "velocities!"
+            msg += "\n\t* Best case: %.2g" % bestCase
+            msg += "\n\t* Worst case: %.2g" % worstCase
+            msg += "\n\t* Mean case: %.2g +/- %.2g" % (avgCase, std)
+            raise SystemExit(msg)
 
     def __finalise(self):
         """
@@ -715,6 +737,10 @@ class CTMQC(object):
         # Small runs are probably tests
         if self.ctmqc_env['iter'] > 30 and self.saveFolder:
             self.__store_data()
+        
+        # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
+        if all([self.ctmqc_env['do_QM_F'], self.ctmqc_env['do_QM_C']]) is False:
+            self.__checkVV()
         
         # Print some useful info
 #        sumTime = np.sum(self.allTimes['step'])
@@ -756,7 +782,7 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 10 / (v_mean * mass)
+    p_std = 5. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
@@ -772,16 +798,7 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    #pos = np.array([[-15.132850264953916],
-    #            [-15.035537944937454],
-    #            [-15.06041110960171],
-    #            [-14.779522321356895],
-    #            [-15.170942986492186],
-    #            [-14.894703237836561],
-    #            [-15.113117117232768],
-    #            [-14.583949369412588],
-    #            [-15.372026580963544],
-    #            [-14.591394891547226]])[:, 0]
+    
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -796,7 +813,7 @@ if nSim > 1 and nRep > 30:
     
     nProc = min([nSim, 20])
     pool = mp.Pool(nProc)
-    print("Doing %i sims with %i processors" % (nSim, nProc))
+    print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))
 else:
     #import test
@@ -820,26 +837,117 @@ def plotQlk(runData):
 def plotPops(runData):
     lw = 0.25
     alpha = 0.5
-    plt.figure()
-    plt.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r')
-    plt.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b')
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
+           label=r"|C$_{1}$|$^2$")
+    a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
+           label=r"|C$_{2}$|$^2$")
+    a.set_ylabel("Adiab. Pop.")
+    a.set_ylabel("Time [au]")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+    a.legend()
+
+    
+def plotNorm(runData):
+    lw = 0.25
+    alpha = 0.5
+    allNorms = np.sum(runData.allAdPop, axis=2)
+    avgNorms = np.mean(allNorms, axis=1)
+    f, a = plt.subplots()
+    a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgNorms, 'r')
+    a.set_ylabel("Norm")
+    a.set_ylabel("Time [au]")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
 def plotDeco(runData):
     lw = 0.1
     alpha = 0.5
-    plt.figure()
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-    plt.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, np.mean(deco, axis=1), 'k')
+
+    f, a = plt.subplots()
+    a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
+    a.plot(runData.allt, np.mean(deco, axis=1), 'k')
+    a.set_ylabel("Coherence")
+    a.set_ylabel("Time [au]")    
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
+def plotSigmal(runData):
+    """
+    Will plot sigmal against time
+    """
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$")
+    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$")
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\sigma_{l}$")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+    a.legend()
+
+
+def plotPos(runData):
+    """
+    Will plot sigmal against time
+    """
+    lw = 0.3
+    alpha = 0.7
+    
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$R^{(I)}$")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+
+
+def plotEpotTime(runData, istep=False, saveFolder='.', step=1):
+    """
+    Will plot the potential energy over time for either each step or just the
+    one specified.
+    """
+    if istep is not False:
+        potE = np.sum(runData.allAdPop[istep] * runData.allE[istep], axis=1)
+        f, a = plt.subplots()
+        a.plot(runData.allR, runData.allE[:, :, 0], 'r')
+        a.plot(runData.allR, runData.allE[:, :, 1], 'b')
+        a.plot(runData.allR[istep], potE, 'k.')
+        a.set_ylabel("Energy [Ha]")
+        a.set_xlabel("Nucl. Pos [bohr]")
+    else:
+        potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+        f, a = plt.subplots()
+        nSteps = runData.ctmqc_env['iter']
+        lenStrNum = len(str(nSteps))
+        count = 0
+        totNumSteps = len(range(0, nSteps, istep))
+        for istep in range(0, nSteps, step):
+            print("\rStep %i/%i" % (count, totNumSteps), end="\r")
+            a.clear()
+            a.plot(runData.allR, runData.allE[:, :, 0], 'r')
+            a.plot(runData.allR, runData.allE[:, :, 1], 'b')
+            a.plot(runData.allR[istep], potE[istep], 'k.')
+            a.set_ylabel("Energy [Ha]")
+            a.set_xlabel("Nucl. Pos [bohr]") 
+            picName = "0" * (lenStrNum - len(str(count))) + str(count)
+            f.savefig("%s/%s.png" % (saveFolder, picName))
+            count += 1
+        
+        ffmpegCmd = "ffmpeg -framerate 120 -i %s/%%0%id.png potE_ani.mp4" % (saveFolder,
+                                                             lenStrNum)
+        print("Use the following command to stitch the pics together:")
+        print("\t`%s`" % ffmpegCmd)
+        plt.close()
+        
 
 
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plotPops(runData)
     plotDeco(runData)
+    plotSigmal(runData)
+#    plotEpotTime(runData, saveFolder="/temp/mellis/TullyModels/EhPics",
+#                 step=2)
     plt.show()

@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -100,65 +101,69 @@ def do_diab_prop_ehren(ctmqc_env):
             X2 = makeX_diab_ehren(H)
 
             H = H_tm + (Estep + 1.0) * dH_E
-            ctmqc_env['u'][irep] = __RK4_2(ctmqc_env,
-                                         ctmqc_env['u'][irep], X1, X12, X2)
+            ctmqc_env['u'][irep] = __RK4(ctmqc_env['u'][irep], X1, X12, X2,
+                                         ctmqc_env)
 
             X1 = X2[:]
 
 
-def do_diab_prop_QM(ctmqc_env, irep):
+def do_diab_prop_QM(ctmqc_env):
     """
     Will propagate the coefficients in the diabatic basis (without the
-    diabatic NACE)
+    diabatic NACE)  
+    
+    N.B. Is just Ehrenfest at the moment
     """
-    dx_E = (ctmqc_env['pos'] - ctmqc_env['pos_tm'])
-    dx_E /= float(ctmqc_env['elec_steps'])
+    for irep in range(ctmqc_env['nrep']):
+        H = ctmqc_env['H_tm'][irep]
+        dH_E = get_diffVal(ctmqc_env['H'][irep], H, ctmqc_env)
+        
+        U = ctmqc_env['U_tm'][irep]
+        dU_E = get_diffVal(ctmqc_env['U'][irep], U, ctmqc_env)
+        
+        QM = ctmqc_env['Qlk_tm'][irep]
+        dQM_E = get_diffVal(ctmqc_env['Qlk'][irep], QM, ctmqc_env)
+        
+        f = ctmqc_env['adMom_tm'][irep]
+        df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
 
-    X1 = makeX_diab_QM(ctmqc_env, ctmqc_env['pos_tm'], irep)
-    for Estep in range(ctmqc_env['elec_steps']):
-        pos2 = ctmqc_env['pos_tm'] + (Estep + 0.5) * dx_E
-        pos3 = ctmqc_env['pos_tm'] + (Estep + 1.0) * dx_E
+        X1 = makeX_diab_QM(H, QM, f, U, ctmqc_env, irep)
+        for Estep in range(ctmqc_env['elec_steps']):
+            H += 0.5 * dH_E
+            U += 0.5 * dU_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X12 = makeX_diab_QM(H, QM, f, U, ctmqc_env, irep)
 
-        X12 = makeX_diab_QM(ctmqc_env, pos2, irep)
-        X2 = makeX_diab_QM(ctmqc_env, pos3, irep)
+            H += 0.5 * dH_E
+            U += 0.5 * dU_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X2 = makeX_diab_QM(H, QM, f, U, ctmqc_env, irep)
 
-        coeff = __RK4(ctmqc_env['u'][irep], X1, X12, X2, ctmqc_env)
-        ctmqc_env['u'][irep] = coeff
+            ctmqc_env['u'][irep] = __RK4(ctmqc_env['u'][irep], X1, X12, X2,
+                                         ctmqc_env)
 
-        X1 = X2[:]
+            X1 = X2[:]
 
 
-def makeX_diab_QM(ctmqc_env, pos, irep):
+def makeX_diab_QM(H, QM, f, U, ctmqc_env, irep):
     """
-    Will make the diabatic X matrix
+    Will make the diabatic X matrix for the full quantum momentum propagation.
+    
+    N.B. only give Ehrenfest atm
     """
-    nstate = ctmqc_env['nstate']
-    H = ctmqc_env['Hfunc'](pos[irep])
-    U = Ham.getEigProps(H, ctmqc_env)[1]
-    X = -1j * H
-    K = np.zeros((nstate, nstate))
+    u = ctmqc_env['u'][irep]
+    return -1j * H
 
-    C = trans_diab_to_adiab(H,
-                            ctmqc_env['u'][irep],
-                            ctmqc_env)
-    ctmqc_env['C'][irep] = C
-    adPops = calc_ad_pops(C, ctmqc_env)
 
-    ctmqc_env['pos'] = pos
-    QM = qUt.calc_QM_analytic(ctmqc_env, irep)
-    adMom = qUt.calc_ad_mom(ctmqc_env, irep)
-    for l in range(nstate):
-        tmp = 0.0
-        for k in range(nstate):
-            Ck = adPops[k]
-            fk = adMom[k]
-            tmp += Ck*fk
-
-        K[l, l] = QM * adMom[l] * tmp
-
-    Xctmqc = np.dot(U.T, np.dot(K, U))
-
-    return X - Xctmqc
+def lin_interp_check(oldVal, interpVal, name):
+    """
+    Will check if the linear interpolation went well for the named variable
+    """
+    if np.max(oldVal - interpVal) > 1e-12:
+        raise SystemExit("Something went wrong with the linear " +
+                             "interpolation of the %s" % name)
 
 
 def do_adiab_prop_ehren(ctmqc_env):
@@ -166,40 +171,45 @@ def do_adiab_prop_ehren(ctmqc_env):
     Will actually carry out the propagation of the coefficients
     """
     for irep in range(ctmqc_env['nrep']):
-        v_tm = ctmqc_env['vel_tm'][irep]
-        dv_E = get_diffVal(ctmqc_env['vel'][irep], v_tm, ctmqc_env)
+        v = ctmqc_env['vel_tm'][irep]
+        dv_E = get_diffVal(ctmqc_env['vel'][irep], v, ctmqc_env)
 
-        H_tm = np.matrix(ctmqc_env['H_tm'][irep])
-        dH_E = get_diffVal(ctmqc_env['H'][irep], H_tm, ctmqc_env)
+        H = ctmqc_env['H_tm'][irep]
+        dH_E = get_diffVal(ctmqc_env['H'][irep], H, ctmqc_env)
 
-        E_tm = ctmqc_env['E_tm'][irep]
-        dE_E = get_diffVal(ctmqc_env['E'][irep], E_tm, ctmqc_env)
+        E = ctmqc_env['E_tm'][irep]
+        dE_E = get_diffVal(ctmqc_env['E'][irep], E, ctmqc_env)
 
-        NACV_tm = np.matrix(ctmqc_env['NACV_tm'][irep])
-        dNACV_E = get_diffVal(ctmqc_env['NACV'][irep], NACV_tm, ctmqc_env)
+        NACV = ctmqc_env['NACV_tm'][irep]
+        dNACV_E = get_diffVal(ctmqc_env['NACV'][irep], NACV, ctmqc_env)
 
-        X1 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
+        X1 = makeX_adiab_ehren(NACV, v, E)
         for Estep in range(ctmqc_env['elec_steps']):
-            H_tm = H_tm + (Estep + 0.5) * dH_E
-            E_tm = E_tm + (Estep + 0.5) * dE_E
-            NACV_tm = NACV_tm + (Estep + 0.5) * dNACV_E
-            v_tm = v_tm + (Estep + 0.5) * dv_E
-            X12 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
+            H += 0.5 * dH_E
+            E += 0.5 * dE_E
+            NACV += 0.5 * dNACV_E
+            v += 0.5 * dv_E
+            X12 = makeX_adiab_ehren(NACV, v, E)
 
-            H_tm = H_tm + (Estep + 1.0) * dH_E
-            E_tm = E_tm + (Estep + 1.0) * dE_E
-            NACV_tm = NACV_tm + (Estep + 1.0) * dNACV_E
-            v_tm = v_tm + (Estep + 1.0) * dv_E
-            X2 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
+            H = H + 0.5 * dH_E
+            E = E + 0.5 * dE_E
+            NACV = NACV + 0.5 * dNACV_E
+            v = v + 0.5 * dv_E
+            X2 = makeX_adiab_ehren(NACV, v, E)
 
             coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
                           ctmqc_env)
             ctmqc_env['C'][irep] = coeff
 
             X1 = X2[:]
+        
+        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
+        lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
+        lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
+        lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
 
 
-def makeX_adiab_ehren(ctmqc_env, H, NACV, vel, E):
+def makeX_adiab_ehren(NACV, vel, E):
     """
     Will make the adiabatic X matrix
     """
@@ -211,120 +221,83 @@ def do_adiab_prop_QM(ctmqc_env):
     Will actually carry out the propagation of the coefficients
     """
     for irep in range(ctmqc_env['nrep']):
-        v_tm = ctmqc_env['vel_tm'][irep]
-        dv_E = get_diffVal(ctmqc_env['vel'][irep], v_tm, ctmqc_env)
+        v = ctmqc_env['vel_tm'][irep]
+        dv_E = get_diffVal(ctmqc_env['vel'][irep], v, ctmqc_env)
 
-        H_tm = np.matrix(ctmqc_env['H_tm'][irep])
-        dH_E = get_diffVal(ctmqc_env['H'][irep], H_tm, ctmqc_env)
+        E = ctmqc_env['E_tm'][irep]
+        dE_E = get_diffVal(ctmqc_env['E'][irep], E, ctmqc_env)
 
-        E_tm = ctmqc_env['E_tm'][irep]
-        dE_E = get_diffVal(ctmqc_env['E'][irep], E_tm, ctmqc_env)
+        NACV = ctmqc_env['NACV_tm'][irep]
+        dNACV_E = get_diffVal(ctmqc_env['NACV'][irep], NACV, ctmqc_env)
 
-        NACV_tm = np.matrix(ctmqc_env['NACV_tm'][irep])
-        dNACV_E = get_diffVal(ctmqc_env['NACV'][irep], NACV_tm, ctmqc_env)
+        QM = ctmqc_env['Qlk_tm'][irep]
+        dQM_E = get_diffVal(ctmqc_env['Qlk'][irep], QM, ctmqc_env)
 
-        dQlk_E = (ctmqc_env['Qlk'][irep]
-                  - ctmqc_env['Qlk_tm'][irep])
-        dQlk_E /= float(ctmqc_env['elec_steps'])
-        df_E = (ctmqc_env['adMom'][irep]
-                - ctmqc_env['adMom_tm'][irep])
-        df_E /= float(ctmqc_env['elec_steps'])
+        f = ctmqc_env['adMom_tm'][irep]
+        df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
         
-        # Make X_{1}
-        ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]
-        ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]
-        if (irep in ctmqc_env['QM_reps']):
-            X1 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
-        else:
-            X1 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
-
+        adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+        
+        X1_eh = makeX_adiab_ehren(NACV, v, E)
+        X1_qm = makeX_adiab_Qlk(QM, f, adPops)
+        X1 = X1_eh - X1_qm
         for Estep in range(ctmqc_env['elec_steps']):
-            # Linear Interpolationprint(check)
-            H_tm = H_tm + (Estep + 0.5) * dH_E
-            E_tm = E_tm + (Estep + 0.5) * dE_E
-            NACV_tm = NACV_tm + (Estep + 0.5) * dNACV_E
-            v_tm = v_tm + (Estep + 0.5) * dv_E
-            ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]\
-                + (Estep + 0.5) * dQlk_E
-            ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]\
-                + (Estep + 0.5) * df_E
+            adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+            E += 0.5 * dE_E
+            NACV += 0.5 * dNACV_E
+            v += 0.5 * dv_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X12_eh = makeX_adiab_ehren(NACV, v, E)
+            X12_qm = makeX_adiab_Qlk(QM, f, adPops)
+            X12 = X12_eh - X12_qm
 
-            # Make X12
-            if (irep in ctmqc_env['QM_reps']):
-                X12 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
-            else:
-                X12 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
-#            X12 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
+            E = E + 0.5 * dE_E
+            NACV = NACV + 0.5 * dNACV_E
+            v = v + 0.5 * dv_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X2_eh = makeX_adiab_ehren(NACV, v, E)
+            X2_qm = makeX_adiab_Qlk(QM, f, adPops)
+            X2 = X2_eh - X2_qm
 
-            # Linear Interpolation
-            ctmqc_env['Qlk'][irep] = ctmqc_env['Qlk_tm'][irep]\
-                + (Estep + 1.0) * dQlk_E
-            ctmqc_env['adMom'][irep] = ctmqc_env['adMom_tm'][irep]\
-                + (Estep + 1.0) * df_E
-            H_tm = H_tm + (Estep + 1.0) * dH_E
-            E_tm = E_tm + (Estep + 1.0) * dE_E
-            NACV_tm = NACV_tm + (Estep + 1.0) * dNACV_E
-            v_tm = v_tm + (Estep + 1.0) * dv_E
-
-            # Make X2
-            if (irep in ctmqc_env['QM_reps']):
-                X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep)
-            else:
-                X2 = makeX_adiab_ehren(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm)
-#            X2 = makeX_adiab_Qlk(ctmqc_env, H_tm, NACV_tm, v_tm, E_tm, irep) 
-
-            # RK4
             coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
                           ctmqc_env)
             ctmqc_env['C'][irep] = coeff
 
-            X1 = X2[:]  # Update X_{1}
+            X1 = X2[:]
+        
+#        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
+        lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
+        lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
+        lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
+        lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
+        lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
 
 
-def makeX_adiab_Qlk(ctmqc_env, H, NACV, vel, E, irep):
+def makeX_adiab_Qlk(Qlk, f, adPops):
     """
     Will make the adiabatic X matrix with Qlk
     """
-    nstates = ctmqc_env['nstate']
-    X = np.zeros((nstates, nstates), dtype=complex)
+    nstates = len(adPops)
     Xqm = np.zeros((nstates, nstates), dtype=complex)
 
-    # Ehrenfest Part
-    X = (-1j * np.identity(2) * E) - (NACV * vel)
-
-    # QM Part
-    # Calculate QM, adMom and adPops
-    C = ctmqc_env['C'][irep]  # coeff
-
-    adPops = np.conjugate(C) * C
-    Qlk = ctmqc_env['Qlk'][irep]
-    f = ctmqc_env['adMom'][irep]
-
-    # ammend X
+    # make X
     for l in range(nstates):
+
         for k in range(nstates):
             Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
-
-    return np.array(X - Xqm)
-
-
-def __RK4_2(ctmqc_env, coeff, X1, X12, X2):
-    """
-    Will carry out the RK4 algorithm to propagate the coefficients
-    """
-    dTe = ctmqc_env['dt'] / float(ctmqc_env['elec_steps'])
-    coeff = np.array(coeff)
-
-    K1 = np.array(dTe * np.matmul(X1, coeff))[0]
-    K2 = np.array(dTe * np.matmul(X12, coeff + K1/2.))[0]
-    K3 = np.array(dTe * np.matmul(X12, coeff + K2/2.))[0]
-    K4 = np.array(dTe * np.matmul(X2, coeff + K3))[0]
-
-    Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
-
-    coeff = coeff + Ktot
-
-    return coeff
+    
+    # Check the Xqm term (using norm conservation)
+    if np.sum(Xqm * adPops) > 1e-10:
+        print("\n\nQM: ", Qlk, "\n")
+        print("f: ", f, "\n")
+        print("adPops: ", adPops, "\n")
+        print("Xqm: ", Xqm, "\n")
+        print("Xqm * adPops: ", Xqm * adPops, "\n")
+        raise SystemExit("ERROR: MakeX, sum Xqm != 0")
+    
+    return Xqm
 
 
 def __RK4(coeff, X1, X12, X2, ctmqc_env):
@@ -338,6 +311,7 @@ def __RK4(coeff, X1, X12, X2, ctmqc_env):
     K2 = np.array(dTe * np.dot(np.array(X12), coeff + K1/2.))
     K3 = np.array(dTe * np.dot(np.array(X12), coeff + K2/2.))
     K4 = np.array(dTe * np.dot(np.array(X2), coeff + K3))
+    
     Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
     coeff = coeff + Ktot
 
