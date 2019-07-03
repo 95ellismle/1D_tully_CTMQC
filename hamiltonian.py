@@ -54,6 +54,22 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
     return np.matrix([[V11, V12], [V12, V22]])
 
 
+def create_H4(x, A=6e-4, B=0.1, C=0.9, D=4):
+    """
+    Will create the Hamiltonian in Tully Model 3
+    """
+    V11 = A
+    V22 = -A
+    if x < -D:
+        V12 = -B *np.exp(C *(x-D)) + B *np.exp(C *(x+D))
+    elif x > D:
+        V12 = B *np.exp(-C *(x-D)) - B *np.exp(-C *(x+D))
+    else:
+        V12 = 2*B - B*np.exp(C *(x-D)) - B *np.exp(-C *(x+D))
+
+    return np.matrix([[V11, V12], [V12, V22]])
+
+
 def getEigProps(H, ctmqc_env):
     """
     Wrapper function, this really needs taking out it when I have time.
@@ -119,3 +135,13 @@ def calcNACV(irep, ctmqc_env):
                 raise SystemExit("NACV not antisymetric!")
 
     return NACV
+
+
+def test_Hfunc(Hfunc, minX=-15, maxX=15, stride=0.01):
+    allR = np.arange(minX, maxX, stride)
+    allH = [Hfunc(x) for x in allR]
+    allE = [np.linalg.eigh(H)[0] for H in allH]
+    allE = np.array(allE)
+    plt.plot(allR, allE[:, 0])
+    plt.plot(allR, allE[:, 1])
+    return allH, allE

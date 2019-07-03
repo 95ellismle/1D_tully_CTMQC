@@ -153,7 +153,6 @@ def makeX_diab_QM(H, QM, f, U, ctmqc_env, irep):
     
     N.B. only give Ehrenfest atm
     """
-    u = ctmqc_env['u'][irep]
     return -1j * H
 
 

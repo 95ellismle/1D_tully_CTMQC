@@ -20,19 +20,20 @@ import nucl_prop
 import elec_prop as e_prop
 import QM_utils as qUt
 
-numRepeats = 6
+numRepeats = 1
 
 #whichPlot = ''
-all_velMultiplier = [2.5, 1] * numRepeats  #, 1, 3, 1.6, 2.5, 1]
-all_maxTime = [2000, 3500] * numRepeats  #, 5500, 1500, 2500, 2000, 3500]
-all_model = [1, 1] * numRepeats  #, 3, 2, 2, 1, 1]
-all_p_mean = [-8, -8] * numRepeats  #, -15, -8, -8, -8, -8]
-all_doCTMQC_C = [True] * 2 * numRepeats
-all_doCTMQC_F = [True] * 2 * numRepeats
+all_velMultiplier = [4] * numRepeats
+all_maxTime = [2000] * numRepeats
+all_model = [4]  * numRepeats
+all_p_mean = [-15] * numRepeats
+all_doCTMQC_C = [False] * numRepeats
+all_doCTMQC_F = [False] * numRepeats
 s_mean = 0.3
-rootFolder = '/temp/mellis/TullyModels/Model1_5Spread/Repeat'
+#rootFolder = '/temp/mellis/TullyModels/CTMQC_Sigmal_ManyRepeats_ConstSig0.25/Repeat'
+rootFolder = '/temp/mellis/TullyModels/Dev'
 
-nRep = 200
+nRep = 1
 mass = 2000
 
 
@@ -365,6 +366,7 @@ class CTMQC(object):
         # For saving the data
         self.allR = np.zeros((nstep, nrep))
         self.allF = np.zeros((nstep, nrep))
+        self.allNACV = np.zeros((nstep, nrep, nstate, nstate))
         self.allFeh = np.zeros((nstep, nrep))
         self.allFqm = np.zeros((nstep, nrep))
         self.allt = np.zeros((nstep))
@@ -420,9 +422,11 @@ class CTMQC(object):
             self.ctmqc_env['Hfunc'] = Ham.create_H2
         elif self.ctmqc_env['tullyModel'] == 3:
             self.ctmqc_env['Hfunc'] = Ham.create_H3
+        elif self.ctmqc_env['tullyModel'] == 4:
+            self.ctmqc_env['Hfunc'] = Ham.create_H4
         else:
             print("Tully Model = %i" % self.ctmqc_env['tullyModel'])
-            msg = "Incorrect tully model chosen. Only 1, 2 and 3 available"
+            msg = "Incorrect tully model chosen. Only 1, 2, 3 and 4 available"
             raise SystemExit(msg)
 
     def __init_step(self):
@@ -481,10 +485,12 @@ class CTMQC(object):
             adFrc = qUt.calc_ad_frc(pos, self.ctmqc_env)
             self.ctmqc_env['adFrc'][irep] = adFrc
 
-
             # Get adiabatic NACV
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
                                                            self.ctmqc_env)
+
+            if self.ctmqc_env['pos'][irep] > 0:
+                self.ctmqc_env['NACV'][irep] = -0.1 * self.ctmqc_env['NACV'][irep]
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
@@ -643,6 +649,7 @@ class CTMQC(object):
         """
         istep = self.ctmqc_env['iter']
         self.allR[istep] = self.ctmqc_env['pos']
+        self.allNACV[istep] = self.ctmqc_env['NACV']
         self.allF[istep] = self.ctmqc_env['frc']
         self.allFeh[istep] = self.ctmqc_env['F_eh']
         self.allFqm[istep] = self.ctmqc_env['F_qm']
@@ -670,6 +677,7 @@ class CTMQC(object):
         """
         self.allR = self.allR[:self.ctmqc_env['iter']]
         self.allt = self.allt[:self.ctmqc_env['iter']]
+        self.allNACV = self.allNACV[:self.ctmqc_env['iter']]
         self.allF = self.allF[:self.ctmqc_env['iter']]
         self.allFeh = self.allFeh[:self.ctmqc_env['iter']]
         self.allFqm = self.allFqm[:self.ctmqc_env['iter']]
@@ -697,11 +705,13 @@ class CTMQC(object):
             os.makedirs(self.saveFolder)
 
         names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
-                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "sigmal"]
+                "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "sigmal",
+                "NACV"]
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
-                self.allRlk, self.allRI0, self.allSigma, self.allSigmal]
+                self.allRlk, self.allRI0, self.allSigma, self.allSigmal,
+                self.allNACV]
         for name, arr in zip(names, arrs):
             savepath = "%s/%s" % (self.saveFolder, name)
             np.save(savepath, arr)
@@ -782,7 +792,7 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 5. / float(v_mean * mass)
+    p_std = 10. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
@@ -811,7 +821,7 @@ def doSim(i):
 if nSim > 1 and nRep > 30:
     import multiprocessing as mp
     
-    nProc = min([nSim, 20])
+    nProc = min([nSim, 12])
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))
@@ -903,6 +913,23 @@ def plotPos(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
+def plotNACV(runData):
+    """
+    Will plot NACV against position
+    """
+    lw = 1
+    alpha = 0.7
+    
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"NACV")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+
+
 def plotEpotTime(runData, istep=False, saveFolder='.', step=1):
     """
     Will plot the potential energy over time for either each step or just the
@@ -922,7 +949,7 @@ def plotEpotTime(runData, istep=False, saveFolder='.', step=1):
         nSteps = runData.ctmqc_env['iter']
         lenStrNum = len(str(nSteps))
         count = 0
-        totNumSteps = len(range(0, nSteps, istep))
+        totNumSteps = len(range(0, nSteps, step))
         for istep in range(0, nSteps, step):
             print("\rStep %i/%i" % (count, totNumSteps), end="\r")
             a.clear()
@@ -947,7 +974,7 @@ def plotEpotTime(runData, istep=False, saveFolder='.', step=1):
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plotPops(runData)
     plotDeco(runData)
-    plotSigmal(runData)
+#    plotSigmal(runData)
 #    plotEpotTime(runData, saveFolder="/temp/mellis/TullyModels/EhPics",
 #                 step=2)
     plt.show()

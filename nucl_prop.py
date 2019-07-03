@@ -7,8 +7,6 @@ Created on Thu May  9 14:41:21 2019
 """
 import numpy as np
 
-import hamiltonian as Ham
-
 
 def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     """
