@@ -24,15 +24,15 @@ import plot
 numRepeats = 1
 
 #whichPlot = ''
-all_velMultiplier = [4] * numRepeats
-all_maxTime = [2000] * numRepeats
-all_model = [4]  * numRepeats
-all_p_mean = [-15] * numRepeats
+all_velMultiplier = [1.6] * numRepeats
+all_maxTime = [2500] * numRepeats
+all_model = [2]  * numRepeats
+all_p_mean = [-8] * numRepeats
 all_doCTMQC_C = [False] * numRepeats
 all_doCTMQC_F = [False] * numRepeats
 s_mean = 0.3
 #rootFolder = '/temp/mellis/TullyModels/CTMQC_Sigmal_ManyRepeats_ConstSig0.25/Repeat'
-rootFolder = False # '/temp/mellis/TullyModels/Dev'
+rootFolder = '/temp/mellis/TullyModels/Model2_Ehren/Repeat'
 
 nRep = 1
 mass = 2000
@@ -838,5 +838,6 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     plot.plotDeco(runData)
 #    plotSigmal(runData)
-    plot.plotEpotTime(runData, range(runData.ctmqc_env['iter'])[0:10], saveFolder='.')
+#    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
+#                      saveFolder='/scratch/mellis/Pics')
     plt.show()

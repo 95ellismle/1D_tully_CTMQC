@@ -1,6 +1,9 @@
+from __future__ import print_function
+
 import multiprocessing
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
 def plotQlk(runData):
@@ -130,7 +133,32 @@ def plot_Epot_wrapper_func(args):
     plot_single_Epot_frame(*args)
 
 
-def plotEpotTime(runData, which_steps, saveFolder=False):
+def orderFiles(folder, ext, badStr=False, replacer=False):
+    """
+    Will rename files to reorder them for ffmpeg.
+    """
+    # First find the files and sort them
+    allFiles = [f for f in os.listdir(folder) if ext in f]
+    if badStr is not False:
+        allFiles = [f for f in allFiles if badStr not in f]
+    if replacer is not False:
+        allFiles = [f.replace(replacer, "") for f in allFiles]
+    allNums = [int(f.replace(ext, "")) for f in allFiles]
+    allFiles = [i[1] for i in sorted(zip(allNums, allFiles))]
+    
+    # Now change the names
+    maxZeros = len(str(len(allFiles)))
+    for i, oldF in enumerate(allFiles):
+        newF = "0" * (maxZeros - len(str(i))) + str(i) + ".png"
+        os.rename("%s/%s" % (folder, oldF), "%s/%s" % (folder, newF))
+    
+    ffmpegCmd = "ffmpeg -framerate 120 "
+    ffmpegCmd += "-i %s/%%0%id.png potE_ani.mp4" % (folder, maxZeros)
+    print("Use the following command to stitch the pics together:")
+    print("\t`%s`" % ffmpegCmd)
+
+
+def plotEpotTime(runData, which_steps=False, saveFolder=False):
     """
     Will plot the potential energy over time for either each step or just the
     one specified.
@@ -140,13 +168,17 @@ def plotEpotTime(runData, which_steps, saveFolder=False):
                 '|C|^2': runData.allAdPop}
         plot_single_Epot_frame(data, which_steps, saveFolder)
     else:
+        if which_steps is False:
+            which_steps = range(0, runData.ctmqc_env['iter'])
+        elif not isinstance(which_steps, (type(np.array(1)), list)):
+            raise SystemExit("Sorry the argument `which_steps` has been"+
+                             " inputted incorrectly. It should be an int, " +
+                             "a list or a numpy array.")
         pool = multiprocessing.Pool()
         
         # First create the arguments to feed into the wrapper function
         data = []
-        print("\n", which_steps)
         for istep in which_steps:
-            print(istep)
             d = {'x': runData.allR, 'E': runData.allE,
                  '|C|^2': runData.allAdPop}
             data.append(d)
@@ -155,4 +187,6 @@ def plotEpotTime(runData, which_steps, saveFolder=False):
         # Feed in the arguments zipped up
         pool.map(plot_Epot_wrapper_func,
                             zip(data, which_steps, saveFolders))
+
+        orderFiles(saveFolder, ".png")
         
