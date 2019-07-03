@@ -19,6 +19,7 @@ import hamiltonian as Ham
 import nucl_prop
 import elec_prop as e_prop
 import QM_utils as qUt
+import plot
 
 numRepeats = 1
 
@@ -31,7 +32,7 @@ all_doCTMQC_C = [False] * numRepeats
 all_doCTMQC_F = [False] * numRepeats
 s_mean = 0.3
 #rootFolder = '/temp/mellis/TullyModels/CTMQC_Sigmal_ManyRepeats_ConstSig0.25/Repeat'
-rootFolder = '/temp/mellis/TullyModels/Dev'
+rootFolder = False # '/temp/mellis/TullyModels/Dev'
 
 nRep = 1
 mass = 2000
@@ -54,8 +55,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 2,  # The timestep | |au_t
-            'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
+            'dt': 0.5,  # The timestep | |au_t
+            'elec_steps': 1,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
@@ -833,148 +834,9 @@ else:
         #test.vel_is_diff_x(runData)
 
 
-
-def plotQlk(runData):
-    lw = 0.1
-    alpha = 0.5
-    plt.figure()
-    plt.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha)
-
-    
-def plotPops(runData):
-    lw = 0.25
-    alpha = 0.5
-    f, a = plt.subplots()
-    a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
-           label=r"|C$_{1}$|$^2$")
-    a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
-           label=r"|C$_{2}$|$^2$")
-    a.set_ylabel("Adiab. Pop.")
-    a.set_ylabel("Time [au]")
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-    a.legend()
-
-    
-def plotNorm(runData):
-    lw = 0.25
-    alpha = 0.5
-    allNorms = np.sum(runData.allAdPop, axis=2)
-    avgNorms = np.mean(allNorms, axis=1)
-    f, a = plt.subplots()
-    a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgNorms, 'r')
-    a.set_ylabel("Norm")
-    a.set_ylabel("Time [au]")
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-
-
-def plotDeco(runData):
-    lw = 0.1
-    alpha = 0.5
-    deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-
-    f, a = plt.subplots()
-    a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
-    a.plot(runData.allt, np.mean(deco, axis=1), 'k')
-    a.set_ylabel("Coherence")
-    a.set_ylabel("Time [au]")    
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-
-
-def plotSigmal(runData):
-    """
-    Will plot sigmal against time
-    """
-    f, a = plt.subplots()
-    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$")
-    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$")
-    a.set_xlabel("Time [au]")
-    a.set_ylabel(r"$\sigma_{l}$")
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-    a.legend()
-
-
-def plotPos(runData):
-    """
-    Will plot sigmal against time
-    """
-    lw = 0.3
-    alpha = 0.7
-    
-    f, a = plt.subplots()
-    a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
-    a.set_xlabel("Time [au]")
-    a.set_ylabel(r"$R^{(I)}$")
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-
-
-def plotNACV(runData):
-    """
-    Will plot NACV against position
-    """
-    lw = 1
-    alpha = 0.7
-    
-    f, a = plt.subplots()
-    a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha)
-    a.set_xlabel("Time [au]")
-    a.set_ylabel(r"NACV")
-    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-
-
-def plotEpotTime(runData, istep=False, saveFolder='.', step=1):
-    """
-    Will plot the potential energy over time for either each step or just the
-    one specified.
-    """
-    if istep is not False:
-        potE = np.sum(runData.allAdPop[istep] * runData.allE[istep], axis=1)
-        f, a = plt.subplots()
-        a.plot(runData.allR, runData.allE[:, :, 0], 'r')
-        a.plot(runData.allR, runData.allE[:, :, 1], 'b')
-        a.plot(runData.allR[istep], potE, 'k.')
-        a.set_ylabel("Energy [Ha]")
-        a.set_xlabel("Nucl. Pos [bohr]")
-    else:
-        potE = np.sum(runData.allAdPop * runData.allE, axis=2)
-        f, a = plt.subplots()
-        nSteps = runData.ctmqc_env['iter']
-        lenStrNum = len(str(nSteps))
-        count = 0
-        totNumSteps = len(range(0, nSteps, step))
-        for istep in range(0, nSteps, step):
-            print("\rStep %i/%i" % (count, totNumSteps), end="\r")
-            a.clear()
-            a.plot(runData.allR, runData.allE[:, :, 0], 'r')
-            a.plot(runData.allR, runData.allE[:, :, 1], 'b')
-            a.plot(runData.allR[istep], potE[istep], 'k.')
-            a.set_ylabel("Energy [Ha]")
-            a.set_xlabel("Nucl. Pos [bohr]") 
-            picName = "0" * (lenStrNum - len(str(count))) + str(count)
-            f.savefig("%s/%s.png" % (saveFolder, picName))
-            count += 1
-        
-        ffmpegCmd = "ffmpeg -framerate 120 -i %s/%%0%id.png potE_ani.mp4" % (saveFolder,
-                                                             lenStrNum)
-        print("Use the following command to stitch the pics together:")
-        print("\t`%s`" % ffmpegCmd)
-        plt.close()
-        
-
-
-
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
-    plotPops(runData)
-    plotDeco(runData)
+    plot.plotPops(runData)
+    plot.plotDeco(runData)
 #    plotSigmal(runData)
-#    plotEpotTime(runData, saveFolder="/temp/mellis/TullyModels/EhPics",
-#                 step=2)
+    plot.plotEpotTime(runData, range(runData.ctmqc_env['iter'])[0:10], saveFolder='.')
     plt.show()
