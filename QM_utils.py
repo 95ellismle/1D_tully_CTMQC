@@ -60,17 +60,15 @@ def get_effectiveR(ctmqc_env):
     Will return the 'effectiveR' term. That is the intercept that has the
     spikes removed.
     """
-    Rlk = abs(ctmqc_env['Rlk'][0, 1])
+    Rlk = ctmqc_env['Rlk'][0, 1]
     
     # Determine whether the Rlk is spiking
     tol = 1
-    avgRl = np.mean(ctmqc_env['Rl'])
-    minus = abs(avgRl - tol) #(tol * stdRl)
-    plus = abs(avgRl + tol) #(tol * stdRl)
+    maxRl = np.max(ctmqc_env['Rl'])
+    minRl = np.min(ctmqc_env['Rl'])
+    minus = minRl - tol #(tol * stdRl)
+    plus = maxRl + tol #(tol * stdRl)
     isSpiking = Rlk > plus or Rlk < minus
-
-    if ctmqc_env['prevSpike'] != isSpiking:
-        ctmqc_env['iSmoothStep'] = 0
 
     # If it is spiking do something to fix it
     if isSpiking:
