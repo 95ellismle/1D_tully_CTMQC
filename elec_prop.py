@@ -156,13 +156,14 @@ def lin_interp_check(oldVal, interpVal, name):
     """
     Will check if the linear interpolation went well for the named variable
     """
-    if np.max(oldVal - interpVal) > 1e-8:
-        print("\n\nOld Value = ", oldVal)
-        print("\n\nInterpolated Value = ", interpVal)
-        print("Quantity = %s" % name)
-        raise SystemExit("Something went wrong with the linear " +
-                             "interpolation of the %s" % name)
-
+    if np.max(oldVal) != 0:
+        if abs(np.max(oldVal - interpVal)/np.max(oldVal)) > 1e-10:
+            print("\n\nOld Value = ", oldVal)
+            print("\n\nInterpolated Value = ", interpVal)
+            print("Quantity = %s" % name)
+            raise SystemExit("Something went wrong with the linear " +
+                                 "interpolation of the %s" % name)
+    
 
 def do_adiab_prop_ehren(ctmqc_env):
     """
