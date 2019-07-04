@@ -24,17 +24,23 @@ import plot
 numRepeats = 1
 
 #whichPlot = ''
+#all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+#all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+#all_model = [4, 4, 3, 3, 2, 2, 1, 1] * 2 * numRepeats
+#all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+#all_doCTMQC_C = ([True] * 8) * numRepeats
+#all_doCTMQC_F = ([True] * 8 )  * numRepeats
 all_velMultiplier = [1.6] * numRepeats
 all_maxTime = [2500] * numRepeats
-all_model = [2]  * numRepeats
+all_model = [2] * numRepeats
 all_p_mean = [-8] * numRepeats
-all_doCTMQC_C = [False] * numRepeats
-all_doCTMQC_F = [False] * numRepeats
+all_doCTMQC_C = [True] * numRepeats
+all_doCTMQC_F = [True]  * numRepeats
 s_mean = 0.3
 #rootFolder = '/temp/mellis/TullyModels/CTMQC_Sigmal_ManyRepeats_ConstSig0.25/Repeat'
-rootFolder = '/temp/mellis/TullyModels/Model2_Ehren/Repeat'
+rootFolder = '/scratch/mellis/TullyModelData/Dev'
 
-nRep = 1
+nRep = 200
 mass = 2000
 
 
@@ -54,9 +60,9 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'mass': [mass],  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
-            'dx': 1e-6,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 0.5,  # The timestep | |au_t
-            'elec_steps': 1,  # Num elec. timesteps per nucl. one | | -
+            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+            'dt': 1,  # The timestep | |au_t
+            'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
@@ -367,7 +373,7 @@ class CTMQC(object):
         # For saving the data
         self.allR = np.zeros((nstep, nrep))
         self.allF = np.zeros((nstep, nrep))
-        self.allNACV = np.zeros((nstep, nrep, nstate, nstate))
+        self.allNACV = np.zeros((nstep, nrep, nstate, nstate), dtype=complex)
         self.allFeh = np.zeros((nstep, nrep))
         self.allFqm = np.zeros((nstep, nrep))
         self.allt = np.zeros((nstep))
@@ -386,6 +392,7 @@ class CTMQC(object):
         self.allEffR = np.zeros((nstep, nrep, nstate, nstate))
         self.allSigma = np.zeros((nstep, nrep))
         self.allSigmal = np.zeros((nstep, nstate))
+        self.allRl = np.zeros((nstep, nstate))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
@@ -406,6 +413,7 @@ class CTMQC(object):
         self.ctmqc_env['alpha'] = np.zeros((nrep))
         self.ctmqc_env['alphal'] = 0.0
         self.ctmqc_env['sigmal'] = np.zeros(nstate)
+        self.ctmqc_env['Rl'] = np.zeros(nstate)
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['EffR'] = np.zeros((nrep, nstate, nstate))
@@ -490,13 +498,13 @@ class CTMQC(object):
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
                                                            self.ctmqc_env)
 
-            if self.ctmqc_env['pos'][irep] > 0:
-                self.ctmqc_env['NACV'][irep] = -0.1 * self.ctmqc_env['NACV'][irep]
+#            if self.ctmqc_env['pos'][irep] > 0:
+#                self.ctmqc_env['NACV'][irep] = -0.1 * self.ctmqc_env['NACV'][irep]
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in self.ctmqc_env['adPops'][irep]):
-                    adMom = 0.0  # 0.8 * self.ctmqc_env['adMom'][irep]
+                    adMom = 0.8 * self.ctmqc_env['adMom'][irep]
                 else:
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
@@ -668,6 +676,7 @@ class CTMQC(object):
         self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
+        self.allRl[istep] = self.ctmqc_env['Rl']
         self.allAlphal[istep] = self.ctmqc_env['alphal']
 
         self.allt[istep] = self.ctmqc_env['t']
@@ -696,6 +705,7 @@ class CTMQC(object):
         self.allEffR = self.allEffR[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
         self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
+        self.allRl = self.allRl[:self.ctmqc_env['iter']]
         self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
 
     def __store_data(self):
@@ -707,12 +717,12 @@ class CTMQC(object):
 
         names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
                 "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "sigmal",
-                "NACV"]
+                "NACV", "Rl"]
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
                 self.allRlk, self.allRI0, self.allSigma, self.allSigmal,
-                self.allNACV]
+                self.allNACV, self.allRl]
         for name, arr in zip(names, arrs):
             savepath = "%s/%s" % (self.saveFolder, name)
             np.save(savepath, arr)
@@ -837,6 +847,7 @@ else:
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     plot.plotDeco(runData)
+    #plot.plotNorm(runData)
 #    plotSigmal(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')

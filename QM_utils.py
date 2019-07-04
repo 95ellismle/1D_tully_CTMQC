@@ -328,6 +328,16 @@ def calc_Qlk_2state(ctmqc_env):
     f2 = ctmqc_env['adMom'][:, 1]
     allBottomRlk = rho11 * rho22 * (f1 - f2)
     Rlk = np.sum(ctmqc_env['pos'] * (allBottomRlk / np.sum(allBottomRlk)))
+    ctmqc_env['Rlk'][0, 1] = Rlk
+    ctmqc_env['Rlk'][1, 0] = Rlk
+    
+    # Correction to the Rlk term
+    avgRl = np.mean(ctmqc_env['Rl'])
+    stdRl = np.std(ctmqc_env['Rl'])
+    minus = avgRl - stdRl
+    plus = avgRl + stdRl
+    if minus > Rlk < plus:
+        Rlk = avgRl
     
     Qlk = np.zeros((nRep, nState, nState))
     for I in range(nRep):
@@ -363,6 +373,7 @@ def calc_sigmal(ctmqc_env):
         sigmal += squaredDist * pops[irep] * sumInvPops
     
     ctmqc_env['sigmal'] = sigmal
+    ctmqc_env['Rl'] = Rl
     
 
 def test_QM_calc(ctmqc_env):

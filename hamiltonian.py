@@ -89,7 +89,7 @@ def calcNACVgradPhi(pos, ctmqc_env):
     H_x = ctmqc_env['Hfunc'](pos)
     H_xp = ctmqc_env['Hfunc'](pos + dx)
 
-    allU = [getEigProps(H, ctmqc_env)[1]
+    allU = [np.linalg.eigh(H)[1]
             for H in (H_xm, H_x, H_xp)]
 
     gradU = np.gradient(allU, dx, axis=0)
@@ -98,11 +98,57 @@ def calcNACVgradPhi(pos, ctmqc_env):
     for l in range(2):
         for k in range(2):
             NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
+    
+    # Check the anti-symettry of the NACV
+    for l in range(len(NACV)):
+        for k in range(l+1, len(NACV)):
+            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
+                print("NACV:")
+                print(NACV)
+                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
+                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
+                raise SystemExit("NACV not antisymetric!")
 
     return NACV
 
 
 def calcNACV(irep, ctmqc_env):
+    """
+    Will use a different method to calculate the NACV. This function will
+    simply use:
+        d = <phil | grad phik>
+    """
+    dx = 1e-5
+    pos = ctmqc_env['pos'][irep]
+
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
+
+    allU = [np.linalg.eigh(H)[1]
+            for H in (H_xm, H_x, H_xp)]
+
+    gradU = np.gradient(allU, dx, axis=0)
+    
+    NACV = np.zeros((2, 2))
+    for l in range(2):
+        for k in range(2):
+            NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
+    
+    # Check the anti-symettry of the NACV
+#    for l in range(len(NACV)):
+#        for k in range(l+1, len(NACV)):
+#            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
+#                print("NACV:")
+#                print(NACV)
+#                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
+#                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
+#                raise SystemExit("NACV not antisymetric!")
+
+    return NACV
+
+
+def calcNACV1(irep, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
@@ -110,7 +156,7 @@ def calcNACV(irep, ctmqc_env):
     nState = ctmqc_env['nstate']
 
     H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] - dx)
-    H_x = ctmqc_env['H'][irep]
+    H_x = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
     H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
 
     allH = [H_xm, H_x, H_xp]
@@ -138,10 +184,48 @@ def calcNACV(irep, ctmqc_env):
 
 
 def test_Hfunc(Hfunc, minX=-15, maxX=15, stride=0.01):
+    import matplotlib.pyplot as plt
     allR = np.arange(minX, maxX, stride)
     allH = [Hfunc(x) for x in allR]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     allE = np.array(allE)
-    plt.plot(allR, allE[:, 0])
-    plt.plot(allR, allE[:, 1])
+    plt.plot(allR, allE[:, 0], 'g', label=r"E$_{1}^{ad}$")
+    plt.plot(allR, allE[:, 1], 'b', label=r"E$_{1}^{ad}$")
     return allH, allE
+
+
+def test_NACV(Hfunc):
+    nrep = 2000
+    randomNums = (np.random.random(nrep) * 30) - 15
+    ctmqc_env = {'dx': 1e-5, 'nstate': 2, 'pos': randomNums,
+                 'Hfunc': Hfunc}
+    
+    allNACV1 = [calcNACV(irep, ctmqc_env) for irep in range(nrep)]
+    allNACV2 = [calcNACVgradPhi(randomNums[irep], ctmqc_env)
+                for irep in range(nrep)]
+    
+    allNACV1 = np.array(allNACV1)
+    allNACV2 = np.array(allNACV2)
+    diff = np.abs(allNACV1 - allNACV2)
+
+    worstCase = np.max(diff)
+    bestCase = np.min(diff)
+    avgCase = np.mean(diff)
+    std = np.std(diff)
+    
+    if worstCase> 1e-6 or avgCase > 1e-6:
+        import matplotlib.pyplot as plt
+
+        print("Worst Case: {0}".format(worstCase))
+        print("Best Case: {0}".format(bestCase))
+        print("Mean Case: {0} +/- {1}".format(avgCase, std))
+        print("Something wrong with NACV!")
+        
+        plt.plot(randomNums, allNACV1[:, 0, 1], 'k.')
+        plt.plot(randomNums, allNACV2[:, 0, 1], 'y.')
+        raise SystemExit("BREAK")
+
+#test_NACV(create_H1)
+#test_NACV(create_H2)
+#test_NACV(create_H3)
+#test_NACV(create_H4)

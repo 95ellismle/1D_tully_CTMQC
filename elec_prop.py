@@ -173,9 +173,6 @@ def do_adiab_prop_ehren(ctmqc_env):
         v = ctmqc_env['vel_tm'][irep]
         dv_E = get_diffVal(ctmqc_env['vel'][irep], v, ctmqc_env)
 
-        H = ctmqc_env['H_tm'][irep]
-        dH_E = get_diffVal(ctmqc_env['H'][irep], H, ctmqc_env)
-
         E = ctmqc_env['E_tm'][irep]
         dE_E = get_diffVal(ctmqc_env['E'][irep], E, ctmqc_env)
 
@@ -184,13 +181,11 @@ def do_adiab_prop_ehren(ctmqc_env):
 
         X1 = makeX_adiab_ehren(NACV, v, E)
         for Estep in range(ctmqc_env['elec_steps']):
-            H += 0.5 * dH_E
             E += 0.5 * dE_E
             NACV += 0.5 * dNACV_E
             v += 0.5 * dv_E
             X12 = makeX_adiab_ehren(NACV, v, E)
 
-            H = H + 0.5 * dH_E
             E = E + 0.5 * dE_E
             NACV = NACV + 0.5 * dNACV_E
             v = v + 0.5 * dv_E
@@ -202,7 +197,6 @@ def do_adiab_prop_ehren(ctmqc_env):
 
             X1 = X2[:]
         
-        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
         lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
         lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
         lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
