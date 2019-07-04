@@ -6,6 +6,50 @@ import numpy as np
 import os
 
 
+def plotEcons(runData):
+    """
+    Will plot the conserved quantity along with the kinetice and potential
+    energies.
+    """
+    lw = 0.1
+    alpha = 0.5    
+    
+    f, a = plt.subplots()
+    
+    potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    totE = potE + kinE
+    a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
+    a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, totE, 'k', lw=lw, alpha=alpha)
+    
+    avgTotE = np.mean(totE, axis=1)
+    a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E")
+    a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
+    a.plot(runData.allt, avgTotE, 'k', label="Tot. E")
+    
+    fit = np.polyfit(runData.allt, avgTotE, 1)
+    annotateMsg = r"Energy Drift = %.2g" % (fit[0] * 41341.3745758)
+    annotateMsg += r" [$\frac{Ha}{atom ps}$]"
+    
+    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0] * 41341.3745758))
+    
+    a.legend()
+
+
+def plotRlk_Rl(runData):
+    """
+    Will plot the Rlk and Rl term on the same axis
+    """
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allRl, label="Rl")
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], label="Rlk")
+    a.plot(runData.allt, runData.allEffR, label=r"R$_{eff}$")
+    a.set_xlabel("Time [au]")
+    a.set_xlabel("Intercept [au]")
+    a.legend()
+
+
 def plotQlk(runData):
     lw = 0.1
     alpha = 0.5
@@ -43,6 +87,9 @@ def plotNorm(runData):
     a.set_ylabel("Norm")
     a.set_ylabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+    
+    fit = np.polyfit(runData.allt, avgNorms, 1)
+    print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758))
 
 
 def plotDeco(runData):

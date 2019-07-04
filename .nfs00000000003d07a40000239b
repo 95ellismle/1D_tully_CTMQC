@@ -40,159 +40,6 @@ def calc_ad_mom(ctmqc_env, irep, ad_frc=False):
     return ad_mom
 
 
-def smoothingFunc(x, ctmqc_env):
-    """
-    Will do the smoothing between points
-    """
-    dx = ctmqc_env['vel'] * ctmqc_env['dt']
-    pos = ctmqc_env['pos']
-    finalPos = pos + (dx * ctmqc_env['nSmoothStep'])
-    midPoint = (finalPos + pos) / 2.
-    
-    D = 0.5 * (ctmqc_env['currGoodPoint'] - ctmqc_env['lastGoodPoint'])
-    W = dx
-    
-    return ctmqc_env['lastGoodPoint'] + (np.tanh((x - midPoint) / W) + 1) * D
-
-
-def get_effectiveR(ctmqc_env):
-    """
-    Will return the 'effectiveR' term. That is the intercept that has the
-    spikes removed.
-    """
-    Rlk = ctmqc_env['Rlk'][0, 1]
-    
-    # Determine whether the Rlk is spiking
-    tol = 1
-    avgRl = np.mean(ctmqc_env['Rl'])
-    minus = avgRl - tol #(tol * stdRl)
-    plus = avgRl + tol #(tol * stdRl)
-    isSpiking = Rlk > plus or Rlk < minus
-    
-    # If it is spiking do something to fix it
-    if isSpiking:
-        effR = avgRl
-    else:
-        effR = Rlk
-    
-    ctmqc_env['effR'] = effR
-    return effR
-
-
-def calc_Qlk_2state(ctmqc_env):
-    """
-    Will calculate the quantum momentum for 2 states exactly as given in
-    Frederica's paper.
-    """
-    nState, nRep = ctmqc_env['nstate'], ctmqc_env['nrep']
-    pops = ctmqc_env['adPops']
-    ctmqc_env['QM_reps'] = np.arange(nRep)# [irep for irep, rep_pops in enumerate(pops)
-                           #if all(state_pop < 0.995 for state_pop in rep_pops)]
-    calc_sigmal(ctmqc_env)
-#    ctmqc_env['sigmal'][:] = 0.25
-    
-    alpha = np.nan_to_num(np.sum(ctmqc_env['adPops'][0] / ctmqc_env['sigmal']))
-    ctmqc_env['alphal'] = alpha
-    
-    rho11 = pops[:, 0]
-    rho22 = pops[:, 1]
-    f1 = ctmqc_env['adMom'][:, 0]
-    f2 = ctmqc_env['adMom'][:, 1]
-    allBottomRlk = rho11 * rho22 * (f1 - f2)
-    Rlk = np.sum(ctmqc_env['pos'] * (allBottomRlk / np.sum(allBottomRlk)))
-    ctmqc_env['Rlk'][0, 1] = Rlk
-    ctmqc_env['Rlk'][1, 0] = Rlk
-    
-    effR = get_effectiveR(ctmqc_env)
-    
-    Qlk = np.zeros((nRep, nState, nState))
-    for I in range(nRep):
-        Qlk[I, 0, 1] = ctmqc_env['pos'][I] - effR
-        Qlk[I, 1, 0] = ctmqc_env['pos'][I] - effR
-    Qlk = np.nan_to_num(Qlk)
-    Qlk = alpha * Qlk / ctmqc_env['mass'][0]
-    
-    return Qlk
-
-
-def calc_sigmal(ctmqc_env):
-    """
-    Will calculate the state dependant sigma l term.
-    """
-    nState = ctmqc_env['nstate']
-    nRep = ctmqc_env['nrep']
-    pops = ctmqc_env['adPops']
-    sumPops = np.sum(ctmqc_env['adPops'], axis=0)
-    
-    # First  get R_l
-    sumInvPops = np.nan_to_num(1. / sumPops)
-    Rl = np.zeros(nState)
-    for irep in range(nRep):
-        # implicit iteration over l
-        Rl += ctmqc_env['pos'][irep] * pops[irep] * sumInvPops
-    
-    # Now get sigma_l
-    sigmal = np.zeros(nState)
-    for irep in range(nRep):
-        # implicit iteration over l
-        squaredDist = (ctmqc_env['pos'][irep] - Rl)**2
-        sigmal += squaredDist * pops[irep] * sumInvPops
-    
-    ctmqc_env['sigmal'] = sigmal
-    ctmqc_env['Rl'] = Rl
-    
-
-def test_QM_calc(ctmqc_env):
-    """
-    Will compare the output of the analytic QM calculation and the finite
-    difference one.
-    """
-    allDiffs = calc_QM_analytic(ctmqc_env) - calc_QM_FD(ctmqc_env)
-    allPos = ctmqc_env['pos']
-
-    print("Avg Abs Diff = %.2g +/- %.2g" % (np.mean(allDiffs),
-                                              np.std(allDiffs)))
-    print("Max Abs Diff = %.2g" % np.max(np.abs(allDiffs)))
-    print("Min Abs Diff = %.2g" % np.min(np.abs(allDiffs)))
-    if np.max(np.abs(allDiffs)) > 1e-5:
-        raise SystemExit("Analytic Quantum Momentum != Finite Difference")
-
-    return allDiffs, allPos
-
-
-#test_norm_gauss()
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-            ########################
-            # Old Unused Code Repo #
-            ########################
-
-
-
-
-
-
-
-
-
 def gaussian(RIv, RJv, sigma):
     """
     Will calculate the gaussian on the traj
@@ -458,4 +305,93 @@ def calc_Qlk(ctmqc_env):
 #        for I in ctmqc_env['QM_reps']
 
     return Qlk
-'''
+
+
+def calc_Qlk_2state(ctmqc_env):
+    """
+    Will calculate the quantum momentum for 2 states exactly as given in
+    Frederica's paper.
+    """
+    nState, nRep = ctmqc_env['nstate'], ctmqc_env['nrep']
+    pops = ctmqc_env['adPops']
+    ctmqc_env['QM_reps'] = np.arange(nRep)# [irep for irep, rep_pops in enumerate(pops)
+                           #if all(state_pop < 0.995 for state_pop in rep_pops)]
+    calc_sigmal(ctmqc_env)
+#    ctmqc_env['sigmal'][:] = 0.25
+    
+    alpha = np.nan_to_num(np.sum(ctmqc_env['adPops'][0] / ctmqc_env['sigmal']))
+    ctmqc_env['alphal'] = alpha
+    
+    rho11 = pops[:, 0]
+    rho22 = pops[:, 1]
+    f1 = ctmqc_env['adMom'][:, 0]
+    f2 = ctmqc_env['adMom'][:, 1]
+    allBottomRlk = rho11 * rho22 * (f1 - f2)
+    Rlk = np.sum(ctmqc_env['pos'] * (allBottomRlk / np.sum(allBottomRlk)))
+    ctmqc_env['Rlk'][0, 1] = Rlk
+    ctmqc_env['Rlk'][1, 0] = Rlk
+    
+    # Correction to the Rlk term
+    avgRl = np.mean(ctmqc_env['Rl'])
+    stdRl = np.std(ctmqc_env['Rl'])
+    minus = avgRl - stdRl
+    plus = avgRl + stdRl
+    if minus > Rlk < plus:
+        Rlk = avgRl
+    
+    Qlk = np.zeros((nRep, nState, nState))
+    for I in range(nRep):
+        Qlk[I, 0, 1] = ctmqc_env['pos'][I] - Rlk 
+        Qlk[I, 1, 0] = ctmqc_env['pos'][I] - Rlk
+    Qlk = np.nan_to_num(Qlk)
+    Qlk = alpha * Qlk / ctmqc_env['mass'][0]
+    
+    return Qlk
+
+
+def calc_sigmal(ctmqc_env):
+    """
+    Will calculate the state dependant sigma l term.
+    """
+    nState = ctmqc_env['nstate']
+    nRep = ctmqc_env['nrep']
+    pops = ctmqc_env['adPops']
+    sumPops = np.sum(ctmqc_env['adPops'], axis=0)
+    
+    # First  get R_l
+    sumInvPops = np.nan_to_num(1. / sumPops)
+    Rl = np.zeros(nState)
+    for irep in range(nRep):
+        # implicit iteration over l
+        Rl += ctmqc_env['pos'][irep] * pops[irep] * sumInvPops
+    
+    # Now get sigma_l
+    sigmal = np.zeros(nState)
+    for irep in range(nRep):
+        # implicit iteration over l
+        squaredDist = (ctmqc_env['pos'][irep] - Rl)**2
+        sigmal += squaredDist * pops[irep] * sumInvPops
+    
+    ctmqc_env['sigmal'] = sigmal
+    ctmqc_env['Rl'] = Rl
+    
+
+def test_QM_calc(ctmqc_env):
+    """
+    Will compare the output of the analytic QM calculation and the finite
+    difference one.
+    """
+    allDiffs = calc_QM_analytic(ctmqc_env) - calc_QM_FD(ctmqc_env)
+    allPos = ctmqc_env['pos']
+
+    print("Avg Abs Diff = %.2g +/- %.2g" % (np.mean(allDiffs),
+                                              np.std(allDiffs)))
+    print("Max Abs Diff = %.2g" % np.max(np.abs(allDiffs)))
+    print("Min Abs Diff = %.2g" % np.min(np.abs(allDiffs)))
+    if np.max(np.abs(allDiffs)) > 1e-5:
+        raise SystemExit("Analytic Quantum Momentum != Finite Difference")
+
+    return allDiffs, allPos
+
+
+#test_norm_gauss()

@@ -7,6 +7,10 @@ Created on Thu May  9 14:41:10 2019
 @author: mellis
 """
 import numpy as np
+import time
+
+import hamiltonian as Ham
+import QM_utils as qUt
 
 
 def trans_diab_to_adiab(ctmqc_env):
@@ -156,10 +160,7 @@ def lin_interp_check(oldVal, interpVal, name):
     """
     Will check if the linear interpolation went well for the named variable
     """
-    if np.max(oldVal - interpVal) > 1e-8:
-        print("\n\nOld Value = ", oldVal)
-        print("\n\nInterpolated Value = ", interpVal)
-        print("Quantity = %s" % name)
+    if np.max(oldVal - interpVal) > 1e-12:
         raise SystemExit("Something went wrong with the linear " +
                              "interpolation of the %s" % name)
 

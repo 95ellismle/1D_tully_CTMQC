@@ -21,25 +21,25 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-numRepeats = 1
+numRepeats = 10
 
-#whichPlot = ''
-#all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
-#all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
-#all_model = [4, 4, 3, 3, 2, 2, 1, 1] * 2 * numRepeats
-#all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
-#all_doCTMQC_C = ([True] * 8) * numRepeats
-#all_doCTMQC_F = ([True] * 8 )  * numRepeats
-all_velMultiplier = [1.6] * numRepeats
-all_maxTime = [2500] * numRepeats
-all_model = [2] * numRepeats
-all_p_mean = [-8] * numRepeats
-all_doCTMQC_C = [True] * numRepeats
-all_doCTMQC_F = [True]  * numRepeats
+all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+all_doCTMQC_C = ([True] * 8) * numRepeats
+all_doCTMQC_F = ([True] * 8 )  * numRepeats
+rootFolder = '/scratch/mellis/TullyModelData/EffectiveR/Repeat'
+
+#all_velMultiplier = [1] * numRepeats
+#all_maxTime = [3500] * numRepeats
+#all_model = [1] * numRepeats
+#all_p_mean = [-8] * numRepeats
+#all_doCTMQC_C = [True] * numRepeats
+#all_doCTMQC_F = [True]  * numRepeats
+#rootFolder = '/scratch/mellis/TullyModelData/Dev'
+
 s_mean = 0.3
-#rootFolder = '/temp/mellis/TullyModels/CTMQC_Sigmal_ManyRepeats_ConstSig0.25/Repeat'
-rootFolder = '/scratch/mellis/TullyModelData/Dev'
-
 nRep = 200
 mass = 2000
 
@@ -68,6 +68,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
+            'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
                 }
     return ctmqc_env
 
@@ -161,8 +162,8 @@ class CTMQC(object):
             sigStr = "varSig"
         else:
             sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-        self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                              modelStr, momStr, sigStr)
+        self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                              modelStr, momStr)
         
         # This should be recursive but I can't be bothered making it work in a
         #   class.
@@ -189,8 +190,8 @@ class CTMQC(object):
                 sigStr = "varSig"
             else:
                 sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-            self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                                  modelStr, momStr, sigStr)
+            self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                  modelStr, momStr)
             count += 1
         
         try:
@@ -216,8 +217,8 @@ class CTMQC(object):
                 sigStr = "varSig"
             else:
                 sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-            self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                                  modelStr, momStr, sigStr)
+            self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
+                                                  modelStr, momStr)
             
             # This should be recursive but I can't be bothered making it work in a
             #   class.
@@ -389,7 +390,7 @@ class CTMQC(object):
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
         self.allRI0 = np.zeros((nstep, nrep))
-        self.allEffR = np.zeros((nstep, nrep, nstate, nstate))
+        self.allEffR = np.zeros((nstep))
         self.allSigma = np.zeros((nstep, nrep))
         self.allSigmal = np.zeros((nstep, nstate))
         self.allRl = np.zeros((nstep, nstate))
@@ -416,7 +417,7 @@ class CTMQC(object):
         self.ctmqc_env['Rl'] = np.zeros(nstate)
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
-        self.ctmqc_env['EffR'] = np.zeros((nrep, nstate, nstate))
+        self.ctmqc_env['effR'] = 0.0 
         self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
         self.ctmqc_env['RI0'] = np.zeros((nrep))
         self.ctmqc_env['Rlk_tm'] = np.zeros((nstate, nstate))
@@ -530,7 +531,7 @@ class CTMQC(object):
                          'prep': []}
 
         for istep in range(nstep):
-            try:
+#            try:
                 t1 = time.time()
                 self.__save_data()
                 self.__ctmqc_step()
@@ -552,9 +553,9 @@ class CTMQC(object):
     #            print(" "*200, end="\r")
                 print(msg,
                       end="\r")
-            except KeyboardInterrupt:
-                print("\nOk Exiting Safely")
-                return
+#            except (KeyboardInterrupt, SystemExit):
+#                print("\n\nOk Exiting Safely")
+#                return
 
     def __calc_F(self):
         """
@@ -672,7 +673,7 @@ class CTMQC(object):
         self.allv[istep] = self.ctmqc_env['vel']
         self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allRlk[istep] = self.ctmqc_env['Rlk']
-        self.allEffR[istep] = self.ctmqc_env['EffR']
+        self.allEffR[istep] = self.ctmqc_env['effR']
         self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
@@ -803,10 +804,60 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 10. / float(v_mean * mass)
+    p_std = 20. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
+    pos = [ -8.04910616,  -8.11373539, -10.02259722,  -8.0410751 ,
+        -6.66998231,  -9.0567181 ,  -8.49919676,  -8.6986839 ,
+        -7.01809389,  -6.57261684,  -9.33079494,  -7.58902002,
+        -7.97566433,  -7.63600355,  -7.84910729,  -8.54683989,
+        -9.34682712,  -8.56036804,  -7.86155926,  -6.96933734,
+        -8.99622009,  -7.25461229,  -7.72256048,  -9.30023776,
+        -8.03907912,  -8.13681033,  -8.04740528,  -6.79830708,
+        -8.92520023,  -7.37401661,  -7.94191597,  -8.82468894,
+        -6.64447847,  -7.34899066,  -6.43411302,  -8.09172623,
+        -9.75957376,  -7.25178972,  -8.02000309,  -7.08721693,
+        -8.11062182,  -8.91344714,  -8.2054316 ,  -8.05236252,
+        -9.22264851,  -8.48595252,  -7.65054049,  -7.760368  ,
+        -8.13274096,  -8.60343613,  -6.88641226,  -7.62126653,
+        -7.68510144,  -8.01770285,  -8.37370045,  -8.51342775,
+        -8.08402372,  -8.22729659,  -6.8469031 ,  -7.4014849 ,
+        -8.85602108,  -8.31835222,  -7.28564433,  -8.5622688 ,
+        -9.26021825,  -7.35601602,  -6.11515705,  -7.66672686,
+        -6.81958268,  -6.41589623,  -7.52783774,  -8.68118761,
+        -7.3890811 ,  -8.02177865,  -8.65204357,  -7.52449401,
+        -7.4651457 ,  -7.42041555,  -6.84626713,  -7.3157486 ,
+        -8.44141106,  -8.58280185,  -6.98057015,  -8.09453005,
+       -10.05864752,  -6.64759544,  -8.13316885,  -8.93045412,
+        -8.11407663,  -8.48096764,  -7.35877067,  -7.51303533,
+        -7.95265122,  -7.98544436,  -7.03725483,  -7.97898984,
+        -9.10472252,  -8.50594345,  -6.59632519,  -6.84294243,
+        -8.97191828,  -8.80132626,  -9.10372277,  -7.57211689,
+        -8.2382156 ,  -7.10910427,  -7.60848644,  -8.027597  ,
+        -8.87585921,  -7.6173295 ,  -7.56801169,  -8.08748334,
+        -7.47915758,  -8.57133138,  -8.36510635,  -9.43742457,
+        -7.86819007,  -8.02356644,  -8.01034112,  -8.52381399,
+        -8.38384938,  -7.71170765,  -7.15312275,  -8.57156641,
+        -7.01539276,  -8.21050543,  -8.60719841,  -7.63839256,
+        -7.92886356,  -7.45050815,  -8.36289096,  -8.35767176,
+        -7.97286798,  -8.41936427,  -8.25334918,  -9.72893678,
+        -8.30973889,  -9.00211973,  -7.20605429,  -8.05994986,
+        -7.26586108,  -9.12406703,  -6.36636985,  -7.02662133,
+        -8.67214473,  -7.60847842,  -8.62075487,  -8.09455161,
+        -8.58998741,  -6.65712051,  -7.4493979 ,  -8.36679818,
+        -8.45220862,  -8.45032979,  -7.26847089,  -7.3108029 ,
+        -7.65072679,  -7.77961175,  -8.75619428,  -7.6573155 ,
+        -6.80086091,  -9.28857695,  -7.24309605,  -8.10384208,
+        -8.46685755,  -8.11818922,  -9.35635903,  -7.68105989,
+        -8.94582102,  -8.02648647,  -7.20364015,  -5.77959916,
+        -7.63907439,  -8.61686965,  -8.17341883,  -8.52536182,
+        -6.95046271,  -6.74453161,  -7.60737621,  -9.06269249,
+        -8.00592844,  -6.3506931 ,  -8.8717187 ,  -8.85129328,
+        -9.48373918,  -8.35987096,  -8.09275958,  -8.81699219,
+        -7.76780734,  -8.45920348,  -7.05180641,  -9.02860055,
+        -8.63769035,  -7.38807801,  -9.10239012,  -7.28412053,
+        -8.82399235,  -8.95472582,  -7.5737501 ,  -7.34736727]
     
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
     
@@ -832,7 +883,7 @@ def doSim(i):
 if nSim > 1 and nRep > 30:
     import multiprocessing as mp
     
-    nProc = min([nSim, 12])
+    nProc = min([nSim, 16])
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))
@@ -847,6 +898,7 @@ else:
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     plot.plotDeco(runData)
+    plot.plotRlk_Rl(runData)
     #plot.plotNorm(runData)
 #    plotSigmal(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
