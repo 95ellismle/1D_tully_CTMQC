@@ -40,7 +40,7 @@ all_doCTMQC_F = [True]  * numRepeats
 rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
 
 s_mean = 0.3
-nRep = 50
+nRep = 20
 mass = 2000
 
 

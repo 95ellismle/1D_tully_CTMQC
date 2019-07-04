@@ -63,7 +63,8 @@ def get_effectiveR(ctmqc_env):
     Rlk = ctmqc_env['Rlk'][0, 1]
     
     # Determine whether the Rlk is spiking
-    tol = 1
+    tol = 3
+    avgRl = np.mean(ctmqc_env['Rl'])
     maxRl = np.max(ctmqc_env['Rl'])
     minRl = np.min(ctmqc_env['Rl'])
     minus = minRl - tol #(tol * stdRl)
