@@ -612,6 +612,12 @@ class CTMQC(object):
             e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
+        norm = np.sum(self.ctmqc_env['adPops'], axis=1)
+        if any(norm > 2):
+            print("Error in conserving the norm.")
+            print("Norms for all reps [%s]" % (', '.join(norm.astype(str))))
+            raise SystemExit("ERROR: Norm Cons")
+
         self.allTimes['wf_prop']['transform'].append(t3 - t2)
 
     def __ctmqc_step(self):

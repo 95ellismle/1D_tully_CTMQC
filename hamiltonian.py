@@ -112,43 +112,43 @@ def calcNACVgradPhi(pos, ctmqc_env):
     return NACV
 
 
+#def calcNACV(irep, ctmqc_env):
+#    """
+#    Will use a different method to calculate the NACV. This function will
+#    simply use:
+#        d = <phil | grad phik>
+#    """
+#    dx = 1e-5
+#    pos = ctmqc_env['pos'][irep]
+#
+#    H_xm = ctmqc_env['Hfunc'](pos - dx)
+#    H_x = ctmqc_env['Hfunc'](pos)
+#    H_xp = ctmqc_env['Hfunc'](pos + dx)
+#
+#    allU = [np.linalg.eigh(H)[1]
+#            for H in (H_xm, H_x, H_xp)]
+#
+#    gradU = np.gradient(allU, dx, axis=0)
+#    
+#    NACV = np.zeros((2, 2))
+#    for l in range(2):
+#        for k in range(2):
+#            NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
+#    
+#    # Check the anti-symettry of the NACV
+##    for l in range(len(NACV)):
+##        for k in range(l+1, len(NACV)):
+##            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
+##                print("NACV:")
+##                print(NACV)
+##                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
+##                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
+##                raise SystemExit("NACV not antisymetric!")
+#
+#    return NACV
+
+
 def calcNACV(irep, ctmqc_env):
-    """
-    Will use a different method to calculate the NACV. This function will
-    simply use:
-        d = <phil | grad phik>
-    """
-    dx = 1e-5
-    pos = ctmqc_env['pos'][irep]
-
-    H_xm = ctmqc_env['Hfunc'](pos - dx)
-    H_x = ctmqc_env['Hfunc'](pos)
-    H_xp = ctmqc_env['Hfunc'](pos + dx)
-
-    allU = [np.linalg.eigh(H)[1]
-            for H in (H_xm, H_x, H_xp)]
-
-    gradU = np.gradient(allU, dx, axis=0)
-    
-    NACV = np.zeros((2, 2))
-    for l in range(2):
-        for k in range(2):
-            NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
-    
-    # Check the anti-symettry of the NACV
-#    for l in range(len(NACV)):
-#        for k in range(l+1, len(NACV)):
-#            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
-#                print("NACV:")
-#                print(NACV)
-#                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
-#                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
-#                raise SystemExit("NACV not antisymetric!")
-
-    return NACV
-
-
-def calcNACV1(irep, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
