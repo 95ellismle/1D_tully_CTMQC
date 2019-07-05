@@ -75,25 +75,33 @@ def do_Rlk_smoothing(effR, ctmqc_env):
     return effR
 
 
+def Rlk_is_spiking(Rlk, ctmqc_env):
+    """
+    Will determine whether the Rlk intercept term is spiking and if it is return True,
+    else return False. Currently all this does is check that the Rlk isn't too far away
+    from the Rl intercept.
+    """
+    # Determine whether the Rlk is spiking
+    tol = 2
+    avgRl = np.mean(ctmqc_env['Rl'])
+    maxRl = np.max(ctmqc_env['Rl'])
+    minRl = np.min(ctmqc_env['Rl'])
+    minus = minRl - tol #(tol * stdRl)
+    plus = maxRl + tol #(tol * stdRl)
+    return Rlk > plus or Rlk < minus
+
+
 def get_effectiveR(ctmqc_env):
     """
     Will return the 'effectiveR' term. That is the intercept that has the
     spikes removed.
     """
     Rlk = ctmqc_env['Rlk'][0, 1]
-    
-    # Determine whether the Rlk is spiking
-    tol = 3
-    avgRl = np.mean(ctmqc_env['Rl'])
-    maxRl = np.max(ctmqc_env['Rl'])
-    minRl = np.min(ctmqc_env['Rl'])
-    minus = minRl - tol #(tol * stdRl)
-    plus = maxRl + tol #(tol * stdRl)
-    ctmqc_env['isSpiking'] = Rlk > plus or Rlk < minus
+    ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, ctmqc_env)
 
     # If it is spiking do something to fix it
     if ctmqc_env['isSpiking']:
-        effR = avgRl
+        effR = np.mean(ctmqc_env['Rl'])
     else:
         effR = Rlk
     
