@@ -21,26 +21,26 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-numRepeats = 1
+numRepeats = 10
 
-#all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
-#all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
-#all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
-#all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
-#all_doCTMQC_C = ([True] * 8) * numRepeats
-#all_doCTMQC_F = ([True] * 8 )  * numRepeats
-#rootFolder = '/scratch/mellis/TullyModelData/EffectiveR/Repeat'
+all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+all_doCTMQC_C = ([True] * 8) * numRepeats
+all_doCTMQC_F = ([True] * 8 )  * numRepeats
+rootFolder = '/scratch/mellis/TullyModelData/EffectiveR/Repeat'
 
-all_velMultiplier = [3] * numRepeats
-all_maxTime = [1500] * numRepeats
-all_model = [2] * numRepeats
-all_p_mean = [-8] * numRepeats
-all_doCTMQC_C = [True] * numRepeats
-all_doCTMQC_F = [True]  * numRepeats
-rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
+#all_velMultiplier = [3] * numRepeats
+#all_maxTime = [1500] * numRepeats
+#all_model = [2] * numRepeats
+#all_p_mean = [-8] * numRepeats
+#all_doCTMQC_C = [True] * numRepeats
+#all_doCTMQC_F = [True]  * numRepeats
+#rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
 
 s_mean = 0.3
-nRep = 20
+nRep = 200
 mass = 2000
 
 
