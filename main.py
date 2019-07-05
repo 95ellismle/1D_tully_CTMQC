@@ -23,7 +23,8 @@ import plot
 
 #inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
-inputs = "custom"
+inputs = "quickFullCTMQC"
+#inputs = "custom"
 
 if inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -49,12 +50,24 @@ elif inputs == "FullCTMQCEhren":
     rootFolder = '/scratch/mellis/TullyModelData/CompleteData/Repeat'
     nRep = 200
 
+elif inputs == 'quickFullCTMQC':
+    print("Quickly running through all the models with CTMQC (reduced repilcas)")
+    numRepeats = 1
+    all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+    all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/QuickCTMQC_test'
+    nRep = 20
+
 else:
     print("Carrying out custom input file")
     numRepeats = 1
-    all_velMultiplier = [4] * numRepeats
-    all_maxTime = [2000] * numRepeats
-    all_model = [4] * numRepeats
+    all_velMultiplier = [3] * numRepeats
+    all_maxTime = [1300] * numRepeats
+    all_model = [3] * numRepeats
     all_p_mean = [-15] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
     all_doCTMQC_F = [True]  * numRepeats
@@ -875,7 +888,7 @@ def get_min_procs(nSim, maxProcs):
    return nProc
 
 
-if nSim > 1 and nRep > 30:
+if nSim > 1 and (nRep > 30 or nSim > 4):
     import multiprocessing as mp
     
     nProc = get_min_procs(nSim, 16)
