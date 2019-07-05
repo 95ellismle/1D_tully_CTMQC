@@ -55,6 +55,26 @@ def smoothingFunc(x, ctmqc_env):
     return ctmqc_env['lastGoodPoint'] + (np.tanh((x - midPoint) / W) + 1) * D
 
 
+def do_Rlk_smoothing(effR, ctmqc_env):
+    """
+    Will carry out the smoothing between the Rlk and the R0 intercepts.
+    """
+    # Do the smoothing between Rl and Rlk
+    ctmqc_env['currGoodPoint'] = effR
+    if ctmqc_env['isSpiking'] != ctmqc_env['prevSpike']:
+        ctmqc_env['iSmoothStep']  = 1
+        ctmqc_env['lastGoodPoint'] = ctmqc_env['effR']
+        ctmqc_env['smoothInitT'] = ctmqc_env['dt'] * (ctmqc_env['iter'] - 1)
+        effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
+    elif ctmqc_env['iSmoothStep'] == ctmqc_env['nSmoothStep']:
+        ctmqc_env['iSmoothStep'] = -1
+    elif 0 < ctmqc_env['iSmoothStep'] and ctmqc_env['iSmoothStep'] < ctmqc_env['nSmoothStep']:
+        effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
+        ctmqc_env['iSmoothStep'] += 1
+
+    return effR
+
+
 def get_effectiveR(ctmqc_env):
     """
     Will return the 'effectiveR' term. That is the intercept that has the
@@ -63,35 +83,25 @@ def get_effectiveR(ctmqc_env):
     Rlk = ctmqc_env['Rlk'][0, 1]
     
     # Determine whether the Rlk is spiking
-    tol = 3
+    tol = 0.3 * ctmqc_env['nSmoothStep'] * ctmqc_env['dt']
     avgRl = np.mean(ctmqc_env['Rl'])
     maxRl = np.max(ctmqc_env['Rl'])
     minRl = np.min(ctmqc_env['Rl'])
     minus = minRl - tol #(tol * stdRl)
     plus = maxRl + tol #(tol * stdRl)
-    isSpiking = Rlk > plus or Rlk < minus
+    ctmqc_env['isSpiking'] = Rlk > plus or Rlk < minus
 
     # If it is spiking do something to fix it
-    if isSpiking:
+    if ctmqc_env['isSpiking']:
         effR = avgRl
     else:
         effR = Rlk
     
-    ## Do the smoothing between Rl and Rlk
-    #ctmqc_env['currGoodPoint'] = effR
-    #if isSpiking != ctmqc_env['prevSpike']:
-    #    ctmqc_env['iSmoothStep']  = 1
-    #    ctmqc_env['lastGoodPoint'] = ctmqc_env['effR']
-    #    ctmqc_env['smoothInitT'] = ctmqc_env['dt'] * (ctmqc_env['iter'] - 1)
-    #    effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
-    #elif ctmqc_env['iSmoothStep'] == ctmqc_env['nSmoothStep']:
-    #    ctmqc_env['iSmoothStep'] = -1
-    #elif 1 < ctmqc_env['iSmoothStep'] < ctmqc_env['nSmoothStep']:
-    #    effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
-    #    ctmqc_env['iSmoothStep'] += 1
+    if ctmqc_env['nSmoothStep'] > 0:
+        effR = do_Rlk_smoothing(effR, ctmqc_env)
 
     ctmqc_env['effR'] = effR
-    ctmqc_env['prevSpike'] = isSpiking
+    ctmqc_env['prevSpike'] = ctmqc_env['isSpiking']
     return effR
 
 

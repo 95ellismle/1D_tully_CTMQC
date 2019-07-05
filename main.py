@@ -31,16 +31,16 @@ numRepeats = 1
 #all_doCTMQC_F = ([True] * 8 )  * numRepeats
 #rootFolder = '/scratch/mellis/TullyModelData/EffectiveR/Repeat'
 
-all_velMultiplier = [1] * numRepeats
-all_maxTime = [3500] * numRepeats
-all_model = [1] * numRepeats
+all_velMultiplier = [3] * numRepeats
+all_maxTime = [1500] * numRepeats
+all_model = [2] * numRepeats
 all_p_mean = [-8] * numRepeats
 all_doCTMQC_C = [True] * numRepeats
 all_doCTMQC_F = [True]  * numRepeats
 rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
 
 s_mean = 0.3
-nRep = 20
+nRep = 60
 mass = 2000
 
 
