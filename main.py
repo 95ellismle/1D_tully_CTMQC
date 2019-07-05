@@ -856,7 +856,8 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     plot.plotDeco(runData)
     plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
+    plot.plotNorm(runData)
+    plot.plotEcons(runData)
 #    plotSigmal(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')

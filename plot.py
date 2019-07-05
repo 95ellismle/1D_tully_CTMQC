@@ -31,7 +31,10 @@ def plotEcons(runData):
     fit = np.polyfit(runData.allt, avgTotE, 1)
     annotateMsg = r"Energy Drift = %.2g" % (fit[0] * 41341.3745758)
     annotateMsg += r" [$\frac{Ha}{atom ps}$]"
-    
+    ypos = avgTotE[100] / 2.
+    xpos = runData.allt[100]
+    a.annotate(annotateMsg, (xpos, ypos), fontsize=20)
+
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0] * 41341.3745758))
     
     a.legend()
