@@ -40,7 +40,7 @@ all_doCTMQC_F = [True]  * numRepeats
 rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
 
 s_mean = 0.3
-nRep = 60
+nRep = 20
 mass = 2000
 
 
@@ -68,7 +68,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 50,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 20,  # The number of steps to take to smooth the QM intercept
                 }
     return ctmqc_env
 

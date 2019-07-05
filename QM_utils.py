@@ -50,7 +50,7 @@ def smoothingFunc(x, ctmqc_env):
     midPoint = (finalPos + pos) / 2.
     
     D = 0.5 * (ctmqc_env['currGoodPoint'] - ctmqc_env['lastGoodPoint'])
-    W = 10
+    W = ctmqc_env['nSmoothStep'] * dt * 0.3
     
     return ctmqc_env['lastGoodPoint'] + (np.tanh((x - midPoint) / W) + 1) * D
 
@@ -83,7 +83,7 @@ def get_effectiveR(ctmqc_env):
     Rlk = ctmqc_env['Rlk'][0, 1]
     
     # Determine whether the Rlk is spiking
-    tol = 0.3 * ctmqc_env['nSmoothStep'] * ctmqc_env['dt']
+    tol = 3
     avgRl = np.mean(ctmqc_env['Rl'])
     maxRl = np.max(ctmqc_env['Rl'])
     minRl = np.min(ctmqc_env['Rl'])
