@@ -13,9 +13,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '/scratch/mellis/TullyModelData/QuickCTMQC_test'
-model = 4
-whichPlot = 'compFred normEner'
+mroot_folder = '/scratch/mellis/TullyModelData/QuickTests'
+model = 1
+whichPlot = 'compFred'
 numStd = 1
 std_or_allSim = "std"
 rm_bad_sims = False

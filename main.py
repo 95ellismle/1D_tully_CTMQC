@@ -24,6 +24,7 @@ import plot
 #inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
 inputs = "quickFullCTMQC"
+#inputs = "quickFullEhren"
 #inputs = "custom"
 
 if inputs == "FullCTMQC":
@@ -59,15 +60,27 @@ elif inputs == 'quickFullCTMQC':
     all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
-    rootFolder = '/scratch/mellis/TullyModelData/QuickCTMQC_test'
+    rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
     nRep = 20
+
+elif inputs == 'quickFullEhren':
+    print("Quickly running through all the models with Ehren (reduced repilcas)")
+    numRepeats = 1
+    all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+    all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([False] * 8) * numRepeats
+    all_doCTMQC_F = ([False] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
+    nRep = 5
 
 else:
     print("Carrying out custom input file")
     numRepeats = 1
-    all_velMultiplier = [3] * numRepeats
-    all_maxTime = [1300] * numRepeats
-    all_model = [3] * numRepeats
+    all_velMultiplier = [4] * numRepeats
+    all_maxTime = [2000] * numRepeats
+    all_model = [4] * numRepeats
     all_p_mean = [-15] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
     all_doCTMQC_F = [True]  * numRepeats
@@ -846,7 +859,7 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 20. / float(v_mean * mass)
+    p_std = 10. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
@@ -879,9 +892,9 @@ def get_min_procs(nSim, maxProcs):
    procs.
    """
    nProc = min([nSim, 16])
-   sims_to_procs = nSim // nProc
+   sims_to_procs = np.ceil(nSim / nProc)
    for i in range(nProc, 1, -1):
-       if nSim // i == sims_to_procs:
+       if np.ceil(nSim / i) == sims_to_procs:
            nProc = i
        else:
            break
