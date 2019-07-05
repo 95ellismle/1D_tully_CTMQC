@@ -865,7 +865,7 @@ def get_min_procs(nSim, maxProcs):
    keeping the nsim per proc ratio constant but reducing number
    procs.
    """
-   nProc = min([nsim, 16])
+   nProc = min([nSim, 16])
    sims_to_procs = nSim // nProc
    for i in range(nProc, 1, -1):
        if nSim // i == sims_to_procs:

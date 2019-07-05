@@ -233,7 +233,7 @@ def do_adiab_prop_QM(ctmqc_env):
         
         X1 = makeX_adiab_ehren(NACV, v, E)
         #if QM[0, 1] > 1e-10:
-        X1 += makeX_adiab_Qlk(QM, f, adPops)
+        X1 -= makeX_adiab_Qlk(QM, f, adPops)
         for Estep in range(ctmqc_env['elec_steps']):
             adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
             E += 0.5 * dE_E
@@ -243,7 +243,7 @@ def do_adiab_prop_QM(ctmqc_env):
             f += 0.5 * df_E
             X12 = makeX_adiab_ehren(NACV, v, E)
             #if QM[0, 1] > 1e-10:
-            X12 += makeX_adiab_Qlk(QM, f, adPops)
+            X12 -= makeX_adiab_Qlk(QM, f, adPops)
 
             E = E + 0.5 * dE_E
             NACV = NACV + 0.5 * dNACV_E
@@ -252,7 +252,7 @@ def do_adiab_prop_QM(ctmqc_env):
             f += 0.5 * df_E
             X2 = makeX_adiab_ehren(NACV, v, E)
             #if QM[0, 1] > 1e-10:
-            X2 += makeX_adiab_Qlk(QM, f, adPops)
+            X2 -= makeX_adiab_Qlk(QM, f, adPops)
 
             coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
                           ctmqc_env)
