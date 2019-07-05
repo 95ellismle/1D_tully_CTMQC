@@ -23,9 +23,9 @@ import plot
 
 #inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
-inputs = "quickFullCTMQC"
+#inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
-#inputs = "custom"
+inputs = "custom"
 
 if inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -77,15 +77,24 @@ elif inputs == 'quickFullEhren':
 
 else:
     print("Carrying out custom input file")
+    #numRepeats = 1
+    #all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+    #all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+    #all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    #all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+    #all_doCTMQC_C = ([True] * 8) * numRepeats
+    #all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    #rootFolder = '/scratch/mellis/TullyModelData/ConstSig'
+    #nRep = 200
     numRepeats = 1
-    all_velMultiplier = [4] * numRepeats
-    all_maxTime = [2000] * numRepeats
-    all_model = [4] * numRepeats
-    all_p_mean = [-15] * numRepeats
+    all_velMultiplier = [3] * numRepeats
+    all_maxTime = [1500] * numRepeats
+    all_model = [2] * numRepeats
+    all_p_mean = [-8] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
     all_doCTMQC_F = [True]  * numRepeats
     rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
-    nRep = 20
+    nRep = 50
 
 
 s_mean = 0.3
@@ -115,7 +124,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 20,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 0,  # The number of steps to take to smooth the QM intercept
                 }
     return ctmqc_env
 
@@ -859,7 +868,7 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 10. / float(v_mean * mass)
+    p_std = 20. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
@@ -874,6 +883,17 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
+    pos = np.array([-7.8979439 , -7.84391593, -8.64605171, -7.41433849, -9.30669699,
+                    -7.94685117, -7.72570313, -8.02554493, -7.20513459, -8.31396283,
+                    -8.68462472, -8.11011923, -7.99214535, -7.67810446, -7.95454351,
+                    -8.58774377, -9.50373277, -8.09453468, -8.76340585, -8.98758076,
+                    -8.62075933, -8.32611946, -7.70214277, -8.12265927, -7.8523527 ,
+                    -7.90964055, -8.2806314 , -8.08013512, -7.12031343, -8.33090518,
+                    -7.22891879, -8.01158939, -8.29806864, -8.67307193, -7.40151944,
+                    -7.22315518, -9.09032445, -7.29181917, -7.96661169, -6.94138918,
+                    -7.57410692, -7.14403882, -7.98691562, -7.72083168, -8.51630211,
+                    -7.76744169, -7.76579131, -7.62942481, -7.4600962 , -7.28024501])
+
     
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
@@ -917,11 +937,11 @@ else:
 
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
-    plot.plotPops(runData)
-    plot.plotDeco(runData)
+    #plot.plotPops(runData)
+    #plot.plotDeco(runData)
     plot.plotRlk_Rl(runData)
-    plot.plotNorm(runData)
-    plot.plotEcons(runData)
+    #plot.plotNorm(runData)
+    #plot.plotEcons(runData)
 #    plotSigmal(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')

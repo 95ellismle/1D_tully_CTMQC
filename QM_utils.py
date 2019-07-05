@@ -82,7 +82,7 @@ def Rlk_is_spiking(Rlk, ctmqc_env):
     from the Rl intercept.
     """
     # Determine whether the Rlk is spiking
-    tol = 15
+    tol = 10
     avgRl = np.mean(ctmqc_env['Rl'])
     maxRl = np.max(ctmqc_env['Rl'])
     minRl = np.min(ctmqc_env['Rl'])
@@ -123,7 +123,7 @@ def calc_Qlk_2state(ctmqc_env):
     ctmqc_env['QM_reps'] = np.arange(nRep)# [irep for irep, rep_pops in enumerate(pops)
                            #if all(state_pop < 0.995 for state_pop in rep_pops)]
     calc_sigmal(ctmqc_env)
-#    ctmqc_env['sigmal'][:] = 0.25
+    #ctmqc_env['sigmal'][:] = 0.25
     
     alpha = np.nan_to_num(np.sum(ctmqc_env['adPops'][0] / ctmqc_env['sigmal']))
     ctmqc_env['alphal'] = alpha

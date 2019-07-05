@@ -45,11 +45,12 @@ def plotRlk_Rl(runData):
     Will plot the Rlk and Rl term on the same axis
     """
     f, a = plt.subplots()
-    a.plot(runData.allt, runData.allRl, label="Rl")
+    a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
+    a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
     a.plot(runData.allt, runData.allRlk[:, 0, 1], label="Rlk")
     a.plot(runData.allt, runData.allEffR, label=r"R$_{eff}$")
     a.set_xlabel("Time [au]")
-    a.set_xlabel("Intercept [au]")
+    a.set_ylabel("Intercept [au]")
     a.legend()
 
 

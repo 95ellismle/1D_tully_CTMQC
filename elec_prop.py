@@ -230,7 +230,7 @@ def do_adiab_prop_QM(ctmqc_env):
         df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
         
         adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
-        doQM = abs(QM[0, 1]) > 0
+        doQM = abs(QM[0, 1]) > 1e-10
 
         X1 = makeX_adiab_ehren(NACV, v, E)
         if doQM: X1 -= makeX_adiab_Qlk(QM, f, adPops)

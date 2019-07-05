@@ -13,8 +13,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '/scratch/mellis/TullyModelData/QuickTests'
-model = 1
+mroot_folder = '/scratch/mellis/TullyModelData/ConstSigma'
+model = 2
 whichPlot = 'compFred'
 numStd = 1
 std_or_allSim = "std"
