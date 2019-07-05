@@ -21,28 +21,49 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-numRepeats = 10
+#inputs = "FullCTMQC"
+#inputs = "FullCTMQCEhren"
+inputs = "custom"
 
-all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
-all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
-all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
-all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
-all_doCTMQC_C = ([True] * 8) * numRepeats
-all_doCTMQC_F = ([True] * 8 )  * numRepeats
-rootFolder = '/scratch/mellis/TullyModelData/EffectiveR/Repeat'
+if inputs == "FullCTMQC":
+    print("Carrying out full CTMQC testing!")
+    numRepeats = 10
+    all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
+    all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQC/Repeat'
+    nRep = 200
 
-#all_velMultiplier = [3] * numRepeats
-#all_maxTime = [1500] * numRepeats
-#all_model = [2] * numRepeats
-#all_p_mean = [-8] * numRepeats
-#all_doCTMQC_C = [True] * numRepeats
-#all_doCTMQC_F = [True]  * numRepeats
-#rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
+elif inputs == "FullCTMQCEhren":
+    print("Carrying out all testing (Ehren and CTMQC)!")
+    numRepeats = 10
+    all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats * 2
+    all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats * 2
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats * 2
+    all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats * 2
+    all_doCTMQC_C = ([True] * 8 + [False] * 8) * numRepeats * 2
+    all_doCTMQC_F = ([True] * 8 + [False] * 8)  * numRepeats * 2
+    rootFolder = '/scratch/mellis/TullyModelData/CompleteData/Repeat'
+    nRep = 200
+
+else:
+    print("Carrying out custom input file")
+    numRepeats = 1
+    all_velMultiplier = [4] * numRepeats
+    all_maxTime = [2000] * numRepeats
+    all_model = [4] * numRepeats
+    all_p_mean = [-15] * numRepeats
+    all_doCTMQC_C = [True] * numRepeats
+    all_doCTMQC_F = [True]  * numRepeats
+    rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
+    nRep = 20
+
 
 s_mean = 0.3
-nRep = 200
 mass = 2000
-
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
@@ -835,12 +856,29 @@ def doSim(i):
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
                       doCTMQC_C, doCTMQC_F)
     return CTMQC(ctmqc_env, rootFolder)
-    
+
+
+def get_min_procs(nSim, maxProcs):
+   """
+   This will simply find the maximum amount of processes that can
+   be used (e.g nproc = nSim or maxProcs) then minimise this by
+   keeping the nsim per proc ratio constant but reducing number
+   procs.
+   """
+   nProc = min([nsim, 16])
+   sims_to_procs = nSim // nProc
+   for i in range(nProc, 1, -1):
+       if nSim // i == sims_to_procs:
+           nProc = i
+       else:
+           break
+   return nProc
+
 
 if nSim > 1 and nRep > 30:
     import multiprocessing as mp
     
-    nProc = min([nSim, 16])
+    nProc = get_min_procs(nSim, 16)
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))

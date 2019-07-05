@@ -82,7 +82,7 @@ def Rlk_is_spiking(Rlk, ctmqc_env):
     from the Rl intercept.
     """
     # Determine whether the Rlk is spiking
-    tol = 2
+    tol = 15
     avgRl = np.mean(ctmqc_env['Rl'])
     maxRl = np.max(ctmqc_env['Rl'])
     minRl = np.min(ctmqc_env['Rl'])
