@@ -44,13 +44,13 @@ def smoothingFunc(x, ctmqc_env):
     """
     Will do the smoothing between points
     """
-    dx = ctmqc_env['vel'] * ctmqc_env['dt']
-    pos = ctmqc_env['pos']
-    finalPos = pos + (dx * ctmqc_env['nSmoothStep'])
+    dt = ctmqc_env['dt']
+    pos = ctmqc_env['smoothInitT']
+    finalPos = pos + (dt * ctmqc_env['nSmoothStep'])
     midPoint = (finalPos + pos) / 2.
     
     D = 0.5 * (ctmqc_env['currGoodPoint'] - ctmqc_env['lastGoodPoint'])
-    W = dx
+    W = 10
     
     return ctmqc_env['lastGoodPoint'] + (np.tanh((x - midPoint) / W) + 1) * D
 
@@ -77,7 +77,21 @@ def get_effectiveR(ctmqc_env):
     else:
         effR = Rlk
     
+    ## Do the smoothing between Rl and Rlk
+    #ctmqc_env['currGoodPoint'] = effR
+    #if isSpiking != ctmqc_env['prevSpike']:
+    #    ctmqc_env['iSmoothStep']  = 1
+    #    ctmqc_env['lastGoodPoint'] = ctmqc_env['effR']
+    #    ctmqc_env['smoothInitT'] = ctmqc_env['dt'] * (ctmqc_env['iter'] - 1)
+    #    effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
+    #elif ctmqc_env['iSmoothStep'] == ctmqc_env['nSmoothStep']:
+    #    ctmqc_env['iSmoothStep'] = -1
+    #elif 1 < ctmqc_env['iSmoothStep'] < ctmqc_env['nSmoothStep']:
+    #    effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
+    #    ctmqc_env['iSmoothStep'] += 1
+
     ctmqc_env['effR'] = effR
+    ctmqc_env['prevSpike'] = isSpiking
     return effR
 
 

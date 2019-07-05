@@ -68,7 +68,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 50,  # The number of steps to take to smooth the QM intercept
                 }
     return ctmqc_env
 
@@ -446,8 +446,10 @@ class CTMQC(object):
         """
         nrep = self.ctmqc_env['nrep']
         nstate = self.ctmqc_env['nstate']
-        self.ctmqc_env['iSmoothStep'] = 0
+        self.ctmqc_env['iSmoothStep'] = -1
         self.ctmqc_env['prevSpike'] = False
+        self.ctmqc_env['t'] = 0
+        self.ctmqc_env['iter'] = 0
 
         # Calculate the Hamiltonian
         for irep in range(nrep):
@@ -471,8 +473,6 @@ class CTMQC(object):
         # Calculate the forces
         self.__calc_F()
 
-        self.ctmqc_env['t'] = 0
-        self.ctmqc_env['iter'] = 0
         self.__update_vars_step()
 
     def __calc_quantities(self):
