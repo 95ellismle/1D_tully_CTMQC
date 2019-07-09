@@ -21,11 +21,11 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-#inputs = "FullCTMQC"
+inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
-inputs = "custom"
+#inputs = "custom"
 
 if inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -88,13 +88,13 @@ else:
     #nRep = 200
     numRepeats = 1
     all_velMultiplier = [3] * numRepeats
-    all_maxTime = [1500] * numRepeats
+    all_maxTime = [2000] * numRepeats
     all_model = [2] * numRepeats
     all_p_mean = [-8] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
     all_doCTMQC_F = [True]  * numRepeats
     rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
-    nRep = 50
+    nRep = 60
 
 
 s_mean = 0.3
@@ -124,7 +124,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 0,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
+            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
                 }
     return ctmqc_env
 
@@ -773,6 +774,24 @@ class CTMQC(object):
         self.allRl = self.allRl[:self.ctmqc_env['iter']]
         self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
 
+    def __checkS26(self):
+        """
+        Will check the S26 equation hold if a CTMQC run is being performed
+        """
+        l, k = 0, 1
+        Qlk = self.ctmqc_env['Qlk'][:, l, k]
+        fl = self.ctmqc_env['adMom'][:, l]
+        fk = self.ctmqc_env['adMom'][:, k]
+        Cl = self.ctmqc_env['adPop'][:, l]
+        Ck = self.ctmqc_env['adPop'][:, k]
+        
+        S26 = 2 * Qlk * (fk - fl) * Ck * Cl
+        S26 = np.sum(S26, axis=0)
+        if S26 > 1e-5:
+           print("\nS26 being violated!\n")
+           raise SystemExit("S26 Error")
+
+
     def __store_data(self):
         """
         Will save all the arrays as numpy binary files.
@@ -868,7 +887,7 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 20. / float(v_mean * mass)
+    p_std = 10. / float(v_mean * mass)
     s_std = 0
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
@@ -883,18 +902,6 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    pos = np.array([-7.8979439 , -7.84391593, -8.64605171, -7.41433849, -9.30669699,
-                    -7.94685117, -7.72570313, -8.02554493, -7.20513459, -8.31396283,
-                    -8.68462472, -8.11011923, -7.99214535, -7.67810446, -7.95454351,
-                    -8.58774377, -9.50373277, -8.09453468, -8.76340585, -8.98758076,
-                    -8.62075933, -8.32611946, -7.70214277, -8.12265927, -7.8523527 ,
-                    -7.90964055, -8.2806314 , -8.08013512, -7.12031343, -8.33090518,
-                    -7.22891879, -8.01158939, -8.29806864, -8.67307193, -7.40151944,
-                    -7.22315518, -9.09032445, -7.29181917, -7.96661169, -6.94138918,
-                    -7.57410692, -7.14403882, -7.98691562, -7.72083168, -8.51630211,
-                    -7.76744169, -7.76579131, -7.62942481, -7.4600962 , -7.28024501])
-
-    
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -942,7 +949,9 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotRlk_Rl(runData)
     #plot.plotNorm(runData)
     #plot.plotEcons(runData)
-#    plotSigmal(runData)
+    #plot.plotSigmal(runData)
+    #plot.plotQlk(runData)
+    plot.plotS26(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')
     plt.show()

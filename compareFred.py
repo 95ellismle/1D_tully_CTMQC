@@ -13,8 +13,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '/scratch/mellis/TullyModelData/ConstSigma'
-model = 2
+mroot_folder = '/scratch/mellis/TullyModelData/FullCTMQC'
+model = 1
 whichPlot = 'compFred'
 numStd = 1
 std_or_allSim = "std"
@@ -396,9 +396,9 @@ for name in plotMe:
         pdAxes[0, 0].set_title("Low Momentum", fontsize=18)
         pdAxes[0, 1].set_title("High Momentum", fontsize=18)
 
+plt.savefig("Model_%i.png" % model)
 plt.show()
 
-#plt.savefig("Model_%i.png" % model)
 #plt.close("all")
 
 

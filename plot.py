@@ -40,6 +40,45 @@ def plotEcons(runData):
     a.legend()
 
 
+def plotS26(runData):
+    """
+    Will plot the equation S26 that the Qlk should obey.
+    """
+    l, k = 0, 1
+    S26 = 2 * runData.allQlk[:, :, l, k] * (runData.allAdMom[:, :, k] - runData.allAdMom[:, :, l]) * runData.allAdPop[:, :, k] * runData.allAdPop[:, :, l]
+    S26 = np.sum(S26, axis=1)
+    lw = 1
+    alpha = 1
+
+    f, a = plt.subplots()
+    a.plot(runData.allt, S26, 'k-', lw=lw, alpha=alpha)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel("S26")
+
+
+
+def plotAdMom(runData):
+    """ 
+    Will plot the adiabatic momentum
+    """
+    f, a = plt.subplots()
+    lw = 0.5
+    alpha = 0.5
+    avgf = np.mean(runData.allAdMom, axis=1)    
+
+    a.plot(runData.allt, runData.allAdMom[:, :, 0], 
+           color='r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allAdMom[:, :, 1], 
+           color='b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgf[:, 0], 
+           label=r"$\mathbf{f}^{(I)}_{0}$", color='r')
+    a.plot(runData.allt, avgf[:, 1], 
+           label=r"$\mathbf{f}^{(I)}_{1}$", color='b')
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\mathbf{f}_{l}^{(I)}$ [au]")
+    a.legend()
+
+
 def plotRlk_Rl(runData):
     """
     Will plot the Rlk and Rl term on the same axis
