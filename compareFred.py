@@ -14,13 +14,14 @@ import matplotlib.pyplot as plt
 import re
 
 mroot_folder = '/scratch/mellis/TullyModelData/FullCTMQC'
-model = 1
-whichPlot = 'compFred'
+model = 3
+whichPlot = 'compFred normEner'
 numStd = 1
 std_or_allSim = "std"
-rm_bad_sims = False
+rm_bad_sims = True
 
 
+minSim, maxSim = 0, -1
 colors = {'CTMQC': (0, 0.5, 0), 'Eh': (0, 0.5, 1), 'MQC': {1, 1, 0},
           'SH': (0, 0, 1), 'exact': (1, 0, 0)}
 folderNames = {'Eh': ['Ehren'], 'CTMQC': ['CTMQC']}
@@ -175,6 +176,7 @@ for name in plotMe:
     allPopsLow, timeLow = [], []
     allPopsHigh, timeHigh = [], []
     badSims = []
+    folders = []
     for i in allData:
         if allData[i]['simType'] == name:
             if is_bad_sim(allData[i]['data']['|C|^2']) * rm_bad_sims:
@@ -185,11 +187,13 @@ for name in plotMe:
                 if len(timeLow) == 0 or cond2:  # Only append once
                     timeLow = allData[i]['data']['time']
                 allPopsLow.append(allData[i]['data']['|C|^2'])
+                folders.append(allData[i]['folder'])
             else:
                 cond2 = len(allData[i]['data']['time']) > len(timeHigh)
                 if len(timeHigh) == 0 or cond2:  # Only append once
                     timeHigh = allData[i]['data']['time']
                 allPopsHigh.append(allData[i]['data']['|C|^2'])
+                folders.append(allData[i]['folder'])
         
     if len(allPopsLow) > 0:
         maxLowSteps = np.max([i.shape[0] for i in allPopsLow])
@@ -197,6 +201,13 @@ for name in plotMe:
     if len(allPopsHigh) > 0:
         maxHighSteps = np.max([i.shape[0] for i in allPopsHigh])
         allPopsHigh = np.array([i for i in allPopsHigh if i.shape[0] == maxHighSteps])
+
+    allPopsHigh = allPopsHigh[minSim:maxSim]
+    allPopsLow = allPopsLow[minSim:maxSim]
+    folders = folders[minSim:maxSim]
+    folders = list(set(folders))
+    print(folders)
+
 #    allPopsHigh = np.array(allPopsHigh)
     print("Num Bad Sims = %i" % len(badSims))
     print("\tLow Sims = %i" % len(allPopsLow))
@@ -218,6 +229,12 @@ for name in plotMe:
     
         allPotLow, allKinLow = np.array(allPotLow), np.array(allKinLow)
         allPotHigh, allKinHigh = np.array(allPotHigh), np.array(allKinHigh)
+
+        allKinLow = allKinLow[minSim:maxSim]
+        allPotLow = allPotLow[minSim:maxSim]
+        allKinHigh = allKinHigh[minSim:maxSim]
+        allPotHigh = allPotHigh[minSim:maxSim]
+
         allTotLow, allTotHigh = allKinLow + allPotLow, allKinHigh + allPotHigh
     
     if 'normEner' in whichPlot:
@@ -396,7 +413,7 @@ for name in plotMe:
         pdAxes[0, 0].set_title("Low Momentum", fontsize=18)
         pdAxes[0, 1].set_title("High Momentum", fontsize=18)
 
-plt.savefig("Model_%i.png" % model)
+#plt.savefig("Model_%i.png" % model)
 plt.show()
 
 #plt.close("all")
