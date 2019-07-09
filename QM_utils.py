@@ -82,13 +82,17 @@ def Rlk_is_spiking(Rlk, ctmqc_env):
     from the Rl intercept.
     """
     # Determine whether the Rlk is spiking
-    tol = 3
-    avgRl = np.mean(ctmqc_env['Rl'])
-    maxRl = np.max(ctmqc_env['Rl'])
-    minRl = np.min(ctmqc_env['Rl'])
-    minus = minRl - tol #(tol * stdRl)
-    plus = maxRl + tol #(tol * stdRl)
-    return Rlk > plus or Rlk < minus
+    #tol = 20
+    #avgRl = np.mean(ctmqc_env['Rl'])
+    #maxRl = np.max(ctmqc_env['Rl'])
+    #minRl = np.min(ctmqc_env['Rl'])
+    #minus = minRl - tol #(tol * stdRl)
+    #plus = maxRl + tol #(tol * stdRl)
+
+    gradRlk = (Rlk - ctmqc_env['Rlk_tm'][0, 1]) / ctmqc_env['dt']
+    if abs(gradRlk) > ctmqc_env['gradTol']: # or Rlk > plus or Rlk < minus:
+       return True
+    return False
 
 
 def get_effectiveR(ctmqc_env):

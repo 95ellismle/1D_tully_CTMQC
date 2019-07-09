@@ -21,12 +21,13 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-#inputs = "FullCTMQC"
+inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
 #inputs = "MomentumEhren"
 inputs = "custom"
+#inputs = "custom"
 
 rootSaveFold = "./"
 
@@ -101,7 +102,7 @@ else:
     #nRep = 200
     numRepeats = 1
     all_velMultiplier = [3] * numRepeats
-    all_maxTime = [1500] * numRepeats
+    all_maxTime = [2000] * numRepeats
     all_model = [2] * numRepeats
     all_p_mean = [-8] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
@@ -135,7 +136,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 30,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
+            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
                 }
     return ctmqc_env
 
@@ -792,6 +794,24 @@ class CTMQC(object):
         self.allRl = self.allRl[:self.ctmqc_env['iter']]
         self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
 
+    def __checkS26(self):
+        """
+        Will check the S26 equation hold if a CTMQC run is being performed
+        """
+        l, k = 0, 1
+        Qlk = self.ctmqc_env['Qlk'][:, l, k]
+        fl = self.ctmqc_env['adMom'][:, l]
+        fk = self.ctmqc_env['adMom'][:, k]
+        Cl = self.ctmqc_env['adPop'][:, l]
+        Ck = self.ctmqc_env['adPop'][:, k]
+        
+        S26 = 2 * Qlk * (fk - fl) * Ck * Cl
+        S26 = np.sum(S26, axis=0)
+        if S26 > 1e-5:
+           print("\nS26 being violated!\n")
+           raise SystemExit("S26 Error")
+
+
     def __store_data(self):
         """
         Will save all the arrays as numpy binary files.
@@ -960,9 +980,11 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     #plot.plotDeco(runData)
     plot.plotRlk_Rl(runData)
-    plot.plotNorm(runData)
-    plot.plotEcons(runData)
-#    plotSigmal(runData)
+    #plot.plotNorm(runData)
+    #plot.plotEcons(runData)
+    #plot.plotSigmal(runData)
+    #plot.plotQlk(runData)
+    plot.plotS26(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')
     plt.show()
