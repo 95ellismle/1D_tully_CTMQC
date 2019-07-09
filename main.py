@@ -25,9 +25,22 @@ import plot
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
+#inputs = "MomentumEhren"
 inputs = "custom"
 
-if inputs == "FullCTMQC":
+rootSaveFold = "./"
+
+if inputs == "MomentumEhren":
+    all_velMultiplier = np.arange(1, 5, 0.03)
+    all_maxTime = [(45.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [4] * len(all_velMultiplier)
+    all_p_mean = [-15] * len(all_velMultiplier)
+    all_doCTMQC_C = [False] * len(all_velMultiplier)
+    all_doCTMQC_F = [False] * len(all_velMultiplier)
+    rootFolder = '%s/MomentumRuns' % rootSaveFold
+    all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
     numRepeats = 10
     all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
@@ -37,7 +50,7 @@ if inputs == "FullCTMQC":
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/FullCTMQC/Repeat'
-    nRep = 200
+    all_nRep = [200]
 
 elif inputs == "FullCTMQCEhren":
     print("Carrying out all testing (Ehren and CTMQC)!")
@@ -49,7 +62,7 @@ elif inputs == "FullCTMQCEhren":
     all_doCTMQC_C = ([True] * 8 + [False] * 8) * numRepeats * 2
     all_doCTMQC_F = ([True] * 8 + [False] * 8)  * numRepeats * 2
     rootFolder = '/scratch/mellis/TullyModelData/CompleteData/Repeat'
-    nRep = 200
+    all_nRep = [200]
 
 elif inputs == 'quickFullCTMQC':
     print("Quickly running through all the models with CTMQC (reduced repilcas)")
@@ -61,7 +74,7 @@ elif inputs == 'quickFullCTMQC':
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    nRep = 20
+    all_nRep = [20]
 
 elif inputs == 'quickFullEhren':
     print("Quickly running through all the models with Ehren (reduced repilcas)")
@@ -73,7 +86,7 @@ elif inputs == 'quickFullEhren':
     all_doCTMQC_C = ([False] * 8) * numRepeats
     all_doCTMQC_F = ([False] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    nRep = 5
+    all_nRep = [5]
 
 else:
     print("Carrying out custom input file")
@@ -93,8 +106,8 @@ else:
     all_p_mean = [-8] * numRepeats
     all_doCTMQC_C = [True] * numRepeats
     all_doCTMQC_F = [True]  * numRepeats
-    rootFolder = False #'/scratch/mellis/TullyModelData/Dev'
-    nRep = 50
+    rootFolder = './Data/'
+    all_nRep = [50] * numRepeats
 
 
 s_mean = 0.3
@@ -102,9 +115,7 @@ mass = 2000
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
-            len(all_doCTMQC_F)])
-coeff = [[complex(1, 0), complex(0, 0)]
-         for i in range(nRep)]
+            len(all_doCTMQC_F), len(all_nRep)])
 
 
 def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
@@ -124,7 +135,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
-            'nSmoothStep': 0,  # The number of steps to take to smooth the QM intercept
+            'nSmoothStep': 30,  # The number of steps to take to smooth the QM intercept
                 }
     return ctmqc_env
 
@@ -212,8 +223,10 @@ class CTMQC(object):
             eHStr = "CTMQCC_EhF"
 
         modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
-        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
-        momStr = "Kinit_%i" % int(mom)
+        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+        if int(mom) == mom:
+            mom = int(mom)
+        momStr = "Kinit_%s" % str(mom).replace(".", "x")
         if self.ctmqc_env['do_sigma_calc']:
             sigStr = "varSig"
         else:
@@ -240,8 +253,10 @@ class CTMQC(object):
                 eHStr = "CTMQCC_EhF"
     
             modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
-            momStr = "Kinit_%i" % int(mom)
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+            momStr = "Kinit_%s" % str(mom).replace(".", "x")
+            if int(mom) == mom:
+                mom = int(mom)
             if self.ctmqc_env['do_sigma_calc']:
                 sigStr = "varSig"
             else:
@@ -267,8 +282,10 @@ class CTMQC(object):
                 eHStr = "CTMQCC_EhF"
     
             modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
-            momStr = "Kinit_%i" % int(mom)
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+            momStr = "Kinit_%s" % str(mom).replace(".", "x")
+            if int(mom) == mom:
+                mom = int(mom)
             if self.ctmqc_env['do_sigma_calc']:
                 sigStr = "varSig"
             else:
@@ -295,8 +312,10 @@ class CTMQC(object):
                     eHStr = "CTMQCC_EhF"
         
                 modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
-                mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0])
-                momStr = "Kinit_%i" % int(mom)
+                mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+                momStr = "Kinit_%s" % str(mom).replace(".", "x")
+                if int(mom) == mom:
+                    mom = int(mom)
                 if self.ctmqc_env['do_sigma_calc']:
                     sigStr = "varSig"
                 else:
@@ -557,9 +576,6 @@ class CTMQC(object):
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
                                                            self.ctmqc_env)
 
-#            if self.ctmqc_env['pos'][irep] > 0:
-#                self.ctmqc_env['NACV'][irep] = -0.1 * self.ctmqc_env['NACV'][irep]
-
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in self.ctmqc_env['adPops'][irep]):
@@ -661,18 +677,21 @@ class CTMQC(object):
                 e_prop.do_diab_prop_ehren(self.ctmqc_env)
         t2 = time.time()
 
-        # Transform WF
-        if self.adiab_diab == 'adiab':
-            e_prop.trans_adiab_to_diab(self.ctmqc_env)
-        else:
-            e_prop.trans_diab_to_adiab(self.ctmqc_env)
-        t3 = time.time()
-
+        # Check the norm
         norm = np.sum(self.ctmqc_env['adPops'], axis=1)
         if any(norm > 2):
             print("Error in conserving the norm.")
             print("Norms for all reps [%s]" % (', '.join(norm.astype(str))))
             raise SystemExit("ERROR: Norm Cons")
+
+        # Transform WF
+        if self.adiab_diab == 'adiab':
+            #e_prop.renormalise_all_coeffs(self.ctmqc_env['C'])
+            e_prop.trans_adiab_to_diab(self.ctmqc_env)
+        else:
+            #e_prop.renormalise_all_coeffs(self.ctmqc_env['u'])
+            e_prop.trans_diab_to_adiab(self.ctmqc_env)
+        t3 = time.time()
 
         self.allTimes['wf_prop']['transform'].append(t3 - t2)
 
@@ -792,6 +811,14 @@ class CTMQC(object):
             savepath = "%s/%s" % (self.saveFolder, name)
             np.save(savepath, arr)
 
+        # Save little things like the strs and int vars etc...
+        saveTypes = (str, int, float)
+        tullyInfo = {i:self.ctmqc_env[i] 
+                       for i in self.ctmqc_env
+                       if isinstance(self.ctmqc_env[i], saveTypes)}
+        np.save("%s/tullyInfo" % self.saveFolder, tullyInfo)
+        
+
     def __checkVV(self):
         """
         Will check the velocity verlet algorithm propagated the dynamics
@@ -865,11 +892,15 @@ def doSim(i):
     p_mean = all_p_mean[i]
     doCTMQC_C = all_doCTMQC_C[i]
     doCTMQC_F = all_doCTMQC_F[i]
+    nRep = all_nRep[i]
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 20. / float(v_mean * mass)
+    p_std = 10. / float(v_mean * mass)
     s_std = 0
+    
+    coeff = [[complex(1, 0), complex(0, 0)]
+         for i in range(nRep)]
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
@@ -883,18 +914,17 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    pos = np.array([-7.8979439 , -7.84391593, -8.64605171, -7.41433849, -9.30669699,
-                    -7.94685117, -7.72570313, -8.02554493, -7.20513459, -8.31396283,
-                    -8.68462472, -8.11011923, -7.99214535, -7.67810446, -7.95454351,
-                    -8.58774377, -9.50373277, -8.09453468, -8.76340585, -8.98758076,
-                    -8.62075933, -8.32611946, -7.70214277, -8.12265927, -7.8523527 ,
-                    -7.90964055, -8.2806314 , -8.08013512, -7.12031343, -8.33090518,
-                    -7.22891879, -8.01158939, -8.29806864, -8.67307193, -7.40151944,
-                    -7.22315518, -9.09032445, -7.29181917, -7.96661169, -6.94138918,
-                    -7.57410692, -7.14403882, -7.98691562, -7.72083168, -8.51630211,
-                    -7.76744169, -7.76579131, -7.62942481, -7.4600962 , -7.28024501])
+    pos = np.array([7.28313448, 6.76988116, 7.48388333, 7.47755007, 7.63059636,
+       7.5267497 , 6.80530626, 8.0966746 , 7.79096426, 7.71673423,
+       8.43103588, 7.12827889, 6.96329131, 7.3504817 , 7.34062691,
+       7.53615344, 8.10495559, 7.33613232, 8.41420472, 7.92214782,
+       7.61679729, 7.64256719, 7.18261589, 6.51484498, 8.16066923,
+       6.82583396, 6.81862909, 7.13095204, 7.69361982, 7.82893505,
+       6.57255223, 7.95719578, 7.50779702, 7.89889137, 7.62163691,
+       7.0804282 , 7.31062436, 6.72383931, 7.6111017 , 8.00996757,
+       6.27328455, 7.5116134 , 8.06156887, 7.43664646, 7.59172013,
+       7.63361701, 7.68879763, 7.04906451, 7.62238917, 7.3222709 ])
 
-    
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -912,6 +942,7 @@ def get_min_procs(nSim, maxProcs):
    procs.
    """
    nProc = min([nSim, 16])
+   nProc = min([nProc, mp.cpu_count() // 2])
    sims_to_procs = np.ceil(nSim / nProc)
    for i in range(nProc, 1, -1):
        if np.ceil(nSim / i) == sims_to_procs:
@@ -921,7 +952,7 @@ def get_min_procs(nSim, maxProcs):
    return nProc
 
 
-if nSim > 1 and (nRep > 30 or nSim > 4):
+if nSim > 1:
     import multiprocessing as mp
     
     nProc = get_min_procs(nSim, 16)
@@ -937,11 +968,11 @@ else:
 
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
-    #plot.plotPops(runData)
+    plot.plotPops(runData)
     #plot.plotDeco(runData)
     plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
-    #plot.plotEcons(runData)
+    plot.plotNorm(runData)
+    plot.plotEcons(runData)
 #    plotSigmal(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')
