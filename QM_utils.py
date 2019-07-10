@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -21,6 +22,18 @@ def calc_ad_frc(pos, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     gradE = np.array(np.gradient(allE, dx, axis=0))[1]
+
+    if ctmqc_env['tullyModel'] == 'lin' and np.round(gradE[0], 7) != -0.01:
+      print(gradE[0])
+      print(gradE[0] != -0.01)
+      print("H:")
+      [print(H, "\n") for H in allH]
+      print("E:")
+      [print(E, "\n") for E in allE]
+      print("dE/dx")
+      print(gradE)
+      raise SystemExit("BREAK")
+
     return -gradE
 
 

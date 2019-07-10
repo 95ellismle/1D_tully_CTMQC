@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '/scratch/mellis/TullyModelData/FullCTMQC'
+mroot_folder = '/scratch/mellis/TullyModelData/FullCTMQC_gradRlk'
 model = 3
 whichPlot = 'compFred normEner'
 numStd = 1
@@ -21,7 +21,7 @@ std_or_allSim = "std"
 rm_bad_sims = True
 
 
-minSim, maxSim = 0, -1
+minSim, maxSim = 3, 4
 colors = {'CTMQC': (0, 0.5, 0), 'Eh': (0, 0.5, 1), 'MQC': {1, 1, 0},
           'SH': (0, 0, 1), 'exact': (1, 0, 0)}
 folderNames = {'Eh': ['Ehren'], 'CTMQC': ['CTMQC']}
@@ -158,6 +158,7 @@ for fold, _, files in os.walk(mroot_folder):
             m_model = int(m_model)
             if m_model == model:
                 tmpData = {'data':{}}
+                #print(fold)
                 for fName in os.listdir(fold):
                     fPath = "%s/%s" % (fold, fName)
                     tmpData['data'][fName.replace(".npy", "")] = np.load(fPath)

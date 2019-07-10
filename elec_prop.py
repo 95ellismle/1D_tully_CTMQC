@@ -298,10 +298,10 @@ def __RK4(coeff, X1, X12, X2, ctmqc_env):
     dTe = ctmqc_env['dt'] / float(ctmqc_env['elec_steps'])
     coeff = np.array(coeff)
 
-    K1 = np.array(dTe * np.dot(np.array(X1), coeff))
-    K2 = np.array(dTe * np.dot(np.array(X12), coeff + K1/2.))
-    K3 = np.array(dTe * np.dot(np.array(X12), coeff + K2/2.))
-    K4 = np.array(dTe * np.dot(np.array(X2), coeff + K3))
+    K1 = np.array(dTe * np.matmul(X1, coeff))
+    K2 = np.array(dTe * np.matmul(X12, coeff + K1/2.))
+    K3 = np.array(dTe * np.matmul(X12, coeff + K2/2.))
+    K4 = np.array(dTe * np.matmul(X2, coeff + K3))
     
     Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
     coeff = coeff + Ktot

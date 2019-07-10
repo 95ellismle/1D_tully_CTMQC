@@ -67,7 +67,18 @@ def create_H4(x, A=6e-4, B=0.1, C=0.9, D=4):
     else:
         V12 = 2*B - B*np.exp(C *(x-D)) - B *np.exp(-C *(x+D))
 
-    return np.matrix([[V11, V12], [V12, V22]])
+    return np.matrix([[V11, V12],
+                      [V12, V22]])
+
+
+def create_Hlin(x, slope=-0.01, Start=-15, Egap=0.05):
+   """
+   Will create a linearly decreasing Hamiltonian with 0 coupling
+   """
+   V11 = slope * (x - Start)
+   V22 = Egap + (slope * (x - Start))
+   return np.matrix([[V11, 0],
+                     [0, V22]])
 
 
 def getEigProps(H, ctmqc_env):
@@ -191,6 +202,7 @@ def test_Hfunc(Hfunc, minX=-15, maxX=15, stride=0.01):
     allE = np.array(allE)
     plt.plot(allR, allE[:, 0], 'g', label=r"E$_{1}^{ad}$")
     plt.plot(allR, allE[:, 1], 'b', label=r"E$_{1}^{ad}$")
+    plt.show()
     return allH, allE
 
 
@@ -223,8 +235,12 @@ def test_NACV(Hfunc):
         
         plt.plot(randomNums, allNACV1[:, 0, 1], 'k.')
         plt.plot(randomNums, allNACV2[:, 0, 1], 'y.')
+        plt.show()
         raise SystemExit("BREAK")
 
+
+#test_Hfunc(create_Hlin)
+#test_NACV(create_Hlin)
 #test_NACV(create_H1)
 #test_NACV(create_H2)
 #test_NACV(create_H3)

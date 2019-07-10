@@ -11,34 +11,46 @@ def plotEcons(runData):
     Will plot the conserved quantity along with the kinetice and potential
     energies.
     """
-    lw = 0.1
-    alpha = 0.5    
+    lw = 0.5
+    alpha = 0.6    
     
-    f, a = plt.subplots()
+    f, a = plt.subplots(3)
     
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
     kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
     totE = potE + kinE
-    a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
-    a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, totE, 'k', lw=lw, alpha=alpha)
+    #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
+    #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
+    a[0].plot(runData.allt, kinE[:, 0],
+              label="Kin E", lw=lw, alpha=alpha)
+    a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-',
+              label="$\langle E$_{kin} \rangle$")
+    a[1].plot(runData.allt, totE, lw=lw, alpha=alpha)
     
     avgTotE = np.mean(totE, axis=1)
-    a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E")
-    a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
-    a.plot(runData.allt, avgTotE, 'k', label="Tot. E")
+    #a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E")
+    #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
+    a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E")
     
+    a[2].plot(runData.allt, potE[:, 0],
+              label="E$_{1}$", lw=lw, alpha=alpha)
+    a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
+              label="$\langle E$_{pot} \rangle$")
+
     fit = np.polyfit(runData.allt, avgTotE, 1)
     annotateMsg = r"Energy Drift = %.2g" % (fit[0] * 41341.3745758)
     annotateMsg += r" [$\frac{Ha}{atom ps}$]"
     ypos = avgTotE[100] / 2.
     xpos = runData.allt[100]
-    a.annotate(annotateMsg, (xpos, ypos), fontsize=20)
+    a[1].annotate(annotateMsg, (xpos, ypos), fontsize=20)
 
+    a[2].set_xlabel("Time [au]")
+    a[0].set_ylabel("Kin. E [au]")
+    a[1].set_ylabel("Tot. E [au]")
+    a[2].set_ylabel(r"Pot. E [au]")
+    a[0].set_title(annotateMsg)
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0] * 41341.3745758))
     
-    a.legend()
-
 
 def plotS26(runData):
     """
@@ -76,6 +88,46 @@ def plotAdMom(runData):
            label=r"$\mathbf{f}^{(I)}_{1}$", color='b')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{f}_{l}^{(I)}$ [au]")
+    a.legend()
+
+
+def plotAdFrc(runData):
+    """ 
+    Will plot the adiabatic momentum
+    """
+    f, a = plt.subplots()
+    lw = 0.5
+    alpha = 0.5
+    avgf = np.mean(runData.allAdFrc, axis=1)    
+
+    a.plot(runData.allt, runData.allAdFrc[:, :, 0], 
+           color='r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allAdFrc[:, :, 1], 
+           color='b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgf[:, 0], 
+           label=r"$\mathbf{Fad}^{(I)}_{0}$", color='r')
+    a.plot(runData.allt, avgf[:, 1], 
+           label=r"$\mathbf{Fad}^{(I)}_{1}$", color='b')
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\mathbf{Fad}_{l}^{(I)}$ [au]")
+    a.legend()
+
+
+def plotFrc(runData):
+    """ 
+    Will plot the adiabatic momentum
+    """
+    f, a = plt.subplots()
+    lw = 0.5
+    alpha = 0.5
+    avgf = np.mean(runData.allF, axis=1)    
+
+    a.plot(runData.allt, runData.allF, 
+           color='r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgf, 
+           label=r"$\mathbf{F}^{(I)}_{0}$", color='r')
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\mathbf{F}_{l}^{(I)}$ [au]")
     a.legend()
 
 
@@ -192,6 +244,23 @@ def plotNACV(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
+def plotH(runData):
+    """ 
+    Will plot NACV against position
+    """
+    lw = 1 
+    alpha = 0.7 
+    
+    f, a = plt.subplots()
+    a.plot(runData.allt, runData.allH[:, :, 0, 1], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allH[:, :, 0, 0], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allH[:, :, 1, 1], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allH[:, :, 1, 0], lw=lw, alpha=alpha)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"H [au]")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+
+
 def plot_single_Epot_frame(data, istep, saveFolder=False):
     """
     Will plot a single frame 
@@ -248,30 +317,32 @@ def orderFiles(folder, ext, badStr=False, replacer=False):
     print("\t`%s`" % ffmpegCmd)
 
 
-def plotEpotTime(runData, which_steps=False, saveFolder=False):
+def plotEpotTime(runData, which_steps=False, saveFolder=False, step=1):
     """
     Will plot the potential energy over time for either each step or just the
     one specified.
     """
+    if which_steps is False:
+        which_steps = range(0, runData.ctmqc_env['iter'], step)
     if isinstance(which_steps, int):
         data = {'x': runData.allR, 'E': runData.allE,
                 '|C|^2': runData.allAdPop}
+        print("\n\n\n")
+        print(which_steps)
+        print(isinstance(which_steps, int))
+        print("\n\n\n")
         plot_single_Epot_frame(data, which_steps, saveFolder)
     else:
-        if which_steps is False:
-            which_steps = range(0, runData.ctmqc_env['iter'])
-        elif not isinstance(which_steps, (type(np.array(1)), list)):
+        if not isinstance(which_steps, (type(np.array(1)), list)):
             raise SystemExit("Sorry the argument `which_steps` has been"+
                              " inputted incorrectly. It should be an int, " +
                              "a list or a numpy array.")
         pool = multiprocessing.Pool()
         
         # First create the arguments to feed into the wrapper function
-        data = []
-        for istep in which_steps:
-            d = {'x': runData.allR, 'E': runData.allE,
-                 '|C|^2': runData.allAdPop}
-            data.append(d)
+        data = {'x': runData.allR, 'E': runData.allE,
+                '|C|^2': runData.allAdPop}
+        data = [data] * len(which_steps)
         saveFolders = [saveFolder] * len(which_steps)
         
         # Feed in the arguments zipped up

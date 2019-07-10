@@ -1,8 +1,9 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import plot
 
-folders = 'MomentumRuns'
+folders = '/scratch/mellis/TullyModelData/MomentumRuns'
 
 
 def read_all_data_in_folders(folderPaths):
@@ -117,18 +118,29 @@ def apply_to_all_data(allData, func, args=[], filters=False):
         return returner
 
 
+class classify(object): 
+    """
+    Will make the dictionary into a class so I can use the
+    functions I've already written for plotting.
+    """
+    def __init__(self, data): 
+        self.ctmqc_env = {'nrep': data['pos'].shape[1],
+                          'iter': len(data['pos'])}
+        self.names = {key: 'all' + str(key).title() for key in data}
+        self.names['time'] = 'allt'
+        self.names['pos'] = 'allR' 
+        self.names['|C|^2'] = 'allAdPop'
+        self.names['Ftot'] = 'allF'
+
+        for key in data:
+            setattr(self, self.names[key], data[key])
+
 allData = read_all_data_in_folders(folders)
 
-f, a = plotDiffMomData(allData, 4)
+plotDiffMomData(allData, 4)
+
+#data = allData[0]
+#runData = classify(data)
+#plot.plotEpotTime(runData, saveFolder="/scratch/mellis/Pics", step=5)
 
 
-#allEprops = apply_to_all_data(allData, get_E_prop)
-##apply_to_all_data(allData, plot_data_keys, ('time', '|C|^2'))
-#apply_to_all_data(allData, plot_data_keys, ('time', 'Qlk'))
-#class classify(object): 
-#    def __init__(self, data): 
-#        self.allR = data['pos'] 
-#        self.allE = data['E'] 
-#        self.allAdPop = data['|C|^2'] 
-#        self.allt = data['time']
-#plt.show()

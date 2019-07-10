@@ -105,10 +105,10 @@ else:
     all_maxTime = [2000] * numRepeats
     all_model = [2] * numRepeats
     all_p_mean = [-8] * numRepeats
-    all_doCTMQC_C = [True] * numRepeats
-    all_doCTMQC_F = [True]  * numRepeats
+    all_doCTMQC_C = [False] * numRepeats
+    all_doCTMQC_F = [False]  * numRepeats
     rootFolder = './Data/'
-    all_nRep = [50] * numRepeats
+    all_nRep = [5] * numRepeats
 
 
 s_mean = 0.3
@@ -979,9 +979,9 @@ else:
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotPops(runData)
     #plot.plotDeco(runData)
-    plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
-    #plot.plotEcons(runData)
+    #plot.plotRlk_Rl(runData)
+    plot.plotNorm(runData)
+    plot.plotEcons(runData)
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
     plot.plotS26(runData)
