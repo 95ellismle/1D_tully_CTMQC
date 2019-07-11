@@ -37,8 +37,10 @@ def plotEcons(runData):
     a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
               label="$\langle E$_{pot} \rangle$")
 
+    dt = runData.ctmqc_env['dt']
     fit = np.polyfit(runData.allt, avgTotE, 1)
-    annotateMsg = r"Energy Drift = %.2g" % (fit[0] * 41341.3745758)
+    slope = fit[0] * dt * 41341.3745758
+    annotateMsg = r"Energy Drift = %.2g" % (slope)
     annotateMsg += r" [$\frac{Ha}{atom ps}$]"
     ypos = avgTotE[100] / 2.
     xpos = runData.allt[100]
@@ -166,7 +168,7 @@ def plotPops(runData):
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
            label=r"|C$_{2}$|$^2$")
     a.set_ylabel("Adiab. Pop.")
-    a.set_ylabel("Time [au]")
+    a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     a.legend()
 
@@ -180,7 +182,7 @@ def plotNorm(runData):
     a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)
     a.plot(runData.allt, avgNorms, 'r')
     a.set_ylabel("Norm")
-    a.set_ylabel("Time [au]")
+    a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     
     fit = np.polyfit(runData.allt, avgNorms, 1)
@@ -196,7 +198,7 @@ def plotDeco(runData):
     a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, np.mean(deco, axis=1), 'k')
     a.set_ylabel("Coherence")
-    a.set_ylabel("Time [au]")
+    a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 

@@ -102,7 +102,7 @@ else:
     #nRep = 200
     numRepeats = 1
     all_velMultiplier = [3] * numRepeats
-    all_maxTime = [2000] * numRepeats
+    all_maxTime = [1500000] * numRepeats
     all_model = ['lin'] * numRepeats
     all_p_mean = [-15] * numRepeats
     all_doCTMQC_C = [False] * numRepeats
@@ -128,7 +128,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'mass': [mass],  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
-            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+            'dx': 1e-2,  # The increment for the NACV and grad E calc | | bohr
             'dt': 1,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
@@ -138,6 +138,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'const': 15,  # The constant in the sigma calc
             'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
             'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
+            'renorm': True,  # Choose whether renormalise the wf
                 }
     return ctmqc_env
 
@@ -687,10 +688,12 @@ class CTMQC(object):
 
         # Transform WF
         if self.adiab_diab == 'adiab':
-            #e_prop.renormalise_all_coeffs(self.ctmqc_env['C'])
+            if self.ctmqc_env['renorm']:
+               e_prop.renormalise_all_coeffs(self.ctmqc_env['C'])
             e_prop.trans_adiab_to_diab(self.ctmqc_env)
         else:
-            #e_prop.renormalise_all_coeffs(self.ctmqc_env['u'])
+            if self.ctmqc_env['renorm']:
+               e_prop.renormalise_all_coeffs(self.ctmqc_env['u'])
             e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
@@ -983,7 +986,7 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
     plot.plotEcons(runData)
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
-    plot.plotS26(runData)
+    #plot.plotS26(runData)
 #    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 #                      saveFolder='/scratch/mellis/Pics')
     plt.show()
