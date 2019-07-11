@@ -21,7 +21,7 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 
-inputs = "FullCTMQC"
+#inputs = "FullCTMQC"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
@@ -103,12 +103,12 @@ else:
     numRepeats = 1
     all_velMultiplier = [3] * numRepeats
     all_maxTime = [2000] * numRepeats
-    all_model = [2] * numRepeats
-    all_p_mean = [-8] * numRepeats
+    all_model = ['lin'] * numRepeats
+    all_p_mean = [-15] * numRepeats
     all_doCTMQC_C = [False] * numRepeats
     all_doCTMQC_F = [False]  * numRepeats
     rootFolder = './Data/'
-    all_nRep = [5] * numRepeats
+    all_nRep = [1] * numRepeats
 
 
 s_mean = 0.3
@@ -224,7 +224,7 @@ class CTMQC(object):
         elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
             eHStr = "CTMQCC_EhF"
 
-        modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
+        modelStr = "Model_%s" % str(self.ctmqc_env['tullyModel'])
         mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
         if int(mom) == mom:
             mom = int(mom)
@@ -254,7 +254,6 @@ class CTMQC(object):
             elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                 eHStr = "CTMQCC_EhF"
     
-            modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
             mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
             momStr = "Kinit_%s" % str(mom).replace(".", "x")
             if int(mom) == mom:
@@ -283,7 +282,6 @@ class CTMQC(object):
             elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                 eHStr = "CTMQCC_EhF"
     
-            modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
             mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
             momStr = "Kinit_%s" % str(mom).replace(".", "x")
             if int(mom) == mom:
@@ -313,7 +311,6 @@ class CTMQC(object):
                 elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                     eHStr = "CTMQCC_EhF"
         
-                modelStr = "Model_%i" % self.ctmqc_env['tullyModel']
                 mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
                 momStr = "Kinit_%s" % str(mom).replace(".", "x")
                 if int(mom) == mom:
@@ -511,8 +508,10 @@ class CTMQC(object):
             self.ctmqc_env['Hfunc'] = Ham.create_H3
         elif self.ctmqc_env['tullyModel'] == 4:
             self.ctmqc_env['Hfunc'] = Ham.create_H4
+        elif self.ctmqc_env['tullyModel'] == 'lin':
+            self.ctmqc_env['Hfunc'] = Ham.create_Hlin
         else:
-            print("Tully Model = %i" % self.ctmqc_env['tullyModel'])
+            print("Tully Model = %s" % str(self.ctmqc_env['tullyModel']))
             msg = "Incorrect tully model chosen. Only 1, 2, 3 and 4 available"
             raise SystemExit(msg)
 
