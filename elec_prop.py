@@ -97,8 +97,8 @@ def do_diab_prop_ehren(ctmqc_env):
             X2 = makeX_diab_ehren(H)
 
             H = H_tm + (Estep + 1.0) * dH_E
-            ctmqc_env['u'][irep] = __RK4(ctmqc_env['u'][irep], X1, X12, X2,
-                                         ctmqc_env)
+            ctmqc_env['u'][irep] = __RK4(ctmqc_env['u'][irep], X1.A, X12.A,
+                                         X2.A, ctmqc_env)
 
             X1 = X2[:]
 
@@ -170,6 +170,7 @@ def do_adiab_prop_ehren(ctmqc_env):
     Will actually carry out the propagation of the coefficients
     """
     for irep in range(ctmqc_env['nrep']):
+        print("\n\n\n\n----------------------\n\n")
         v = ctmqc_env['vel_tm'][irep]
         dv_E = get_diffVal(ctmqc_env['vel'][irep], v, ctmqc_env)
 
@@ -206,7 +207,8 @@ def makeX_adiab_ehren(NACV, vel, E):
     """
     Will make the adiabatic X matrix
     """
-    return (-1j * np.identity(2) * E) - (NACV * vel)
+    X = (-1j * np.identity(2) * E) - (NACV * vel)
+    return X
 
 
 def do_adiab_prop_QM(ctmqc_env):
@@ -302,7 +304,7 @@ def __RK4(coeff, X1, X12, X2, ctmqc_env):
     K2 = np.array(dTe * np.matmul(X12, coeff + K1/2.))
     K3 = np.array(dTe * np.matmul(X12, coeff + K2/2.))
     K4 = np.array(dTe * np.matmul(X2, coeff + K3))
-    
+
     Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
     coeff = coeff + Ktot
 
