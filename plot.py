@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 
-def plotEcons(runData):
+def plotEcons(runData, f=False, a=False):
     """
     Will plot the conserved quantity along with the kinetice and potential
     energies.
@@ -14,10 +14,11 @@ def plotEcons(runData):
     lw = 0.5
     alpha = 0.6    
     
-    f, a = plt.subplots(3)
+    if a is False or f is False: f, a = plt.subplots(3)
+
     
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
-    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
     totE = potE + kinE
     #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
     #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
@@ -54,7 +55,7 @@ def plotEcons(runData):
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0] * 41341.3745758))
     
 
-def plotS26(runData):
+def plotS26(runData, f=False, a=False):
     """
     Will plot the equation S26 that the Qlk should obey.
     """
@@ -64,18 +65,18 @@ def plotS26(runData):
     lw = 1
     alpha = 1
 
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, S26, 'k-', lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
     a.set_ylabel("S26")
 
 
 
-def plotAdMom(runData):
+def plotAdMom(runData, f=False, a=False):
     """ 
     Will plot the adiabatic momentum
     """
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
     avgf = np.mean(runData.allAdMom, axis=1)    
@@ -93,11 +94,11 @@ def plotAdMom(runData):
     a.legend()
 
 
-def plotAdFrc(runData):
+def plotAdFrc(runData, f=False, a=False):
     """ 
     Will plot the adiabatic momentum
     """
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
     avgf = np.mean(runData.allAdFrc, axis=1)    
@@ -115,11 +116,11 @@ def plotAdFrc(runData):
     a.legend()
 
 
-def plotFrc(runData):
+def plotFrc(runData, f=False, a=False):
     """ 
     Will plot the adiabatic momentum
     """
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
     avgf = np.mean(runData.allF, axis=1)    
@@ -133,21 +134,28 @@ def plotFrc(runData):
     a.legend()
 
 
-def plotRlk_Rl(runData):
+def plotRlk_Rl(runData, f=False, a=False):
     """
     Will plot the Rlk and Rl term on the same axis
     """
-    f, a = plt.subplots()
-    a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
-    a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
+    lw = 0.5
+    alpha = 0.5
+    if a is False or f is False: f, a = plt.subplots()
+    if runData.allRl.shape[1] == 2:
+        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
+        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
+    else:
+        a.plot(runData.allt, runData.allR[:, 0], 'k', lw=lw, alpha=alpha,
+               label=r"$R_{\nu, 0}^{(I)}$")
+        a.plot(runData.allt, runData.allR[:, 1:], 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allRlk[:, 0, 1], label="Rlk")
-    a.plot(runData.allt, runData.allEffR, label=r"R$_{eff}$")
+    a.plot(runData.allt, runData.allEffR[:, 0, 1], label=r"R$_{eff}$")
     a.set_xlabel("Time [au]")
     a.set_ylabel("Intercept [au]")
     a.legend()
 
 
-def plotQlk(runData):
+def plotQlk(runData, f=False, a=False):
     lw = 0.1
     alpha = 0.5
     plt.figure()
@@ -157,10 +165,10 @@ def plotQlk(runData):
     plt.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha)
 
 
-def plotPops(runData):
+def plotPops(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
@@ -173,12 +181,28 @@ def plotPops(runData):
     a.legend()
 
 
-def plotNorm(runData):
+def plotDiPops(runData, f=False, a=False):
+    lw = 0.25
+    alpha = 0.5
+    if a is False or f is False: f, a = plt.subplots()
+    a.plot(runData.allt, runData.allu[:, :, 1], 'b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allu[:, :, 0], 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, np.mean(runData.allu[:, :, 0], axis=1), 'r',
+           label=r"|C$_{1}$|$^2$")
+    a.plot(runData.allt, np.mean(runData.allu[:, :, 1], axis=1), 'b',
+           label=r"|C$_{2}$|$^2$")
+    a.set_ylabel("Diab. Pop.")
+    a.set_xlabel("Time [au]")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+    a.legend()
+
+
+def plotNorm(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
     allNorms = np.sum(runData.allAdPop, axis=2)
     avgNorms = np.mean(allNorms, axis=1)
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)
     a.plot(runData.allt, avgNorms, 'r')
     a.set_ylabel("Norm")
@@ -189,12 +213,12 @@ def plotNorm(runData):
     print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758))
 
 
-def plotDeco(runData):
+def plotDeco(runData, f=False, a=False):
     lw = 0.1
     alpha = 0.5
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
 
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, np.mean(deco, axis=1), 'k')
     a.set_ylabel("Coherence")
@@ -202,11 +226,11 @@ def plotDeco(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotSigmal(runData):
+def plotSigmal(runData, f=False, a=False):
     """
     Will plot sigmal against time
     """
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$")
     a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$")
     a.set_xlabel("Time [au]")
@@ -215,28 +239,28 @@ def plotSigmal(runData):
     a.legend()
 
 
-def plotPos(runData):
+def plotPos(runData, f=False, a=False):
     """ 
     Will plot sigmal against time
     """
     lw = 0.3 
     alpha = 0.7 
     
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$R^{(I)}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotNACV(runData):
+def plotNACV(runData, f=False, a=False):
     """ 
     Will plot NACV against position
     """
     lw = 1 
     alpha = 0.7 
     
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha)
@@ -246,14 +270,14 @@ def plotNACV(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotH(runData):
+def plotH(runData, f=False, a=False):
     """ 
     Will plot NACV against position
     """
     lw = 1 
     alpha = 0.7 
     
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allH[:, :, 0, 1], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allH[:, :, 0, 0], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allH[:, :, 1, 1], lw=lw, alpha=alpha)
@@ -263,12 +287,12 @@ def plotH(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plot_single_Epot_frame(data, istep, saveFolder=False):
+def plot_single_Epot_frame(data, istep, saveFolder=False, f=False, a=False):
     """
     Will plot a single frame 
     """
     potE = np.sum(data['|C|^2'][istep] * data['E'][istep], axis=1)
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     a.plot(data['x'], data['E'][:, :, 0], 'r')
     a.plot(data['x'], data['E'][:, :, 1], 'b')
     a.plot(data['x'][istep], potE, 'k.')

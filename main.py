@@ -20,16 +20,19 @@ import nucl_prop
 import elec_prop as e_prop
 import QM_utils as qUt
 import plot
+#from plottingResults import plotPaperData as plotPaper
 
 #inputs = "FullCTMQC"
+#inputs = "FullCTMQCGossel"
+#inputs = "FullCTMQCGosselQuick"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
+#inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren"
 inputs = "custom"
-#inputs = "custom"
 
-rootSaveFold = "./"
+rootSaveFold = "./plottingResults"
 
 if inputs == "MomentumEhren":
     all_velMultiplier = np.arange(1, 5, 0.03)
@@ -51,7 +54,7 @@ elif inputs == "FullCTMQC":
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/FullCTMQC/Repeat'
-    all_nRep = [200]
+    all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCEhren":
     print("Carrying out all testing (Ehren and CTMQC)!")
@@ -63,7 +66,7 @@ elif inputs == "FullCTMQCEhren":
     all_doCTMQC_C = ([True] * 8 + [False] * 8) * numRepeats * 2
     all_doCTMQC_F = ([True] * 8 + [False] * 8)  * numRepeats * 2
     rootFolder = '/scratch/mellis/TullyModelData/CompleteData/Repeat'
-    all_nRep = [200]
+    all_nRep = [200] * 16 * numRepeats
 
 elif inputs == 'quickFullCTMQC':
     print("Quickly running through all the models with CTMQC (reduced repilcas)")
@@ -75,7 +78,7 @@ elif inputs == 'quickFullCTMQC':
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    all_nRep = [20]
+    all_nRep = [20] * 8 * numRepeats
 
 elif inputs == 'quickFullEhren':
     print("Quickly running through all the models with Ehren (reduced repilcas)")
@@ -87,8 +90,31 @@ elif inputs == 'quickFullEhren':
     all_doCTMQC_C = ([False] * 8) * numRepeats
     all_doCTMQC_F = ([False] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    all_nRep = [5]
+    all_nRep = [5] * 8 * numRepeats
 
+elif inputs == "FullCTMQCGossel":
+    print("Carrying out full Gossel CTMQC testing!")
+    numRepeats = 10
+    all_velMultiplier = [4, 1, 3, 1, 3, 1.6, 2.5, 1.5] * numRepeats
+    all_maxTime = [2000, 6000, 1500, 5000, 1500, 2500, 4000, 6000] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-20, -20, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQCGossel/Repeat'
+    all_nRep = [200] * 8 * numRepeats
+
+elif inputs == "FullCTMQCGosselQuick":
+    print("Carrying out quick Gossel CTMQC testing!")
+    numRepeats = 1
+    all_velMultiplier = [4, 1, 3, 1, 3, 1.6, 2.5, 1.5] * numRepeats
+    all_maxTime = [2000, 6000, 1500, 5000, 1500, 2500, 4000, 6000] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-20, -20, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQCGosselQuick'
+    all_nRep = [20] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
     #numRepeats = 1
@@ -99,15 +125,15 @@ else:
     #all_doCTMQC_C = ([True] * 8) * numRepeats
     #all_doCTMQC_F = ([True] * 8 )  * numRepeats
     #rootFolder = '/scratch/mellis/TullyModelData/ConstSig'
-    #nRep = 200
+    #nRep = 200numRepeats
     numRepeats = 1
-    all_velMultiplier = [3] * numRepeats
-    all_maxTime = [40000] * numRepeats
-    all_model = ['lin'] * numRepeats
-    all_p_mean = [-15] * numRepeats
-    all_doCTMQC_C = [False] * numRepeats
-    all_doCTMQC_F = [False]  * numRepeats
-    rootFolder = './Data/'
+    all_velMultiplier = [0] * numRepeats
+    all_maxTime = [2000] * numRepeats
+    all_model = [3] * numRepeats
+    all_p_mean = [-4] * numRepeats
+    all_doCTMQC_C = [True] * numRepeats
+    all_doCTMQC_F = [True]  * numRepeats
+    rootFolder = "%s/Data" % rootSaveFold
     all_nRep = [1] * numRepeats
 
 
@@ -117,7 +143,7 @@ mass = 2000
 nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
             len(all_doCTMQC_F), len(all_nRep)])
-
+print("Nsim = %i" % nSim)
 
 def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     # All units must be atomic units
@@ -125,20 +151,21 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
             'u': coeff,  # Intial WF |nrep, 2| -
-            'mass': [mass],  # nuclear mass |nrep| au_m
+            'mass': mass,  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-2,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 0.05,  # The timestep | |au_t
-            'elec_steps': 1,  # Num elec. timesteps per nucl. one | | -
+            'dt': 1,  # The timestep | |au_t
+            'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
             'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
+            'gradTol': 0.9,  # The maximum allowed gradient in Rlk in time.
             'renorm': False,  # Choose whether renormalise the wf
+            'Qlk_type': 'Min17',  # What method to use to calculate the QM
                 }
     return ctmqc_env
 
@@ -226,7 +253,7 @@ class CTMQC(object):
             eHStr = "CTMQCC_EhF"
 
         modelStr = "Model_%s" % str(self.ctmqc_env['tullyModel'])
-        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'], 7)
         if int(mom) == mom:
             mom = int(mom)
         momStr = "Kinit_%s" % str(mom).replace(".", "x")
@@ -255,7 +282,7 @@ class CTMQC(object):
             elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                 eHStr = "CTMQCC_EhF"
     
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'], 7)
             momStr = "Kinit_%s" % str(mom).replace(".", "x")
             if int(mom) == mom:
                 mom = int(mom)
@@ -283,7 +310,7 @@ class CTMQC(object):
             elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                 eHStr = "CTMQCC_EhF"
     
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'], 7)
             momStr = "Kinit_%s" % str(mom).replace(".", "x")
             if int(mom) == mom:
                 mom = int(mom)
@@ -312,7 +339,7 @@ class CTMQC(object):
                 elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
                     eHStr = "CTMQCC_EhF"
         
-                mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
+                mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'], 7)
                 momStr = "Kinit_%s" % str(mom).replace(".", "x")
                 if int(mom) == mom:
                     mom = int(mom)
@@ -404,6 +431,7 @@ class CTMQC(object):
 
         # Check pos array
         if 'vel' in self.ctmqc_env:
+            self.ctmqc_env['velInit'] = np.mean(self.ctmqc_env['vel'])
             self.ctmqc_env['vel'] = np.array(self.ctmqc_env['vel'],
                                              dtype=np.float64)
             nrep1, = np.shape(self.ctmqc_env['vel'])
@@ -464,11 +492,15 @@ class CTMQC(object):
         self.allQlk = np.zeros((nstep, nrep, nstate, nstate))
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
-        self.allRI0 = np.zeros((nstep, nrep))
-        self.allEffR = np.zeros((nstep))
+        self.allEffR = np.zeros((nstep, nstate, nstate))
+        if self.ctmqc_env['Qlk_type'] == 'sigmal':
+            self.allRl = np.zeros((nstep, nstate))
+        elif self.ctmqc_env['Qlk_type'] == 'Min17':
+            self.allRl = np.zeros((nstep, nrep))
+        else:
+            raise SystemExit("Either use `sigmal` or `Min17` for the Qlk_type")
         self.allSigma = np.zeros((nstep, nrep))
         self.allSigmal = np.zeros((nstep, nstate))
-        self.allRl = np.zeros((nstep, nstate))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
@@ -489,12 +521,16 @@ class CTMQC(object):
         self.ctmqc_env['alpha'] = np.zeros((nrep))
         self.ctmqc_env['alphal'] = 0.0
         self.ctmqc_env['sigmal'] = np.zeros(nstate)
-        self.ctmqc_env['Rl'] = np.zeros(nstate)
+        self.ctmqc_env['effR'] = np.zeros((nstate, nstate))
+        if self.ctmqc_env['Qlk_type'] == 'sigmal':
+            self.ctmqc_env['Rl'] = np.zeros(nstate)
+        elif self.ctmqc_env['Qlk_type'] == 'Min17':
+            self.ctmqc_env['Rl'] = np.zeros(nrep)
+        else:
+            raise SystemExit("Either use `sigmal` or `Min17` for the Qlk_type")
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
-        self.ctmqc_env['effR'] = 0.0 
         self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
-        self.ctmqc_env['RI0'] = np.zeros((nrep))
         self.ctmqc_env['Rlk_tm'] = np.zeros((nstate, nstate))
 
     def __init_tully_model(self):
@@ -531,7 +567,8 @@ class CTMQC(object):
         # Calculate the Hamiltonian
         for irep in range(nrep):
             pos = self.ctmqc_env['pos'][irep]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](self.ctmqc_env,
+                                                                pos)
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
             self.ctmqc_env['E'][irep], self.ctmqc_env['U'][irep] = E, U
 
@@ -567,7 +604,8 @@ class CTMQC(object):
         for irep in range(self.ctmqc_env['nrep']):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
-            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+            self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](self.ctmqc_env,
+                                                                pos)
 
             # Get Eigen properties
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
@@ -584,7 +622,7 @@ class CTMQC(object):
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in self.ctmqc_env['adPops'][irep]):
-                    adMom = 0.8 * self.ctmqc_env['adMom'][irep]
+                    adMom = 0.0 * self.ctmqc_env['adMom'][irep]
                 else:
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
@@ -593,8 +631,10 @@ class CTMQC(object):
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
             if self.ctmqc_env['do_sigma_calc']:
                 qUt.calc_sigma(self.ctmqc_env)
-#            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
-            self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
+            if self.ctmqc_env['Qlk_type'] == 'Min17':
+                self.ctmqc_env['Qlk'] = qUt.calc_Qlk_Min17(self.ctmqc_env)
+            if self.ctmqc_env['Qlk_type'] == 'sigmal':
+                self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
 
     def __main_loop(self):
         """
@@ -661,7 +701,7 @@ class CTMQC(object):
             self.ctmqc_env['F_eh'][irep] = Feh
             self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
-            self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass'][0]
+            self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass']
 
     def __prop_wf(self):
         """
@@ -706,19 +746,18 @@ class CTMQC(object):
         """
         Will carry out a single step in the CTMQC.
         """
-        dt = self.ctmqc_env['dt']
+#        dt = self.ctmqc_env['dt']
 
-        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
-        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
+#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
+#        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         t1 = time.time()
         self.__calc_quantities()
         t2 = time.time()
-
         self.__prop_wf()
         t3 = time.time()
         self.__calc_F()
-        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
+#        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
         t4 = time.time()
         
         self.allTimes['prep'].append(t2 - t1)
@@ -764,7 +803,6 @@ class CTMQC(object):
         self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allRlk[istep] = self.ctmqc_env['Rlk']
         self.allEffR[istep] = self.ctmqc_env['effR']
-        self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
         self.allRl[istep] = self.ctmqc_env['Rl']
@@ -792,7 +830,6 @@ class CTMQC(object):
         self.allv = self.allv[:self.ctmqc_env['iter']]
         self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
         self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
-        self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
         self.allEffR = self.allEffR[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
         self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
@@ -830,7 +867,7 @@ class CTMQC(object):
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
-                self.allRlk, self.allRI0, self.allSigma, self.allSigmal,
+                self.allRlk, self.allSigma, self.allSigmal,
                 self.allNACV, self.allRl]
         for name, arr in zip(names, arrs):
             savepath = "%s/%s" % (self.saveFolder, name)
@@ -912,18 +949,18 @@ class CTMQC(object):
 
 
     
-def doSim(i):
-    velMultiplier = all_velMultiplier[i]
-    maxTime = all_maxTime[i]
-    model = all_model[i]
-    p_mean = all_p_mean[i]
-    doCTMQC_C = all_doCTMQC_C[i]
-    doCTMQC_F = all_doCTMQC_F[i]
-    nRep = all_nRep[i]
+def doSim(iSim):
+    velMultiplier = all_velMultiplier[iSim]
+    maxTime = all_maxTime[iSim]
+    model = all_model[iSim]
+    p_mean = all_p_mean[iSim]
+    doCTMQC_C = all_doCTMQC_C[iSim]
+    doCTMQC_F = all_doCTMQC_F[iSim]
+    nRep = all_nRep[iSim]
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    p_std = 10. / float(v_mean * mass)
+    p_std = np.sqrt(2)  # 15. / float(v_mean * mass)
     s_std = 0
     
     coeff = [[complex(1, 0), complex(0, 0)]
@@ -941,90 +978,25 @@ def doSim(i):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    pos = np.array([-15])
-#    pos = np.array([15 , 15.367833 , 15.686326 , 15.260403 , 15.504686 , 15.933388 
-#                    16.337976 , 15.636532 , 15.00771 , 16.897237 , 15.581466 , 15.107695 
-#                    14.583034 , 15.559791 , 15.043974 , 15.531766 , 17.474016 , 13.735421 
-#                    15.731471 , 13.66913 , 15.313258 , 15.321762 , 14.439246 , 15.879568 
-#                    13.978495 , 15.044843 , 14.178503 , 13.628614 , 15.302411 , 14.820269 
-#                    15.730734 , 13.509959 , 15.371594 , 14.153199 , 14.873124 , 15.05928 
-#                    14.897351 , 18.589138 , 12.137156 , 14.933406 , 14.872558 , 16.886919 
-#                    14.147473 , 14.832666 , 14.453683 , 17.6669 , 14.480971 , 14.694849 
-#                    14.316093 , 16.694849 , 14.15284 , 12.635001 , 16.338562 , 16.725462 
-#                    12.538512 , 15.796553 , 17.417722 , 16.384954 , 16.005783 , 14.129842 
-#                    15.68695 , 15.756132 , 14.490892 , 15.646415 , 15.566083 , 14.854284 
-#                    13.545996 , 13.145867 , 14.817453 , 16.256434 , 14.746041 , 13.908084 
-#                    15.335028 , 15.690294 , 16.788125 , 15.552874 , 14.392097 , 15.433066 
-#                    15.11344 , 15.899335 , 13.737726 , 15.185778 , 15.804433 , 15.017083 
-#                    15.346517 , 17.367569 , 13.858385 , 16.521751 , 14.695567 , 13.621376 
-#                    16.389867 , 16.52056 , 13.621622 , 16.405363 , 13.290941 , 14.205922 
-#                    14.167221 , 16.364677 , 14.168563 , 15.493348 , 16.578461 , 14.304925 
-#                    15.231736 , 16.092521 , 14.788975 , 16.187365 , 13.491081 , 14.877452 
-#                    12.760611 , 14.700896 , 15.469387 , 16.083242 , 18.159379 , 13.176821 
-#                    13.831815 , 15.387392 , 14.350278 , 16.229204 , 14.794758 , 15.967629 
-#                    15.122151 , 15.474942 , 14.035621 , 14.400129 , 14.953305 , 12.292887 
-#                    15.14377 , 14.353471 , 17.667221 , 16.521297 , 17.988397 , 15.275521 
-#                    16.027117 , 15.827167 , 13.621698 , 16.234741 , 15.677048 , 15.427303 
-#                    12.726123 , 17.256586 , 13.766129 , 17.426225 , 13.96555 , 13.172739 
-#                    12.373786 , 15.570675 , 14.03496 , 14.279168 , 14.518897 , 13.904361 
-#                    16.460656 , 15.817472 , 13.690729 , 16.288031 , 15.416134 , 14.79421 
-#                    15.677633 , 14.739786 , 13.482199 , 16.357893 , 16.819438 , 13.457973 
-#                    14.923372 , 14.542594 , 14.811973 , 16.05414 , 12.417571 , 11.992611 
-#                    14.696719 , 16.446351 , 14.585188 , 15.57196 , 15.350183 , 13.770343 
-#                    14.890207 , 14.827526 , 16.373899 , 13.732227 , 12.650384 , 15.54352 
-#                    16.85933 , 14.613893 , 15.844098 , 14.325069 , 15.765524 , 16.419252 
-#                    16.603556 , 15.283646 , 15.403568 , 13.934276 , 14.854076 , 15.611304 
-#                    15.234211 , 14.913923 , 16.103046 , 15.778487 , 17.110567 , 12.402056 
-#                    13.475112 , 15.935844 , 13.420537 , 16.574455 , 16.606278 , 14.363392 
-#                    14.718243 , 16.825957 , 13.626913 , 14.268642 , 14.935164 , 15.176821 
-#                    15.193979 , 15.027061 , 16.930988 , 12.290582 , 14.18574 , 16.057542 
-#                    15.648721 , 14.82847 , 14.562417 , 16.432367 , 15.170263 , 13.149382 
-#                    15.628009 , 16.874939 , 14.760119 , 13.239484 , 14.122813 , 13.27244 
-#                    13.979364 , 11.561945 , 16.973204 , 17.231339 , 15.995843 , 14.269946 
-#                    16.817208 , 13.955989 , 13.435712 , 16.341377 , 16.843078 , 14.502419 
-#                    14.453343 , 13.725481 , 16.209513 , 14.231339 , 14.51627 , 15.053177 
-#                    14.591009 , 14.936865 , 14.995767 , 17.879682 , 15.882138 , 14.232133 
-#                    14.253732 , 15.644431 , 12.938395 , 16.256756 , 15.392532 , 13.976492 
-#                    14.911202 , 15.714086 , 16.181961 , 13.167637 , 13.734457 , 13.078272 
-#                    13.241638 , 14.769096 , 13.807589 , 13.766034 , 16.562909 , 16.521959 
-#                    12.495729 , 15.993972 , 16.334385 , 14.864224 , 15.204241 , 13.275294 
-#                    16.420745 , 14.379172 , 16.171624 , 14.132866 , 13.976813 , 14.076174 
-#                    18.115575 , 13.22189 , 15.650308 , 15.219453 , 15.872293 , 13.170963 
-#                    15.958445 , 13.304547 , 17.887335 , 14.704165 , 15.448071 , 11.046827 
-#                    15.126535 , 14.089043 , 16.636494 , 14.758475 , 15.477909 , 15.259118 
-#                    16.938301 , 15.364847 , 15.657357 , 14.30791 , 14.456744 , 14.09288 
-#                    14.362448 , 16.405533 , 14.781511 , 12.93626 , 15.416588 , 14.052874 
-#                    12.752731 , 13.097377 , 14.372879 , 12.970313 , 16.997411 , 14.646831 
-#                    16.662629 , 16.102687 , 14.36755 , 15.308421 , 14.943006 , 12.790053 
-#                    14.379493 , 15.337069 , 15.511168 , 13.297706 , 14.143996 , 11.523489 
-#                    14.675876 , 15.31254 , 15.839752 , 13.676273 , 15.056162 , 12.888091 
-#                    14.145508 , 16.320855 , 16.463453 , 14.44569 , 15.144299 , 14.482898 
-#                    15.363959 , 15.397747 , 14.435542 , 15.050021 , 14.477739 , 16.000661 
-#                    15.677596 , 17.872085 , 14.848728 , 15.827374 , 15.402812 , 15.360501 
-#                    14.255017 , 13.870781 , 16.071564 , 15.061113 , 16.119166 , 15.665634 
-#                    12.071072 , 13.996466 , 15.63553 , 13.50531 , 13.235704 , 16.189765 
-#                    15.440172 , 16.342889 , 14.648135 , 14.009883 , 14.88433 , 13.896992 
-#                    15.847519 , 17.242299 , 15.270305 , 13.736763 , 16.653823 , 15.106523 
-#                    15.096338 , 14.186005 , 15.987622 , 13.200008 , 13.914075 , 14.242602 
-#                    14.155675 , 13.80209 , 14.888507 , 14.029045 , 15.521675 , 13.723591 
-#                    15.579198 , 15.057428 , 15.857081 , 14.787294 , 16.80791 , 16.347443 
-#                    13.175385 , 14.404154 , 13.624816 , 14.323047 , 13.917854 , 15.090593 
-#                    15.470256 , 16.001077 , 15.485563 , 14.091821 , 12.97139 , 15.96899 
-#                    13.835273 , 16.035187 , 14.877093 , 13.80124 , 16.210817 , 16.433747 
-#                    16.383291 , 13.308137 , 14.693091 , 14.902699 , 17.328962 , 15.408103 
-#                    14.395555 , 13.388601 , 13.214105 , 14.565327 , 16.732189 , 14.785366 
-#                    13.328773 , 14.942742 , 15.616407 , 15.457954 , 14.224007 , 15.105408 
-#                    13.554046 , 13.318663 , 15.812899 , 15.752409 , 14.827545 , 14.386334 
-#                    16.623115 , 15.968857 , 16.212045 , 14.707963 , 14.68729 , 15.006633 
-#                    14.190427 , 14.850372 , 15.708662 , 13.511773 , 15.991761 , 14.647946 
-#                    15.21384 , 14.953003 , 13.550928 , 14.944499 , 14.700726 , 15.525039 
-#                    17.546846 , 14.812672 , 15.596451 , 13.473261 , 15.150365 , 15.289637 
-#                    14.551438 , 15.211724 , 14.981235 , 14.305605 , 16.581428 , 16.558902 
-#                    14.596413 , 15.091595 , 14.184474 , 17.046808 , 13.609056 , 14.890907 
-#                    14.267055 , 15.133168 , 15.446559 , 16.68421 , 13.728656 , 16.008145 
-#                    15.572093 , 16.788068 , 12.666824 , 18.237859 , 15.277316 , 12.778752 
-#                    16.191485 , 14.269549 , 15.335273 , 13.217393 , 15.476076 , 15.910257 
-#                    16.041574 , 16.572754 , 16.564024 , 15.821082 , 16.665293 , 15.115084])
+    
+#    pos = np.array([-14.7027843 , -15.53686452, -15.13550082, -14.89086006,
+#       -14.64911093, -15.26130136, -15.27468515, -14.94785433,
+#       -15.53530487, -15.3808776 , -15.11517294, -15.39821084,
+#       -14.51404437, -14.79858564, -14.52471394, -14.86346282,
+#       -15.00222724, -15.75017752, -14.39549455, -15.40453666,
+#       -14.81653534, -14.66631225, -15.8555549 , -14.82516946,
+#       -15.40487541, -14.76640345, -15.12881254, -14.63889032,
+#       -14.68280335, -15.17918397, -15.186057  , -14.27057088,
+#       -14.94256778, -14.76317967, -15.78983222, -14.76629817,
+#       -14.51484441, -14.86770653, -15.47533013, -14.90003817,
+#       -14.78854349, -14.77434377, -15.31173198, -14.91426438,
+#       -14.77795883, -15.05025176, -14.97301894, -14.61882621,
+#       -15.17987039, -15.40046486, -15.40785849, -14.37760846,
+#       -14.99922323, -15.49046445, -14.80919544, -14.78683536,
+#       -14.96412532, -15.20226974, -14.56624465, -15.0541009 ,
+#       -15.51612004, -14.95586437, -14.66836214, -15.28962745,
+#       -14.74680077, -14.74535079, -15.16194126, -15.25727723,
+#       -14.69901081, -14.9897081 ])
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -1056,6 +1028,7 @@ if nSim > 1:
     import multiprocessing as mp
     
     nProc = get_min_procs(nSim, 16)
+    print("Using %i processes for %i sims" % (nProc, nSim))
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))
@@ -1064,15 +1037,26 @@ else:
     for iSim in range(nSim):
         runData = doSim(iSim)
 
-        #test.vel_is_diff_x(runData)
+#        test.vel_is_diff_x(runData)
 
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
+#    plotPaper.params['tullyModel'] = runData.ctmqc_env['tullyModel']
+#    plotPaper.params['momentum'] = (runData.allv[0, 0] / 0.0005) > 20
+#    plotPaper.params['whichSimType'] = ['CTMQC']
+#    plotPaper.params['whichQuantity'] = 'pops'
+#    f, a = plotPaper.plot_data(plotPaper.params)
     plot.plotPops(runData)
-    #plot.plotDeco(runData)
-    #plot.plotRlk_Rl(runData)
-    plot.plotNorm(runData)
-    plot.plotEcons(runData)
+    plot.plotDiPops(runData)
+    
+#    plotPaper.params['whichQuantity'] = 'coherence'
+#    plotPaper.params['whichSimType'] = ['CTMQC']
+#    f, a = plotPaper.plot_data(plotPaper.params)
+    plot.plotDeco(runData)
+#    plot.plotRlk_Rl(runData)
+    #plot.plotNorm(runData)
+    #plot.plotEcons(runData)
+    
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
     #plot.plotS26(runData)

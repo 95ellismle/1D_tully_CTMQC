@@ -170,7 +170,6 @@ def do_adiab_prop_ehren(ctmqc_env):
     Will actually carry out the propagation of the coefficients
     """
     for irep in range(ctmqc_env['nrep']):
-        print("\n\n\n\n----------------------\n\n")
         v = ctmqc_env['vel_tm'][irep]
         dv_E = get_diffVal(ctmqc_env['vel'][irep], v, ctmqc_env)
 
