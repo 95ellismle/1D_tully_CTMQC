@@ -51,8 +51,33 @@ def plotEcons(runData):
     a[1].set_ylabel("Tot. E [au]")
     a[2].set_ylabel(r"Pot. E [au]")
     a[0].set_title(annotateMsg)
-    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0] * 41341.3745758))
+    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0]*41341.3745758))
     
+
+def Rabi(runData):
+    H = runData.allH[0, 0]
+    t = runData.allt
+    delE = H[0, 0] - H[1, 1]
+    Hab = H[0,1]
+    sinPart = np.sin(0.5 * t * np.sqrt(delE**2 + 4*Hab**2))**2
+    prefact = (4*Hab**2)/(delE**2 + 4 * Hab**2)
+    rabiPops = 1 - (prefact * sinPart)
+    return rabiPops
+
+
+def plotRabi(runData):
+    f, a = plt.subplots()
+    rabiPops = Rabi(runData)
+    diPops = np.conjugate(runData.allu) * runData.allu
+    a.plot(runData.allt, rabiPops, 'r', lw=3, alpha=0.5,
+           label="rabi pops")
+    a.plot(runData.allt, diPops[:, :, 0], 'k--', lw=1,
+           label=r"$|u_{0}|^2$")
+    a.set_ylabel("Diabatic Population")
+    a.set_xlabel("Time [au]")
+    a.set_title(r"Rabi Oscillation H$_{ab}$ = %.2g (Diab. Prop)" % runData.allH[0, 0, 0, 1])
+    a.legend()
+    plt.show()
 
 def plotS26(runData):
     """
