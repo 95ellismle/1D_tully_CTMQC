@@ -14,6 +14,7 @@ import datetime as dt
 import time
 import os
 import collections
+import subprocess
 
 import hamiltonian as Ham
 import nucl_prop
@@ -101,14 +102,14 @@ else:
     #rootFolder = '/scratch/mellis/TullyModelData/ConstSig'
     #nRep = 200
     numRepeats = 1
-    all_velMultiplier = [0] * numRepeats
-    all_maxTime = [1500] * numRepeats
-    all_model = [3] * numRepeats
-    all_p_mean = [-2] * numRepeats
-    all_doCTMQC_C = [True] * numRepeats
-    all_doCTMQC_F = [True]  * numRepeats
+    all_velMultiplier = [3] * 8 * numRepeats
+    all_maxTime = [1500] * 8 * numRepeats
+    all_model = [3] * 8 * numRepeats
+    all_p_mean = [-15] * 8 * numRepeats
+    all_doCTMQC_C = [True] * 8 * numRepeats
+    all_doCTMQC_F = [True] * 8  * numRepeats
     rootFolder = False  # './Data/'
-    all_nRep = [1] * numRepeats
+    all_nRep = [20, 40, 60, 80, 120, 150, 180, 200] * numRepeats
 
 
 s_mean = 0.3
@@ -124,7 +125,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'u': coeff,  # Intial WF |nrep, 2| -
+            'C': coeff,  # Intial WF |nrep, 2| -
             'mass': [mass],  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
@@ -548,7 +549,7 @@ class CTMQC(object):
         # Calculate the QM, adMom, adPop, adFrc.
         self.__calc_quantities()
         # Calculate the forces
-        #self.__calc_F()
+        self.__calc_F()
 
         self.__update_vars_step()
 
@@ -708,8 +709,8 @@ class CTMQC(object):
         """
         dt = self.ctmqc_env['dt']
 
-        #self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
-        #self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # half dt
+        self.ctmqc_env['pos'] += self.ctmqc_env['vel']*dt  # full dt
 
         t1 = time.time()
         self.__calc_quantities()
@@ -717,8 +718,8 @@ class CTMQC(object):
 
         self.__prop_wf()
         t3 = time.time()
-        #self.__calc_F()
-        #self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
+        self.__calc_F()
+        self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
         t4 = time.time()
         
         self.allTimes['prep'].append(t2 - t1)
@@ -911,6 +912,59 @@ class CTMQC(object):
         plt.plot(t, np.polyval(fit, t))
 
 
+
+def get_norm_drift(runData):
+    """
+    Will get the norm drift of some run data.
+    """
+    Ndt = runData.ctmqc_env['dt']
+    allNorms = np.sum(runData.allAdPop, axis=2)
+    avgNorms = np.mean(allNorms, axis=1)
+    fit = np.polyfit(runData.allt, avgNorms, 1)
+    return fit[0] * 41341.3745758 * Ndt
+
+
+def get_ener_drift(runData):
+    """
+    Will get total energy drift.
+    """
+    potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    totE = potE + kinE
+    avgTotE = np.mean(totE, axis=1)
+    Ndt = runData.ctmqc_env['dt']
+    fit = np.polyfit(runData.allt, avgTotE, 1)
+    return fit[0] * Ndt * 41341.3745758
+
+
+def save_vitals(runData):
+    normEnerFile = "normEnerDrift.csv"
+    firstLine = "Model,CTMQC,NRep,NuclDt,ElecDt,Norm,Ener,GitCommit\n"
+    if not os.path.isfile(normEnerFile):
+        with open(normEnerFile, "w") as f:
+            f.write(firstLine)
+    
+    with open(normEnerFile, 'a') as f:
+        model = runData.ctmqc_env['tullyModel']
+        
+        CTMQC = "CTMQC"
+        if not runData.ctmqc_env['do_QM_C'] and runData.ctmqc_env['do_QM_F']:
+            CTMQC = "n-CTMQC"
+        elif not runData.ctmqc_env['do_QM_F'] and runData.ctmqc_env['do_QM_C']:
+            CTMQC = "e-CTMQC"
+        else:
+            CTMQC = "Ehrenfest"
+        
+        nrep = runData.ctmqc_env['nrep']
+        Ndt = runData.ctmqc_env['dt']
+        Edt = Ndt / float(runData.ctmqc_env['elec_steps'])
+        norm = get_norm_drift(runData)
+        ener = get_ener_drift(runData)
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode("utf-8").strip("\n")
+    
+        line = (model, CTMQC, nrep, str(Ndt), str(Edt), norm, ener, commit)
+        f.write("%i,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
+
     
 def doSim(i):
     velMultiplier = all_velMultiplier[i]
@@ -950,7 +1004,9 @@ def doSim(i):
     # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
                       doCTMQC_C, doCTMQC_F)
-    return CTMQC(ctmqc_env, rootFolder)
+    runData = CTMQC(ctmqc_env, rootFolder)
+    save_vitals(runData)
+    return runData
 
 
 def get_min_procs(nSim, maxProcs):
@@ -985,14 +1041,13 @@ else:
 
         #test.vel_is_diff_x(runData)
 
-
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
-    #plot.plotPops(runData)
-    plot.plotRabi(runData)
+    plot.plotPops(runData)
+    #plot.plotRabi(runData)
     #plot.plotDeco(runData)
     #plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
-    #plot.plotEcons(runData)
+    plot.plotNorm(runData)
+    plot.plotEcons(runData)
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
     #plot.plotS26(runData)

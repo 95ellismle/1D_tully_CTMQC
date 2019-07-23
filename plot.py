@@ -51,7 +51,7 @@ def plotEcons(runData):
     a[1].set_ylabel("Tot. E [au]")
     a[2].set_ylabel(r"Pot. E [au]")
     a[0].set_title(annotateMsg)
-    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (fit[0]*41341.3745758))
+    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
     
 
 def Rabi(runData):
@@ -201,6 +201,7 @@ def plotPops(runData):
 def plotNorm(runData):
     lw = 0.25
     alpha = 0.5
+    dt = runData.ctmqc_env['dt']
     allNorms = np.sum(runData.allAdPop, axis=2)
     avgNorms = np.mean(allNorms, axis=1)
     f, a = plt.subplots()
@@ -211,7 +212,7 @@ def plotNorm(runData):
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     
     fit = np.polyfit(runData.allt, avgNorms, 1)
-    print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758))
+    print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758 * dt))
 
 
 def plotDeco(runData):
