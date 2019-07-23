@@ -26,21 +26,46 @@ import plot
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
+#inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren"
+#inputs = "FullEhrenGossel"
 inputs = "custom"
-#inputs = "custom"
 
-rootSaveFold = "./"
+rootSaveFold = "/scratch/mellis/TullyModelData"
 
 if inputs == "MomentumEhren":
-    all_velMultiplier = np.arange(1, 5, 0.03)
-    all_maxTime = [(45.) / (v * 5e-3) for v in all_velMultiplier]
-    all_model = [4] * len(all_velMultiplier)
+    all_velMultiplier = np.arange(1, 4, 0.02)
+    all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [3] * len(all_velMultiplier)
     all_p_mean = [-15] * len(all_velMultiplier)
     all_doCTMQC_C = [False] * len(all_velMultiplier)
     all_doCTMQC_F = [False] * len(all_velMultiplier)
     rootFolder = '%s/MomentumRuns' % rootSaveFold
     all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "quickFullEhrenGossel":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 1
+    all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,        -20, -15,  -8,   -15] * numRepeats
+    all_doCTMQC_C = ([False] * 8) * numRepeats
+    all_doCTMQC_F = ([False] * 8)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/EhrenDataQuick/Repeat'
+    all_nRep = [1] * len(all_p_mean)
+
+elif inputs == "FullEhrenGossel":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 10
+    all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,        -20, -15,  -8,   -15] * numRepeats
+    all_doCTMQC_C = ([False] * 8) * numRepeats
+    all_doCTMQC_F = ([False] * 8)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/EhrenData/Repeat'
+    all_nRep = [200] * len(all_p_mean)
 
 elif inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -92,27 +117,18 @@ elif inputs == 'quickFullEhren':
 
 else:
     print("Carrying out custom input file")
-    #numRepeats = 1
-    #all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
-    #all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
-    #all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
-    #all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
-    #all_doCTMQC_C = ([True] * 8) * numRepeats
-    #all_doCTMQC_F = ([True] * 8 )  * numRepeats
-    #rootFolder = '/scratch/mellis/TullyModelData/ConstSig'
-    #nRep = 200
     numRepeats = 1
-    all_velMultiplier = [3] * 8 * numRepeats
-    all_maxTime = [1500] * 8 * numRepeats
-    all_model = [3] * 8 * numRepeats
-    all_p_mean = [-15] * 8 * numRepeats
-    all_doCTMQC_C = [True] * 8 * numRepeats
-    all_doCTMQC_F = [True] * 8  * numRepeats
-    rootFolder = False  # './Data/'
-    all_nRep = [20, 40, 60, 80, 120, 150, 180, 200] * numRepeats
+    all_velMultiplier = [3] * numRepeats
+    all_maxTime = [1500] * numRepeats
+    all_model = [3] * numRepeats
+    all_p_mean = [-15] * numRepeats
+    all_doCTMQC_C = ([True] * 1) * numRepeats
+    all_doCTMQC_F = ([True] * 1)  * numRepeats
+    all_nRep = [200] * len(all_doCTMQC_C)
+    rootFolder = './Data'
 
 
-s_mean = 0.3
+s_mean = np.sqrt(2)
 mass = 2000
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
@@ -129,12 +145,12 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
             'mass': [mass],  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
-            'dx': 1e-2,  # The increment for the NACV and grad E calc | | bohr
+            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
             'dt': 0.5,  # The timestep | |au_t
-            'elec_steps': 10,  # Num elec. timesteps per nucl. one | | -
+            'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': True,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
             'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
@@ -580,7 +596,7 @@ class CTMQC(object):
 
             # Get adiabatic NACV
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
-                                                           self.ctmqc_env)
+                                                        self.ctmqc_env)
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
@@ -952,7 +968,7 @@ def save_vitals(runData):
             CTMQC = "n-CTMQC"
         elif not runData.ctmqc_env['do_QM_F'] and runData.ctmqc_env['do_QM_C']:
             CTMQC = "e-CTMQC"
-        else:
+        elif not runData.ctmqc_env['do_QM_F'] and not runData.ctmqc_env['do_QM_C']:
             CTMQC = "Ehrenfest"
         
         nrep = runData.ctmqc_env['nrep']
@@ -977,10 +993,12 @@ def doSim(i):
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    if v_mean != 0:
-       p_std = 10. / float(v_mean * mass)
-    else:
-       p_std = 0.
+    #if v_mean != 0:
+    #   p_std = 10. / float(v_mean * mass)
+    #else:
+    #   p_std = 0.
+
+    p_std = np.sqrt(2)
     s_std = 0
     
     coeff = [[complex(1, 0), complex(0, 0)]
@@ -1015,6 +1033,8 @@ def get_min_procs(nSim, maxProcs):
    be used (e.g nproc = nSim or maxProcs) then minimise this by
    keeping the nsim per proc ratio constant but reducing number
    procs.
+
+   N.B. This assumes processes each take the same amount of time.
    """
    nProc = min([nSim, 16])
    nProc = min([nProc, mp.cpu_count() // 2])

@@ -2,12 +2,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+import re
 
-MOMENTA = ['high']
-MODELS = [1, 2, 3, 4]
+MOMENTA = ['low', 'high']
+MODELS = [2]
 QUANTITIES = ['pops', 'coherence']
 CT_or_EHs = ['Ehrenfest']
-root_folder = "/scratch/mellis/TullyModelData/FullCTMQCGossel"
+root_folder = "/scratch/mellis/TullyModelData/EhrenData/"
 
 
 
@@ -152,15 +153,46 @@ def get_params_from_folder(folderpath, params={}):
             params[key] = runParams[key]
         if 'mass' not in runParams:
             params['mass'] = 2000
+        if 'velInit' not in params:
+           params['velInit'] = np.load("%s/vel.npy" % folderpath)[0, 0]
         mom = params['mass'] * params['velInit']
         params['momentum'] = 'low'
         if mom > 20:
             params['momentum'] = 'high'
-            
+    
+    if 'tullyModel' not in params:
+       possModel = re.findall("\/model.*\/", folderpath, flags=re.IGNORECASE)
+       if len(possModel) == 1:
+         model = re.findall("[0-9]+", possModel[0])
+         if len(model) == 1:
+            params['tullyModel'] = int(model[0])
+
+    if 'momentum' not in params:
+       possMom = re.findall("\/.*mom.*\/", folderpath, flags=re.IGNORECASE)
+       if len(possMom) != 1:
+          possMom = re.findall("\/kinit.*\/*", folderpath, flags=re.IGNORECASE)
+       if len(possMom) == 1:
+          mom = re.findall("[0-9]+", possMom[0])
+          if len(possMom) != 1:
+            raise SystemExit("BREAK")
+          mom = int(mom[0])
+          if mom > 20:
+            params['momentum'] = 'high'
+          else:
+            params['momentum'] = 'low'
+
+    if 'do_CTMQC_C' not in params:
+       EorC = "CTMQC" in folderpath
+       params['do_QM_C'] = False
+       params['do_QM_F'] = False
+       if EorC:
+         params['do_QM_C'] = True
+         params['do_QM_F'] = True
+
     return params
 
 
-def load_all_data(root_folder):
+def load_all_data(root_folder, mom=False, mod=False, header=False, EorC=False):
     """
     Will load all the data from a root folder by walking across the available
     files and loading the data from each one.
@@ -168,33 +200,47 @@ def load_all_data(root_folder):
     rootFolder = os.path.abspath(root_folder)
     metadata = {'model':[], 'momentum':[], 'repeat':[], 'name':[],
                 'data_inds':[], 'CTMQC': []}
-    data = []
+    data = {}
     uniqueIdentifiers = []
-    count = 0
+    counts = {}
     for path, folders, files in os.walk(rootFolder):
         if "|C|^2.npy" in files:
             for f in files:
                 if '.npy' in f:
-                    params = get_params_from_folder(path)
+                    params = get_params_from_folder(path, {})
                     
                     dataHeader = f.replace(".npy", "")
                     model = params['tullyModel']
-                    mom = params['momentum']
-                    uniqueIdentifier = "%s_%s_%s" % (dataHeader, model, mom)
+                    momentum = params['momentum']
+                    uniqueIdentifier = "%s_%s_%s" % (dataHeader, model, momentum)
                     uniqueIdentifiers.append(uniqueIdentifier)
                     repeat = uniqueIdentifiers.count(uniqueIdentifier)
                     ehrenCTMQC = params['do_QM_C'] * params['do_QM_F']
                     
+                    if header is not False and dataHeader not in header:
+                        continue
+                    elif mod is not False and model != mod:
+                        continue
+                    elif mom is not False and momentum != mom:
+                        continue
+                    elif ehrenCTMQC != EorC:
+                        continue
+
+                    if dataHeader not in data:
+                       data[dataHeader] = []
+                       counts[dataHeader] = 0
+
                     metadata['model'].append(model)
-                    metadata['momentum'].append(mom)
+                    metadata['momentum'].append(momentum)
                     metadata['repeat'].append(repeat)
                     metadata['name'].append(dataHeader)
-                    metadata['data_inds'].append(count)
+                    metadata['data_inds'].append(counts[dataHeader])
                     metadata['CTMQC'].append(ehrenCTMQC)
-                    data.append(np.load("%s/%s" % (path, f)))
-                    count += 1
+                    data[dataHeader].append(np.load("%s/%s" % (path, f)))
+                    counts[dataHeader] += 1
+                    
     metadata = pd.DataFrame(metadata)
-    data = np.array(data)
+    data = {D:np.array(data[D]) for D in data}
     
     return data, metadata
 
@@ -205,8 +251,9 @@ def get_data_from_array(data, metadata, masks):
     the input dictionary
     """
     mask = np.all([metadata[key] == masks[key] for key in masks], axis=0)
-    pointers = metadata[mask]
-    return np.array([i for i in data[pointers['data_inds']]])
+    pointers = metadata[mask]['data_inds']
+    print(type(data))
+    return np.array([i for i in data[pointers]])
 
 
 def plot_my_pops(data, metadata, model, momentum, CT_or_EH, f, a):
@@ -215,10 +262,10 @@ def plot_my_pops(data, metadata, model, momentum, CT_or_EH, f, a):
     """
     masks = {'model': model, 'name': 'time', 'momentum': momentum,
              'CTMQC': CT_or_EH}
-    time = get_data_from_array(data, metadata, masks)
+    time = get_data_from_array(data['time'], metadata, masks)
     masks = {'model': model, 'name': '|C|^2', 'momentum': momentum,
              'CTMQC': CT_or_EH}
-    pops = get_data_from_array(data, metadata, masks)
+    pops = get_data_from_array(data['|C|^2'], metadata, masks)
     
     time = np.mean(time, axis=0)
     pops = np.mean(pops, axis=2)  # average over replicas
@@ -237,10 +284,10 @@ def plot_my_coherence(data, metadata, model, momentum, CT_or_EH, f, a):
     """
     masks = {'model': model, 'name': 'time', 'momentum': momentum,
              'CTMQC': CT_or_EH}
-    time = get_data_from_array(data, metadata, masks)
+    time = get_data_from_array(data['time'], metadata, masks)
     masks = {'model': model, 'name': '|C|^2', 'momentum': momentum,
              'CTMQC': CT_or_EH}
-    pops = get_data_from_array(data, metadata, masks)
+    pops = get_data_from_array(data['|C|^2'], metadata, masks)
     
     time = np.mean(time, axis=0)
     coherence = pops[:, :, :, 0] * pops[:, :, :, 1]
@@ -254,7 +301,7 @@ def plot_my_coherence(data, metadata, model, momentum, CT_or_EH, f, a):
     a.legend()
 
 
-data, metadata = load_all_data(root_folder)
+names = {'pops': 'Ad. Pops', 'coherence': 'Coherence'}
 for MOMENTUM in MOMENTA:
     for MODEL in MODELS:
         for QUANTITY in QUANTITIES:
@@ -269,12 +316,20 @@ for MOMENTUM in MOMENTA:
                                      'CTMQC': 'r',
                                      'Exact': 'k'},
                           'xlabel': 'Time [au]',
-                          'ylabel': 'Adiabatic Populations',
+                          'ylabel': names[QUANTITY],
                           'lw': 3,
                           'alpha': 0.7,
                           }
                 
                 f, a = plot_Gossel_data(params)
+                data, metadata = load_all_data(root_folder, mom=MOMENTUM, mod=MODEL,
+                                               EorC=(CT_or_EH=="CTMQC"),
+                                               header=['time', '|C|^2'])
+                if len(data) == 0:
+                   print("Can't find any data for:\n\t*mom = %s\n\t*model = %i" % (MOMENTUM, MODEL))
+                   print("\t*Quantity = %s\n\t*CTMQC = %s" % (QUANTITY, CT_or_EH))
+                   continue
+
                 myCTMQC = CT_or_EH == "CTMQC"
                 if QUANTITY == 'pops':
                     plot_my_pops(data, metadata, MODEL, MOMENTUM,
@@ -292,6 +347,7 @@ for MOMENTUM in MOMENTA:
                 if not os.path.isdir(save_folderpath):
                     os.makedirs(save_folderpath)
                 
+                #plt.show()
                 savepath = "%s/%s.png" % (save_folderpath, QUANTITY)
                 f.savefig(savepath)
                 plt.close('all')

@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -94,15 +95,15 @@ def calcNACVgradPhi(pos, ctmqc_env):
     simply use:
         d = <phil | grad phik>
     """
-    dx = 1e-5
-
+    dx = ctmqc_env['dx']
     H_xm = ctmqc_env['Hfunc'](pos - dx)
     H_x = ctmqc_env['Hfunc'](pos)
     H_xp = ctmqc_env['Hfunc'](pos + dx)
+    nstate = len(H_x)
 
     allU = [np.linalg.eigh(H)[1]
             for H in (H_xm, H_x, H_xp)]
-
+    
     gradU = np.gradient(allU, dx, axis=0)
     
     NACV = np.zeros((2, 2))
@@ -110,56 +111,39 @@ def calcNACVgradPhi(pos, ctmqc_env):
         for k in range(2):
             NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
     
-    # Check the anti-symettry of the NACV
-    for l in range(len(NACV)):
-        for k in range(l+1, len(NACV)):
-            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
-                print("NACV:")
-                print(NACV)
-                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
-                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
-                raise SystemExit("NACV not antisymetric!")
+    ## Check the anti-symettry of the NACV
+    #for l in range(len(NACV)):
+    #    for k in range(l+1, len(NACV)):
+    #        if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
+    #            print("\n\n\nPos: ", pos)
+    #            print("\nH_x: ", H_x)
+    #            print("\nH_xp: ", H_xp)
+    #            print("\nH_xm: ", H_xm)
+    #            print("\nU_xm: ", allU[0])
+    #            print("\nU_x: ", allU[1])
+    #            print("\nU_xp: ", allU[2])
+    #            print("\ngradU: ", gradU)
+    #            print("\nNACV:")
+    #            print(NACV)
+    #            print("\nNACV[%i, %i]: " % (l, k), NACV[l, k])
+    #            print("\nNACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
+    #            print("\n\n\n")
+    #            raise SystemExit("NACV not antisymetric!")
+    
+    NACV = 0.5*(NACV - NACV.T)
 
     return NACV
 
 
-#def calcNACV(irep, ctmqc_env):
-#    """
-#    Will use a different method to calculate the NACV. This function will
-#    simply use:
-#        d = <phil | grad phik>
-#    """
-#    dx = 1e-5
-#    pos = ctmqc_env['pos'][irep]
-#
-#    H_xm = ctmqc_env['Hfunc'](pos - dx)
-#    H_x = ctmqc_env['Hfunc'](pos)
-#    H_xp = ctmqc_env['Hfunc'](pos + dx)
-#
-#    allU = [np.linalg.eigh(H)[1]
-#            for H in (H_xm, H_x, H_xp)]
-#
-#    gradU = np.gradient(allU, dx, axis=0)
-#    
-#    NACV = np.zeros((2, 2))
-#    for l in range(2):
-#        for k in range(2):
-#            NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
-#    
-#    # Check the anti-symettry of the NACV
-##    for l in range(len(NACV)):
-##        for k in range(l+1, len(NACV)):
-##            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
-##                print("NACV:")
-##                print(NACV)
-##                print("NACV[%i, %i]: " % (l, k), NACV[l, k])
-##                print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
-##                raise SystemExit("NACV not antisymetric!")
-#
-#    return NACV
-
-
 def calcNACV(irep, ctmqc_env):
+    """
+    Useless wrapper for calcNACVgradPhi function.
+    """
+    pos = ctmqc_env['pos'][irep]
+
+    return calcNACVgradPhi(pos, ctmqc_env)
+
+def calcNACVgradH(irep, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
@@ -191,6 +175,7 @@ def calcNACV(irep, ctmqc_env):
                 print("NACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
                 raise SystemExit("NACV not antisymetric!")
 
+    NACV = 0.5*(NACV - NACV.T)
     return NACV
 
 
@@ -207,13 +192,13 @@ def test_Hfunc(Hfunc, minX=-15, maxX=15, stride=0.01):
 
 
 def test_NACV(Hfunc):
-    nrep = 2000
+    nrep = 4000
     randomNums = (np.random.random(nrep) * 30) - 15
-    ctmqc_env = {'dx': 1e-5, 'nstate': 2, 'pos': randomNums,
+    ctmqc_env = {'dx': 1e-5, 'nstate': 2, 'pos': list(sorted(randomNums)),
                  'Hfunc': Hfunc}
     
     allNACV1 = [calcNACV(irep, ctmqc_env) for irep in range(nrep)]
-    allNACV2 = [calcNACVgradPhi(randomNums[irep], ctmqc_env)
+    allNACV2 = [calcNACVgradH(irep, ctmqc_env)
                 for irep in range(nrep)]
     
     allNACV1 = np.array(allNACV1)
@@ -225,18 +210,18 @@ def test_NACV(Hfunc):
     avgCase = np.mean(diff)
     std = np.std(diff)
     
-    if worstCase> 1e-6 or avgCase > 1e-6:
-        import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
 
-        print("Worst Case: {0}".format(worstCase))
-        print("Best Case: {0}".format(bestCase))
-        print("Mean Case: {0} +/- {1}".format(avgCase, std))
-        print("Something wrong with NACV!")
-        
-        plt.plot(randomNums, allNACV1[:, 0, 1], 'k.')
-        plt.plot(randomNums, allNACV2[:, 0, 1], 'y.')
-        plt.show()
-        raise SystemExit("BREAK")
+    print("Worst Case: {0}".format(worstCase))
+    print("Best Case: {0}".format(bestCase))
+    print("Mean Case: {0} +/- {1}".format(avgCase, std))
+    
+    plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
+             label="calcNACV")
+    plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',
+             label="calcNACVgradPhi")
+    plt.legend()
+    plt.show()
 
 
 #test_Hfunc(create_Hlin)
