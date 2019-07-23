@@ -14,6 +14,7 @@ import datetime as dt
 import time
 import os
 import collections
+import subprocess
 
 import hamiltonian as Ham
 import nucl_prop
@@ -30,19 +31,44 @@ import plot
 #inputs = "quickFullEhren"
 #inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren"
+#inputs = "FullEhrenGossel"
 inputs = "custom"
 
-rootSaveFold = "./plottingResults"
+rootSaveFold = "/scratch/mellis/TullyModelData"
 
 if inputs == "MomentumEhren":
-    all_velMultiplier = np.arange(1, 5, 0.03)
-    all_maxTime = [(45.) / (v * 5e-3) for v in all_velMultiplier]
-    all_model = [4] * len(all_velMultiplier)
+    all_velMultiplier = np.arange(1, 4, 0.02)
+    all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [3] * len(all_velMultiplier)
     all_p_mean = [-15] * len(all_velMultiplier)
     all_doCTMQC_C = [False] * len(all_velMultiplier)
     all_doCTMQC_F = [False] * len(all_velMultiplier)
     rootFolder = '%s/MomentumRuns' % rootSaveFold
     all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "quickFullEhrenGossel":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 1
+    all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,        -20, -15,  -8,   -15] * numRepeats
+    all_doCTMQC_C = ([False] * 8) * numRepeats
+    all_doCTMQC_F = ([False] * 8)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/EhrenDataQuick/Repeat'
+    all_nRep = [1] * len(all_p_mean)
+
+elif inputs == "FullEhrenGossel":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 10
+    all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,        -20, -15,  -8,   -15] * numRepeats
+    all_doCTMQC_C = ([False] * 8) * numRepeats
+    all_doCTMQC_F = ([False] * 8)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/EhrenData/Repeat'
+    all_nRep = [200] * len(all_p_mean)
 
 elif inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -117,27 +143,18 @@ elif inputs == "FullCTMQCGosselQuick":
     all_nRep = [20] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
-    #numRepeats = 1
-    #all_velMultiplier = [4, 2, 3, 1, 3, 1.6, 2.5, 1] * numRepeats
-    #all_maxTime = [2000, 2500, 1300, 5500, 1500, 2500, 2000, 3500] * numRepeats
-    #all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
-    #all_p_mean = [-15, -15, -15, -15, -8, -8, -8, -8] * numRepeats
-    #all_doCTMQC_C = ([True] * 8) * numRepeats
-    #all_doCTMQC_F = ([True] * 8 )  * numRepeats
-    #rootFolder = '/scratch/mellis/TullyModelData/ConstSig'
-    #nRep = 200numRepeats
     numRepeats = 1
-    all_velMultiplier = [0] * numRepeats
-    all_maxTime = [2000] * numRepeats
+    all_velMultiplier = [3] * numRepeats
+    all_maxTime = [1500] * numRepeats
     all_model = [3] * numRepeats
-    all_p_mean = [-4] * numRepeats
-    all_doCTMQC_C = [True] * numRepeats
-    all_doCTMQC_F = [True]  * numRepeats
-    rootFolder = "%s/Data" % rootSaveFold
-    all_nRep = [1] * numRepeats
+    all_p_mean = [-15] * numRepeats
+    all_doCTMQC_C = ([True] * 1) * numRepeats
+    all_doCTMQC_F = ([True] * 1)  * numRepeats
+    all_nRep = [200] * len(all_doCTMQC_C)
+    rootFolder = './Data'
 
 
-s_mean = 0.3
+s_mean = np.sqrt(2)
 mass = 2000
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
@@ -150,16 +167,16 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'u': coeff,  # Intial WF |nrep, 2| -
-            'mass': mass,  # nuclear mass |nrep| au_m
+            'C': coeff,  # Intial WF |nrep, 2| -
+            'mass': [mass],  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
-            'dx': 1e-2,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 1,  # The timestep | |au_t
+            'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
+            'dt': 0.5,  # The timestep | |au_t
             'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': True,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 15,  # The constant in the sigma calc
             'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
@@ -617,7 +634,7 @@ class CTMQC(object):
 
             # Get adiabatic NACV
             self.ctmqc_env['NACV'][irep] = Ham.calcNACV(irep,
-                                                           self.ctmqc_env)
+                                                        self.ctmqc_env)
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
@@ -948,6 +965,59 @@ class CTMQC(object):
         plt.plot(t, np.polyval(fit, t))
 
 
+
+def get_norm_drift(runData):
+    """
+    Will get the norm drift of some run data.
+    """
+    Ndt = runData.ctmqc_env['dt']
+    allNorms = np.sum(runData.allAdPop, axis=2)
+    avgNorms = np.mean(allNorms, axis=1)
+    fit = np.polyfit(runData.allt, avgNorms, 1)
+    return fit[0] * 41341.3745758 * Ndt
+
+
+def get_ener_drift(runData):
+    """
+    Will get total energy drift.
+    """
+    potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    totE = potE + kinE
+    avgTotE = np.mean(totE, axis=1)
+    Ndt = runData.ctmqc_env['dt']
+    fit = np.polyfit(runData.allt, avgTotE, 1)
+    return fit[0] * Ndt * 41341.3745758
+
+
+def save_vitals(runData):
+    normEnerFile = "normEnerDrift.csv"
+    firstLine = "Model,CTMQC,NRep,NuclDt,ElecDt,Norm,Ener,GitCommit\n"
+    if not os.path.isfile(normEnerFile):
+        with open(normEnerFile, "w") as f:
+            f.write(firstLine)
+    
+    with open(normEnerFile, 'a') as f:
+        model = runData.ctmqc_env['tullyModel']
+        
+        CTMQC = "CTMQC"
+        if not runData.ctmqc_env['do_QM_C'] and runData.ctmqc_env['do_QM_F']:
+            CTMQC = "n-CTMQC"
+        elif not runData.ctmqc_env['do_QM_F'] and runData.ctmqc_env['do_QM_C']:
+            CTMQC = "e-CTMQC"
+        elif not runData.ctmqc_env['do_QM_F'] and not runData.ctmqc_env['do_QM_C']:
+            CTMQC = "Ehrenfest"
+        
+        nrep = runData.ctmqc_env['nrep']
+        Ndt = runData.ctmqc_env['dt']
+        Edt = Ndt / float(runData.ctmqc_env['elec_steps'])
+        norm = get_norm_drift(runData)
+        ener = get_ener_drift(runData)
+        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode("utf-8").strip("\n")
+    
+        line = (model, CTMQC, nrep, str(Ndt), str(Edt), norm, ener, commit)
+        f.write("%i,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
+
     
 def doSim(iSim):
     velMultiplier = all_velMultiplier[iSim]
@@ -978,32 +1048,15 @@ def doSim(iSim):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-    
-#    pos = np.array([-14.7027843 , -15.53686452, -15.13550082, -14.89086006,
-#       -14.64911093, -15.26130136, -15.27468515, -14.94785433,
-#       -15.53530487, -15.3808776 , -15.11517294, -15.39821084,
-#       -14.51404437, -14.79858564, -14.52471394, -14.86346282,
-#       -15.00222724, -15.75017752, -14.39549455, -15.40453666,
-#       -14.81653534, -14.66631225, -15.8555549 , -14.82516946,
-#       -15.40487541, -14.76640345, -15.12881254, -14.63889032,
-#       -14.68280335, -15.17918397, -15.186057  , -14.27057088,
-#       -14.94256778, -14.76317967, -15.78983222, -14.76629817,
-#       -14.51484441, -14.86770653, -15.47533013, -14.90003817,
-#       -14.78854349, -14.77434377, -15.31173198, -14.91426438,
-#       -14.77795883, -15.05025176, -14.97301894, -14.61882621,
-#       -15.17987039, -15.40046486, -15.40785849, -14.37760846,
-#       -14.99922323, -15.49046445, -14.80919544, -14.78683536,
-#       -14.96412532, -15.20226974, -14.56624465, -15.0541009 ,
-#       -15.51612004, -14.95586437, -14.66836214, -15.28962745,
-#       -14.74680077, -14.74535079, -15.16194126, -15.25727723,
-#       -14.69901081, -14.9897081 ])
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
     # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
                       doCTMQC_C, doCTMQC_F)
-    return CTMQC(ctmqc_env, rootFolder)
+    runData = CTMQC(ctmqc_env, rootFolder)
+    save_vitals(runData)
+    return runData
 
 
 def get_min_procs(nSim, maxProcs):
@@ -1012,6 +1065,8 @@ def get_min_procs(nSim, maxProcs):
    be used (e.g nproc = nSim or maxProcs) then minimise this by
    keeping the nsim per proc ratio constant but reducing number
    procs.
+
+   N.B. This assumes processes each take the same amount of time.
    """
    nProc = min([nSim, 16])
    nProc = min([nProc, mp.cpu_count() // 2])
@@ -1039,7 +1094,6 @@ else:
 
 #        test.vel_is_diff_x(runData)
 
-
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 #    plotPaper.params['tullyModel'] = runData.ctmqc_env['tullyModel']
 #    plotPaper.params['momentum'] = (runData.allv[0, 0] / 0.0005) > 20
@@ -1047,16 +1101,11 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 #    plotPaper.params['whichQuantity'] = 'pops'
 #    f, a = plotPaper.plot_data(plotPaper.params)
     plot.plotPops(runData)
-    plot.plotDiPops(runData)
-    
-#    plotPaper.params['whichQuantity'] = 'coherence'
-#    plotPaper.params['whichSimType'] = ['CTMQC']
-#    f, a = plotPaper.plot_data(plotPaper.params)
-    plot.plotDeco(runData)
-#    plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
-    #plot.plotEcons(runData)
-    
+    #plot.plotRabi(runData)
+    #plot.plotDeco(runData)
+    #plot.plotRlk_Rl(runData)
+    plot.plotNorm(runData)
+    plot.plotEcons(runData)
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
     #plot.plotS26(runData)
