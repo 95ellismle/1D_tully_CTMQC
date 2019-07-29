@@ -55,7 +55,7 @@ def plotEcons(runData, f=False, a=False):
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
     
 
-def Rabi(runData):
+def Rabi(runData, f=False, a=False):
     H = runData.allH[0, 0]
     t = runData.allt
     delE = H[0, 0] - H[1, 1]
@@ -66,7 +66,7 @@ def Rabi(runData):
     return rabiPops
 
 
-def plotRabi(runData):
+def plotRabi(runData, f=False, a=False):
     f, a = plt.subplots()
     rabiPops = Rabi(runData)
     diPops = np.conjugate(runData.allu) * runData.allu
@@ -80,7 +80,8 @@ def plotRabi(runData):
     a.legend()
     plt.show()
 
-def plotS26(runData):
+
+def plotS26(runData, f=False, a=False):
     """
     Will plot the equation S26 that the Qlk should obey.
     """
@@ -94,7 +95,6 @@ def plotS26(runData):
     a.plot(runData.allt, S26, 'k-', lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
     a.set_ylabel("S26")
-
 
 
 def plotAdMom(runData, f=False, a=False):
@@ -249,6 +249,20 @@ def plotDeco(runData, f=False, a=False):
     a.plot(runData.allt, np.mean(deco, axis=1), 'k')
     a.set_ylabel("Coherence")
     a.set_xlabel("Time [au]")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+
+
+def plotSigma(runData, f=False, a=False):
+    """
+    Will plot sigmal against time
+    """
+    if a is False or f is False: f, a = plt.subplots()
+    a.plot(runData.allt, runData.allSigma[:, :], 'k',
+           lw=0.5, alpha=0.5)
+    a.plot(runData.allt, np.mean(runData.allSigma, axis=1),
+           'k', label=r"$\langle \sigma_{I}\rangle_{I}$")
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\sigma^{(I)}$ [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 

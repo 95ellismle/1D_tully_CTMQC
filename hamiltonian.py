@@ -10,7 +10,7 @@ Created on Thu May  9 14:41:34 2019
 import numpy as np
 
 
-def create_H1(ctmqc_env, x, A=0.01, B=1.6, C=0.005, D=1.0):
+def create_H1(x, A=0.01, B=1.6, C=0.005, D=1.0):
     """
     Will create the Hamiltonian in Tully Model 1
     """
@@ -28,7 +28,7 @@ def create_H1(ctmqc_env, x, A=0.01, B=1.6, C=0.005, D=1.0):
     return np.matrix([[V11, V12], [V12, V22]])
 
 
-def create_H2(ctmqc_env, x, A=0.1, B=0.28, C=0.015, D=0.06, E0=0.05):
+def create_H2(x, A=0.1, B=0.28, C=0.015, D=0.06, E0=0.05):
     """
     Will create the Hamiltonian in Tully Model 2
     """
@@ -39,7 +39,7 @@ def create_H2(ctmqc_env, x, A=0.1, B=0.28, C=0.015, D=0.06, E0=0.05):
     return np.matrix([[V11, V12], [V12, V22]])
 
 
-def create_H3(ctmqc_env, x, A=6e-4, B=0.1, C=0.9):
+def create_H3(x, A=6e-4, B=0.1, C=0.9):
     """
     Will create the Hamiltonian in Tully Model 3
     """
@@ -55,7 +55,7 @@ def create_H3(ctmqc_env, x, A=6e-4, B=0.1, C=0.9):
     return np.matrix([[V11, V12], [V12, V22]])
 
 
-def create_H4(ctmqc_env, x, A=6e-4, B=0.1, C=0.9, D=4):
+def create_H4(x, A=6e-4, B=0.1, C=0.9, D=4):
     """
     Will create the Hamiltonian in Tully Model 3
     """
@@ -72,7 +72,7 @@ def create_H4(ctmqc_env, x, A=6e-4, B=0.1, C=0.9, D=4):
                       [V12, V22]])
 
 
-def create_Hlin(ctmqc_env, x, slope=-0.01, Start=-15, Egap=0.05):
+def create_Hlin(x, slope=-0.01, Start=-15, Egap=0.05):
    """
    Will create a linearly decreasing Hamiltonian with 0 coupling
    """
@@ -141,18 +141,18 @@ def calcNACV(irep, ctmqc_env):
     """
     pos = ctmqc_env['pos'][irep]
 
-    return calcNACVgradPhi(pos, ctmqc_env)
+    return calcNACVgradH(pos, ctmqc_env)
 
-def calcNACVgradH(irep, ctmqc_env):
+def calcNACVgradH(pos, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
     dx = ctmqc_env['dx']
     nState = ctmqc_env['nstate']
 
-    H_xm = ctmqc_env['Hfunc'](ctmqc_env, ctmqc_env['pos'][irep] - dx)
-    H_x = ctmqc_env['Hfunc'](ctmqc_env, ctmqc_env['pos'][irep])
-    H_xp = ctmqc_env['Hfunc'](ctmqc_env, ctmqc_env['pos'][irep] + dx)
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
 
     allH = [H_xm, H_x, H_xp]
     gradH = np.gradient(allH, dx, axis=0)[1]
@@ -210,18 +210,18 @@ def test_NACV(Hfunc):
     avgCase = np.mean(diff)
     std = np.std(diff)
     
-    import matplotlib.pyplot as plt
+    #import matplotlib.pyplot as plt
 
     print("Worst Case: {0}".format(worstCase))
     print("Best Case: {0}".format(bestCase))
     print("Mean Case: {0} +/- {1}".format(avgCase, std))
     
-    plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
-             label="calcNACV")
-    plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',
-             label="calcNACVgradPhi")
-    plt.legend()
-    plt.show()
+    #plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
+    #         label="calcNACV")
+    #plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',
+    #         label="calcNACVgradPhi")
+    #plt.legend()
+    #plt.show()
 
 
 #test_Hfunc(create_Hlin)

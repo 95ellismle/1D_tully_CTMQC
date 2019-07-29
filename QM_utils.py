@@ -16,23 +16,12 @@ def calc_ad_frc(pos, ctmqc_env):
     Will calculate the forces from each adiabatic state (the grad E term)
     """
     dx = ctmqc_env['dx']
-    H_xm = ctmqc_env['Hfunc'](ctmqc_env, pos - dx)
-    H_x = ctmqc_env['Hfunc'](ctmqc_env, pos)
-    H_xp = ctmqc_env['Hfunc'](ctmqc_env, pos + dx)
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
     allH = [H_xm, H_x, H_xp]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     gradE = np.array(np.gradient(allE, dx, axis=0))[1]
-
-    if ctmqc_env['tullyModel'] == 'lin' and np.round(gradE[0], 7) != -0.01:
-      print(gradE[0])
-      print(gradE[0] != -0.01)
-      print("H:")
-      [print(H, "\n") for H in allH]
-      print("E:")
-      [print(E, "\n") for E in allE]
-      print("dE/dx")
-      print(gradE)
-      raise SystemExit("BREAK")
 
     return -gradE
 
@@ -288,27 +277,28 @@ def calc_Gossel_sigma(ctmqc_env):
     Will calculate the sigma parameter as laid out in Gossell, 18.
     """
     for I in range(ctmqc_env['nrep']):
+        ctmqc_env['const'] = float(ctmqc_env['const'])
         R0 = ctmqc_env['const'] * ctmqc_env['sigma'][I]
         distances = ctmqc_env['pos'][I] - ctmqc_env['pos']
         mask = np.arange(len(distances))[np.abs(distances) < R0]
-        sigma0 = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.min(ctmqc_env['sigma'])
-#        nrep = float(len(mask))
-        
-#        avg_squared_dist = np.mean(distances[mask]**2)
-#        avg_dist = np.mean(np.abs(distances[mask]))
-#        newSigma = np.sqrt(avg_squared_dist - avg_dist**2)/float(nrep)
-        newSigma = np.std(distances[mask])
-        
+        distances = distances[mask]
+
+        posSig = ctmqc_env['sigma'][ctmqc_env['sigma'] > 0.05]
+        if len(posSig):
+           sigma0 = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.min(posSig)
+        else:
+           sigma0 = 0.1
+        nrep = float(len(mask))
+       
+        avg_squared_dist = np.mean(distances**2)
+        avg_dist = np.mean(np.abs(distances))
+        newSigma = np.sqrt(avg_squared_dist - (avg_dist**2))
+
         if newSigma < sigma0:
             newSigma = sigma0
-        
+
         ctmqc_env['sigma'][I] = newSigma
         
-#        print(np.std(distances[mask]))
-        
-#        print(newSigma)
-        
-#        raise SystemExit("BREAK")
 
 def calc_Qlk_Min17(ctmqc_env):
     """
@@ -316,6 +306,7 @@ def calc_Qlk_Min17(ctmqc_env):
     """
     if ctmqc_env['do_sigma_calc']:
         calc_Gossel_sigma(ctmqc_env)
+
     
     # Verified by hand for a 3 rep system
     WIJ = calc_WIJ(ctmqc_env)

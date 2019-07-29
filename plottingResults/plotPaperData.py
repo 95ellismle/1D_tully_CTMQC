@@ -5,12 +5,14 @@ import numpy as np
 import re
 
 MOMENTA = ['low', 'high']
-MODELS = [2]
+MODELS = [1, 2, 3, 4]
 QUANTITIES = ['pops', 'coherence']
-CT_or_EHs = ['Ehrenfest']
-root_folder = "/scratch/mellis/TullyModelData/EhrenData/"
+CT_or_EHs = ['CTMQC']
+root_folder = "/scratch/mellis/TullyModelData/FullCTMQCGossel_ConstSig"
+#root_folder = "/scratch/mellis/TullyModelData/EhrenData/Repeat_10"
 
-
+Q = raw_input("Turn autosave on?\n[y/n]:   ")
+autoSave = Q.lower() == 'y'
 
 def tidyFile(filename):
     """
@@ -245,6 +247,16 @@ def load_all_data(root_folder, mom=False, mod=False, header=False, EorC=False):
     return data, metadata
 
 
+def clean_data(data):
+   """
+   Will remove any array with less than the max length
+   """
+   lengths = [len(D) for D in data]
+   max_len = max(lengths)
+   data = [D for D in data if len(D) == max_len]
+   return np.array(data)
+
+
 def get_data_from_array(data, metadata, masks):
     """
     Will get some data from the allData dataframe using the masks provided in
@@ -252,8 +264,9 @@ def get_data_from_array(data, metadata, masks):
     """
     mask = np.all([metadata[key] == masks[key] for key in masks], axis=0)
     pointers = metadata[mask]['data_inds']
-    print(type(data))
-    return np.array([i for i in data[pointers]])
+    data = np.array([i for i in data[pointers]])
+    data = clean_data(data)
+    return data
 
 
 def plot_my_pops(data, metadata, model, momentum, CT_or_EH, f, a):
@@ -340,15 +353,21 @@ for MOMENTUM in MOMENTA:
                 
                 save_root = "/homes/mellis/Documents/Graphs/Tully_Models/" + \
                             "GosselPaper"
-                save_folderpath = "%s/%s/Model%i/%sMom" % (save_root,
-                                                           CT_or_EH,
-                                                           MODEL,
-                                                           MOMENTUM.title())
-                if not os.path.isdir(save_folderpath):
-                    os.makedirs(save_folderpath)
+                save_folderpath = "%s/%s/ConstSig/Sig=0.3/Model%i/%sMom" % (save_root,
+                                                                  CT_or_EH,
+                                                                  MODEL,
+                                                                  MOMENTUM.title())
                 
-                #plt.show()
-                savepath = "%s/%s.png" % (save_folderpath, QUANTITY)
-                f.savefig(savepath)
-                plt.close('all')
-            
+                Q = 'y'
+                if not autoSave:
+                   Q = raw_input("Should I save at:\n\t%s\n[y/n]:\t" % save_folderpath)
+
+                if Q == 'y':
+                   if not os.path.isdir(save_folderpath):
+                       os.makedirs(save_folderpath)
+                   savepath = "%s/%s.png" % (save_folderpath, QUANTITY)
+                   print("Saving at:\n\t%s" % savepath)
+                   f.savefig(savepath)
+                   plt.close('all')
+                else:
+                   plt.show()            
