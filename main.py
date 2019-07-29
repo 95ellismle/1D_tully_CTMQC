@@ -21,22 +21,61 @@ import nucl_prop
 import elec_prop as e_prop
 import QM_utils as qUt
 import plot
+#from plottingResults import plotPaperData as plotPaper
+inputs = "custom"
+
 
 #inputs = "FullCTMQC"
+#inputs = "FullCTMQCGossel"
+#inputs = "FullCTMQCGosselQuick"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
 #inputs = "quickFullEhren"
 #inputs = "quickFullEhrenGossel"
-#inputs = "MomentumEhren"
+#inputs = "MomentumEhren2"
 #inputs = "FullEhrenGossel"
-inputs = "custom"
 
 rootSaveFold = "/scratch/mellis/TullyModelData"
+mfolder_structure = ['ctmqc', 'model', 'mom']
 
-if inputs == "MomentumEhren":
+if inputs == "MomentumEhren1":
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = np.arange(0.02, 3, 0.02)
+    all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [1] * len(all_velMultiplier)
+    all_p_mean = [-8] * len(all_velMultiplier)
+    all_doCTMQC_C = [False] * len(all_velMultiplier)
+    all_doCTMQC_F = [False] * len(all_velMultiplier)
+    rootFolder = '%s/MomentumRuns' % rootSaveFold
+    all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "MomentumEhren2":
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = np.arange(1, 5, 0.02)
+    all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [2] * len(all_velMultiplier)
+    all_p_mean = [-8] * len(all_velMultiplier)
+    all_doCTMQC_C = [False] * len(all_velMultiplier)
+    all_doCTMQC_F = [False] * len(all_velMultiplier)
+    rootFolder = '%s/MomentumRuns' % rootSaveFold
+    all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "MomentumEhren3":
+    mfolder_structure = ['model', 'mom']
     all_velMultiplier = np.arange(1, 4, 0.02)
     all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
     all_model = [3] * len(all_velMultiplier)
+    all_p_mean = [-15] * len(all_velMultiplier)
+    all_doCTMQC_C = [False] * len(all_velMultiplier)
+    all_doCTMQC_F = [False] * len(all_velMultiplier)
+    rootFolder = '%s/MomentumRuns' % rootSaveFold
+    all_nRep = [1] * len(all_velMultiplier)
+
+elif inputs == "MomentumEhren4":
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = np.arange(3, 5, 0.001)
+    all_maxTime = [(45.) / (v * 5e-3) for v in all_velMultiplier]
+    all_model = [4] * len(all_velMultiplier)
     all_p_mean = [-15] * len(all_velMultiplier)
     all_doCTMQC_C = [False] * len(all_velMultiplier)
     all_doCTMQC_F = [False] * len(all_velMultiplier)
@@ -61,7 +100,7 @@ elif inputs == "FullEhrenGossel":
     all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
     all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
     all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
-    all_p_mean = [-20, -15, -8, -15,        -20, -15,  -8,   -15] * numRepeats
+    all_p_mean = [-20, -15, -8, -20,        -20, -15,  -8,   -20] * numRepeats
     all_doCTMQC_C = ([False] * 8) * numRepeats
     all_doCTMQC_F = ([False] * 8)  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/EhrenData/Repeat'
@@ -77,7 +116,7 @@ elif inputs == "FullCTMQC":
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/FullCTMQC/Repeat'
-    all_nRep = [200]
+    all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCEhren":
     print("Carrying out all testing (Ehren and CTMQC)!")
@@ -89,7 +128,7 @@ elif inputs == "FullCTMQCEhren":
     all_doCTMQC_C = ([True] * 8 + [False] * 8) * numRepeats * 2
     all_doCTMQC_F = ([True] * 8 + [False] * 8)  * numRepeats * 2
     rootFolder = '/scratch/mellis/TullyModelData/CompleteData/Repeat'
-    all_nRep = [200]
+    all_nRep = [200] * 16 * numRepeats
 
 elif inputs == 'quickFullCTMQC':
     print("Quickly running through all the models with CTMQC (reduced repilcas)")
@@ -101,7 +140,7 @@ elif inputs == 'quickFullCTMQC':
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    all_nRep = [20]
+    all_nRep = [20] * 8 * numRepeats
 
 elif inputs == 'quickFullEhren':
     print("Quickly running through all the models with Ehren (reduced repilcas)")
@@ -113,49 +152,75 @@ elif inputs == 'quickFullEhren':
     all_doCTMQC_C = ([False] * 8) * numRepeats
     all_doCTMQC_F = ([False] * 8 )  * numRepeats
     rootFolder = '/scratch/mellis/TullyModelData/QuickTests'
-    all_nRep = [5]
+    all_nRep = [5] * 8 * numRepeats
 
+elif inputs == "FullCTMQCGossel":
+    print("Carrying out full Gossel CTMQC testing!")
+    numRepeats = 10
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
+    all_p_mean = [-20, -15, -8, -20,        -20, -15,  -8,   -20] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQCGossel_ConstSig/'
+    all_nRep = [200] * 8 * numRepeats
+
+elif inputs == "FullCTMQCGosselQuick":
+    print("Carrying out quick Gossel CTMQC testing!")
+    numRepeats = 1
+    all_velMultiplier = [4, 1, 3, 1, 3, 1.6, 2.5, 1.5] * numRepeats
+    all_maxTime = [2000, 6000, 1500, 5000, 1500, 2500, 4000, 6000] * numRepeats
+    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
+    all_p_mean = [-20, -20, -15, -15, -8, -8, -8, -8] * numRepeats
+    all_doCTMQC_C = ([True] * 8) * numRepeats
+    all_doCTMQC_F = ([True] * 8 )  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQCGosselQuick'
+    all_nRep = [20] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
     numRepeats = 1
-    all_velMultiplier = [3] * numRepeats
-    all_maxTime = [1500] * numRepeats
-    all_model = [3] * numRepeats
-    all_p_mean = [-15] * numRepeats
-    all_doCTMQC_C = ([True] * 1) * numRepeats
-    all_doCTMQC_F = ([True] * 1)  * numRepeats
-    all_nRep = [200] * len(all_doCTMQC_C)
-    rootFolder = './Data'
+    mfolder_structure = []
+    all_nRep = [20]  # , 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300] 
+    all_velMultiplier = [2.5] * numRepeats * len(all_nRep)
+    all_maxTime = [2500] * numRepeats * len(all_nRep)
+    all_model = [2] * numRepeats * len(all_nRep)
+    all_p_mean = [-15] * numRepeats * len(all_nRep)
+    all_doCTMQC_C = ([True] * 2) * numRepeats * len(all_nRep)
+    all_doCTMQC_F = ([False] * 2)  * numRepeats * len(all_nRep)
+    rootFolder = False #'%s/EhrenData' % rootSaveFold
 
 
-s_mean = np.sqrt(2)
+s_mean = 0.3
 mass = 2000
 
 nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
             len(all_doCTMQC_F), len(all_nRep)])
-
+print("Nsim = %i" % nSim)
 
 def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     # All units must be atomic units
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'C': coeff,  # Intial WF |nrep, 2| -
-            'mass': [mass],  # nuclear mass |nrep| au_m
+            'u': coeff,  # Intial WF |nrep, 2| -
+            'mass': mass,  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 0.5,  # The timestep | |au_t
-            'elec_steps': 5,  # Num elec. timesteps per nucl. one | | -
+            'dt': 1,  # The timestep | |au_t
+            'elec_steps': 2,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': True,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 15,  # The constant in the sigma calc
+            'const': 5,  # The constant in the sigma calc
             'nSmoothStep': 7,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
+            'gradTol': 0.9,  # The maximum allowed gradient in Rlk in time.
             'renorm': False,  # Choose whether renormalise the wf
+            'Qlk_type': 'Min17',  # What method to use to calculate the QM
                 }
     return ctmqc_env
 
@@ -207,140 +272,88 @@ class CTMQC(object):
     allR = []
     allt = []
 
-    def __init__(self, ctmqc_env, root_folder = False):
+    def __init__(self, ctmqc_env, root_folder = False, folder_structure=['ctmqc', 'model', 'mom']):
         
         # Set everything up
         self.root_folder = root_folder
         self.ctmqc_env = ctmqc_env
 
-        self.__create_folderpath()
         self.__init_tully_model()  # Set the correct Hamiltonian function
         self.__init_nsteps()  # Find how many steps to take
         self.__init_pos_vel_wf()  # set pos vel wf as arrays, get nrep
         self.__init_arrays()  # Create the arrays used
         self.__init_sigma()  # Will initialise the nuclear width
+        self.__create_folderpath(folder_structure)
 
         # Carry out the propagation
         self.__init_step()  # Get things prepared for RK4 (propagate positions)
         self.__main_loop()  # Loop over all steps and propagate
         self.__finalise()  # Finish up and tidy
     
-    def __create_folderpath(self):
+    def __create_folderpath(self, folder_structure):
         """
-        Will determine where to store the data.
+        Will determine where to store the data. 
+
+        Inputs: folder_sStructure [list <str>] a list of keys to the ctmqc_env
+           dictionary that determines the folderstructure of the
+           data folders.
+
+        What it does: This function will create the folder that the data
+           will be saved in and stored as an attribute named self.save_folder.
+
+        How it works: This is based on the parameters that are inputted into
+           the simulation so different runs are stored in different places
+           that are easy to find.
         """
         if bool(self.root_folder) is False:
-            self.saveFolder = False
+            self.save_folder = False
             return
         self.root_folder = os.path.abspath(self.root_folder)
-        
-        eHStr = "Ehren"
-        if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-            eHStr = "CTMQC"
-        elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-            eHStr = "CTMQCF_EhC"
-        elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
-            eHStr = "CTMQCC_EhF"
 
-        modelStr = "Model_%s" % str(self.ctmqc_env['tullyModel'])
-        mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
-        if int(mom) == mom:
-            mom = int(mom)
-        momStr = "Kinit_%s" % str(mom).replace(".", "x")
-        if self.ctmqc_env['do_sigma_calc']:
-            sigStr = "varSig"
-        else:
-            sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-        self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                              modelStr, momStr)
+        # First determine some special params
+        CT_str = "Ehren"
+        if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
+           CT_str = "CTMQC"
+        elif self.ctmqc_env['do_QM_F'] and not self.ctmqc_env['do_QM_C']:
+           CT_str = "n-CTMQC"
+        elif not self.ctmqc_env['do_QM_F'] and self.ctmqc_env['do_QM_C']:
+           CT_str = "e-CTMQC"
+
+        mom = round(self.ctmqc_env['mass'] * self.ctmqc_env['vel'][0], 7)
+        if int(mom) == mom: mom = int(mom)
+        mom_str = "Kinit=%s" % (str(mom).replace(".", "x").strip())
+
+        model_str = "Model_%i" % self.ctmqc_env['tullyModel']
+
+        params = {i: str(i) + "=" + str(self.ctmqc_env[i]) for i in self.ctmqc_env}
+        params['ctmqc'] = CT_str
+        params['model'] = model_str
+        params['mom'] = mom_str
         
-        # This should be recursive but I can't be bothered making it work in a
-        #   class.
-        count = 0
-        rootFold = self.root_folder[:]
-        while (os.path.isdir(self.saveFolder)):
-            self.root_folder = "%s_%i" % (rootFold, count)
-            if self.root_folder is False:
-                self.root_folder = os.getcwd()
-            self.root_folder = os.path.abspath(self.root_folder)
+        # Create the folderpath from the structure given
+        folderPath = "/".join([params[i] for i in folder_structure])
+        self.save_folder = "%s/%s" % (self.root_folder, folderPath)
+
+        # If the folder already exists then move the contents into a Repeat
+        #  folder and create more Repeats
+        if os.path.isdir(self.save_folder):
+            # move any straggling files into a Repeat folder
+            oSaveF = self.save_folder[:]
+            self.save_folder = "%s/Repeat" % self.save_folder
+            if not os.path.isdir(self.save_folder):
+               os.mkdir(self.save_folder)
+               for f in os.listdir(oSaveF):
+                  oldFile = "%s/%s" % (oSaveF, f) 
+                  if os.path.isfile(oldFile) and '.npy' in oldFile:
+                     os.rename(oldFile, "%s/%s" % (self.save_folder, f))
             
-            eHStr = "Ehren"
-            if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQC"
-            elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQCF_EhC"
-            elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQCC_EhF"
-    
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
-            momStr = "Kinit_%s" % str(mom).replace(".", "x")
-            if int(mom) == mom:
-                mom = int(mom)
-            if self.ctmqc_env['do_sigma_calc']:
-                sigStr = "varSig"
-            else:
-                sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-            self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                                  modelStr, momStr)
-            count += 1
-        
-        try:
-            os.makedirs(self.saveFolder)
-        except OSError:
-            if bool(self.root_folder) is False:
-                self.saveFolder = False
-                return
-            self.root_folder = os.path.abspath(self.root_folder)
-            
-            eHStr = "Ehren"
-            if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQC"
-            elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQCF_EhC"
-            elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
-                eHStr = "CTMQCC_EhF"
-    
-            mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
-            momStr = "Kinit_%s" % str(mom).replace(".", "x")
-            if int(mom) == mom:
-                mom = int(mom)
-            if self.ctmqc_env['do_sigma_calc']:
-                sigStr = "varSig"
-            else:
-                sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-            self.saveFolder = "%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                                  modelStr, momStr)
-            
-            # This should be recursive but I can't be bothered making it work in a
-            #   class.
-            count = 0
-            rootFold = self.root_folder[:]
-            while (os.path.isdir(self.saveFolder)):
-                self.root_folder = "%s_%i" % (rootFold, count)
-                if self.root_folder is False:
-                    self.root_folder = os.getcwd()
-                self.root_folder = os.path.abspath(self.root_folder)
-                
-                eHStr = "Ehren"
-                if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                    eHStr = "CTMQC"
-                elif not self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
-                    eHStr = "CTMQCF_EhC"
-                elif self.ctmqc_env['do_QM_C'] and not self.ctmqc_env['do_QM_F']:
-                    eHStr = "CTMQCC_EhF"
-        
-                mom = np.round(self.ctmqc_env['vel'][0] * self.ctmqc_env['mass'][0], 7)
-                momStr = "Kinit_%s" % str(mom).replace(".", "x")
-                if int(mom) == mom:
-                    mom = int(mom)
-                if self.ctmqc_env['do_sigma_calc']:
-                    sigStr = "varSig"
-                else:
-                    sigStr = "%.2gSig" % self.ctmqc_env['sigma'][0]
-                self.saveFolder = "%s/%s/%s/%s/%s" % (self.root_folder, eHStr,
-                                                      modelStr, momStr, sigStr)
+            # Create a new repeat
+            count = 1
+            oSaveF = self.save_folder[:]
+            while os.path.isdir(self.save_folder):
+                self.save_folder = oSaveF + "_%i" % count
                 count += 1
-#        print("\r%s" % self.saveFolder, end="\r")
+        
     
     def __init_nsteps(self):
         """
@@ -421,6 +434,7 @@ class CTMQC(object):
 
         # Check pos array
         if 'vel' in self.ctmqc_env:
+            self.ctmqc_env['velInit'] = np.mean(self.ctmqc_env['vel'])
             self.ctmqc_env['vel'] = np.array(self.ctmqc_env['vel'],
                                              dtype=np.float64)
             nrep1, = np.shape(self.ctmqc_env['vel'])
@@ -481,11 +495,15 @@ class CTMQC(object):
         self.allQlk = np.zeros((nstep, nrep, nstate, nstate))
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
-        self.allRI0 = np.zeros((nstep, nrep))
-        self.allEffR = np.zeros((nstep))
+        self.allEffR = np.zeros((nstep, nstate, nstate))
+        if self.ctmqc_env['Qlk_type'] == 'sigmal':
+            self.allRl = np.zeros((nstep, nstate))
+        elif self.ctmqc_env['Qlk_type'] == 'Min17':
+            self.allRl = np.zeros((nstep, nrep))
+        else:
+            raise SystemExit("Either use `sigmal` or `Min17` for the Qlk_type")
         self.allSigma = np.zeros((nstep, nrep))
         self.allSigmal = np.zeros((nstep, nstate))
-        self.allRl = np.zeros((nstep, nstate))
 
         # For propagating dynamics
         self.ctmqc_env['frc'] = np.zeros((nrep))
@@ -506,12 +524,16 @@ class CTMQC(object):
         self.ctmqc_env['alpha'] = np.zeros((nrep))
         self.ctmqc_env['alphal'] = 0.0
         self.ctmqc_env['sigmal'] = np.zeros(nstate)
-        self.ctmqc_env['Rl'] = np.zeros(nstate)
+        self.ctmqc_env['effR'] = np.zeros((nstate, nstate))
+        if self.ctmqc_env['Qlk_type'] == 'sigmal':
+            self.ctmqc_env['Rl'] = np.zeros(nstate)
+        elif self.ctmqc_env['Qlk_type'] == 'Min17':
+            self.ctmqc_env['Rl'] = np.zeros(nrep)
+        else:
+            raise SystemExit("Either use `sigmal` or `Min17` for the Qlk_type")
         self.ctmqc_env['Qlk'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['Qlk_tm'] = np.zeros((nrep, nstate, nstate))
-        self.ctmqc_env['effR'] = 0.0 
         self.ctmqc_env['Rlk'] = np.zeros((nstate, nstate))
-        self.ctmqc_env['RI0'] = np.zeros((nrep))
         self.ctmqc_env['Rlk_tm'] = np.zeros((nstate, nstate))
 
     def __init_tully_model(self):
@@ -601,17 +623,19 @@ class CTMQC(object):
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
                 if any(Ck > 0.995 for Ck in self.ctmqc_env['adPops'][irep]):
-                    adMom = 0.8 * self.ctmqc_env['adMom'][irep]
+                    adMom = 0.0 * self.ctmqc_env['adMom'][irep]
                 else:
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
 
         # Do for all reps
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-            if self.ctmqc_env['do_sigma_calc']:
-                qUt.calc_sigma(self.ctmqc_env)
-#            self.ctmqc_env['Qlk'] = qUt.calc_Qlk(self.ctmqc_env)
-            self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
+            #if self.ctmqc_env['do_sigma_calc']:
+            #    qUt.calc_sigma(self.ctmqc_env)
+            if self.ctmqc_env['Qlk_type'] == 'Min17':
+                self.ctmqc_env['Qlk'] = qUt.calc_Qlk_Min17(self.ctmqc_env)
+            if self.ctmqc_env['Qlk_type'] == 'sigmal':
+                self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
 
     def __main_loop(self):
         """
@@ -678,7 +702,7 @@ class CTMQC(object):
             self.ctmqc_env['F_eh'][irep] = Feh
             self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
-            self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass'][0]
+            self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass']
 
     def __prop_wf(self):
         """
@@ -687,16 +711,10 @@ class CTMQC(object):
         """
         # Propagate WF
 #        t1 = time.time()
-        if self.ctmqc_env['do_QM_C']:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_QM(self.ctmqc_env)
-            else:
-                e_prop.do_diab_prop_QM(self.ctmqc_env)
+        if self.adiab_diab == 'adiab':
+            e_prop.do_adiab_prop(self.ctmqc_env)
         else:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
-            else:
-                e_prop.do_diab_prop_ehren(self.ctmqc_env)
+            e_prop.do_diab_prop(self.ctmqc_env)
         t2 = time.time()
 
         # Check the norm
@@ -731,7 +749,6 @@ class CTMQC(object):
         t1 = time.time()
         self.__calc_quantities()
         t2 = time.time()
-
         self.__prop_wf()
         t3 = time.time()
         self.__calc_F()
@@ -781,7 +798,6 @@ class CTMQC(object):
         self.allQlk[istep] = self.ctmqc_env['Qlk']
         self.allRlk[istep] = self.ctmqc_env['Rlk']
         self.allEffR[istep] = self.ctmqc_env['effR']
-        self.allRI0[istep] = self.ctmqc_env['RI0']
         self.allSigma[istep] = self.ctmqc_env['sigma']
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
         self.allRl[istep] = self.ctmqc_env['Rl']
@@ -809,7 +825,6 @@ class CTMQC(object):
         self.allv = self.allv[:self.ctmqc_env['iter']]
         self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
         self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
-        self.allRI0 = self.allRI0[:self.ctmqc_env['iter']]
         self.allEffR = self.allEffR[:self.ctmqc_env['iter']]
         self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
         self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
@@ -838,8 +853,8 @@ class CTMQC(object):
         """
         Will save all the arrays as numpy binary files.
         """
-        if not os.path.isdir(self.saveFolder):
-            os.makedirs(self.saveFolder)
+        if not os.path.isdir(self.save_folder):
+            os.makedirs(self.save_folder)
 
         names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
                 "H", "f", "Fad", "vel", "Qlk", "Rlk", "RI0", "sigma", "sigmal",
@@ -847,10 +862,10 @@ class CTMQC(object):
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
-                self.allRlk, self.allRI0, self.allSigma, self.allSigmal,
+                self.allRlk, self.allSigma, self.allSigmal,
                 self.allNACV, self.allRl]
         for name, arr in zip(names, arrs):
-            savepath = "%s/%s" % (self.saveFolder, name)
+            savepath = "%s/%s" % (self.save_folder, name)
             np.save(savepath, arr)
 
         # Save little things like the strs and int vars etc...
@@ -858,7 +873,7 @@ class CTMQC(object):
         tullyInfo = {i:self.ctmqc_env[i] 
                        for i in self.ctmqc_env
                        if isinstance(self.ctmqc_env[i], saveTypes)}
-        np.save("%s/tullyInfo" % self.saveFolder, tullyInfo)
+        np.save("%s/tullyInfo" % self.save_folder, tullyInfo)
         
 
     def __checkVV(self):
@@ -890,13 +905,13 @@ class CTMQC(object):
         self.allt = np.array(self.allt)
         self.__chop_arrays()
         # Small runs are probably tests
-        if self.ctmqc_env['iter'] > 30 and self.saveFolder:
+        if self.ctmqc_env['iter'] > 30 and self.save_folder:
             self.__store_data()
         
         # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
         if any([all([self.ctmqc_env['do_QM_F'],
-                self.ctmqc_env['do_QM_C']]),
-               self.ctmqc_env['iter'] < 10]) is False:
+                     self.ctmqc_env['do_QM_C']]),
+                self.ctmqc_env['iter'] < 10]) is False:
             self.__checkVV()
         
         # Print some useful info
@@ -913,7 +928,7 @@ class CTMQC(object):
 #
 #        msg += "\n\nAverage Times:"
 #        print(msg)
-        print("Finished. Saving in %s" % self.saveFolder)
+        print("Finished. Saving in %s" % self.save_folder)
 #        print_timings(self.allTimes, 1)
 
     def plot_avg_vel(self):
@@ -945,7 +960,7 @@ def get_ener_drift(runData):
     Will get total energy drift.
     """
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
-    kinE = 0.5 * runData.ctmqc_env['mass'][0] * (runData.allv**2)
+    kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
     totE = potE + kinE
     avgTotE = np.mean(totE, axis=1)
     Ndt = runData.ctmqc_env['dt']
@@ -982,23 +997,18 @@ def save_vitals(runData):
         f.write("%i,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
 
     
-def doSim(i):
-    velMultiplier = all_velMultiplier[i]
-    maxTime = all_maxTime[i]
-    model = all_model[i]
-    p_mean = all_p_mean[i]
-    doCTMQC_C = all_doCTMQC_C[i]
-    doCTMQC_F = all_doCTMQC_F[i]
-    nRep = all_nRep[i]
+def doSim(iSim):
+    velMultiplier = all_velMultiplier[iSim]
+    maxTime = all_maxTime[iSim]
+    model = all_model[iSim]
+    p_mean = all_p_mean[iSim]
+    doCTMQC_C = all_doCTMQC_C[iSim]
+    doCTMQC_F = all_doCTMQC_F[iSim]
+    nRep = all_nRep[iSim]
     
     v_mean = 5e-3 * velMultiplier
     v_std = 0  # 2.5e-4 * 0.7
-    #if v_mean != 0:
-    #   p_std = 10. / float(v_mean * mass)
-    #else:
-    #   p_std = 0.
-
-    p_std = np.sqrt(2)
+    p_std = np.sqrt(2)  # 15. / float(v_mean * mass)
     s_std = 0
     
     coeff = [[complex(1, 0), complex(0, 0)]
@@ -1007,6 +1017,7 @@ def doSim(i):
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
     
+
     corrV = 1
     if np.mean(vel) != 0:
         corrV = v_mean / np.mean(vel)
@@ -1022,7 +1033,7 @@ def doSim(i):
     # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
                       doCTMQC_C, doCTMQC_F)
-    runData = CTMQC(ctmqc_env, rootFolder)
+    runData = CTMQC(ctmqc_env, rootFolder, mfolder_structure)
     save_vitals(runData)
     return runData
 
@@ -1039,18 +1050,21 @@ def get_min_procs(nSim, maxProcs):
    nProc = min([nSim, 16])
    nProc = min([nProc, mp.cpu_count() // 2])
    sims_to_procs = np.ceil(nSim / nProc)
-   for i in range(nProc, 1, -1):
+   for i in range(nProc+1, 1, -1):
        if np.ceil(nSim / i) == sims_to_procs:
            nProc = i
        else:
            break
+
    return nProc
 
 
 if nSim > 1:
     import multiprocessing as mp
     
+
     nProc = get_min_procs(nSim, 16)
+    print("Using %i processes for %i sims" % (nProc, nSim))
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
     pool.map(doSim, range(nSim))
@@ -1059,15 +1073,20 @@ else:
     for iSim in range(nSim):
         runData = doSim(iSim)
 
-        #test.vel_is_diff_x(runData)
+#        test.vel_is_diff_x(runData)
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
+#    plotPaper.params['tullyModel'] = runData.ctmqc_env['tullyModel']
+#    plotPaper.params['momentum'] = (runData.allv[0, 0] / 0.0005) > 20
+#    plotPaper.params['whichSimType'] = ['CTMQC']
+#    plotPaper.params['whichQuantity'] = 'pops'
+#    f, a = plotPaper.plot_data(plotPaper.params)
     plot.plotPops(runData)
     #plot.plotRabi(runData)
     #plot.plotDeco(runData)
     #plot.plotRlk_Rl(runData)
-    plot.plotNorm(runData)
-    plot.plotEcons(runData)
+    #plot.plotNorm(runData)
+    #plot.plotEcons(runData)
     #plot.plotSigmal(runData)
     #plot.plotQlk(runData)
     #plot.plotS26(runData)

@@ -13,9 +13,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '/scratch/mellis/TullyModelData/FullCTMQC_gradRlk'
-model = 3
-whichPlot = 'compFred normEner'
+mroot_folder = '' # /scratch/mellis/TullyModelData/FullCTMQC_gradRlk'
+model = 1
+whichPlot = 'compFred'# normEner'
 numStd = 1
 std_or_allSim = "std"
 rm_bad_sims = True
@@ -102,8 +102,8 @@ def plotFredData(rootFolder, model, momentum=False,
                     axes[ix, iy].set_ylabel("coherence", fontsize=20)
             
             else:
-                axes[ix, iy].set_ylim([0, 1])
-                axes[ix, iy].set_yticks([0, 0.5, 1.0])
+                #axes[ix, iy].set_ylim([0, 1])
+                #axes[ix, iy].set_yticks([0, 0.5, 1.0])
                 if iy == 0:
                     axes[ix, iy].set_ylabel("populations", fontsize=20)
             

@@ -7,8 +7,8 @@ Created on Mon May 13 12:25:43 2019
 @author: oem
 """
 import numpy as np
-import scipy.integrate as integrate
-import random as rd
+#import scipy.integrate as integrate
+#import random as rd
 
 
 def calc_ad_frc(pos, ctmqc_env):
@@ -22,17 +22,6 @@ def calc_ad_frc(pos, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     gradE = np.array(np.gradient(allE, dx, axis=0))[1]
-
-    if ctmqc_env['tullyModel'] == 'lin' and np.round(gradE[0], 7) != -0.01:
-      print(gradE[0])
-      print(gradE[0] != -0.01)
-      print("H:")
-      [print(H, "\n") for H in allH]
-      print("E:")
-      [print(E, "\n") for E in allE]
-      print("dE/dx")
-      print(gradE)
-      raise SystemExit("BREAK")
 
     return -gradE
 
@@ -102,23 +91,29 @@ def Rlk_is_spiking(Rlk, ctmqc_env):
     #minus = minRl - tol #(tol * stdRl)
     #plus = maxRl + tol #(tol * stdRl)
 
+    Rlk = Rlk[0, 1]
     gradRlk = (Rlk - ctmqc_env['Rlk_tm'][0, 1]) / ctmqc_env['dt']
     if abs(gradRlk) > ctmqc_env['gradTol']: # or Rlk > plus or Rlk < minus:
        return True
     return False
 
 
-def get_effectiveR(ctmqc_env):
+def get_effectiveR(ctmqc_env, Rlk, alternativeR):
     """
     Will return the 'effectiveR' term. That is the intercept that has the
     spikes removed.
     """
-    Rlk = ctmqc_env['Rlk'][0, 1]
     ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, ctmqc_env)
+#    ctmqc_env['isSpiking'] = True
 
     # If it is spiking do something to fix it
     if ctmqc_env['isSpiking']:
-        effR = np.mean(ctmqc_env['Rl'])
+        effR = np.zeros_like(Rlk)
+        meanR = np.mean(alternativeR)
+        for l in range(ctmqc_env['nstate']):
+            for k in range(l):
+                effR[l, k] = meanR
+                effR[k, l] = meanR
     else:
         effR = Rlk
     
@@ -154,14 +149,14 @@ def calc_Qlk_2state(ctmqc_env):
     ctmqc_env['Rlk'][0, 1] = Rlk
     ctmqc_env['Rlk'][1, 0] = Rlk
     
-    effR = get_effectiveR(ctmqc_env)
+    effR = get_effectiveR(ctmqc_env, ctmqc_env['Rlk'], ctmqc_env['Rl'])
     
     Qlk = np.zeros((nRep, nState, nState))
     for I in range(nRep):
-        Qlk[I, 0, 1] = ctmqc_env['pos'][I] - effR
-        Qlk[I, 1, 0] = ctmqc_env['pos'][I] - effR
+        Qlk[I, 0, 1] = ctmqc_env['pos'][I] - effR[0, 1]
+        Qlk[I, 1, 0] = ctmqc_env['pos'][I] - effR[1, 0]
     Qlk = np.nan_to_num(Qlk)
-    Qlk = alpha * Qlk / ctmqc_env['mass'][0]
+    Qlk = alpha * Qlk / ctmqc_env['mass']
     
     return Qlk
 
@@ -191,26 +186,155 @@ def calc_sigmal(ctmqc_env):
     
     ctmqc_env['sigmal'] = sigmal
     ctmqc_env['Rl'] = Rl
+
+
+def calc_all_prod_gauss(ctmqc_env):
+    """
+    Will calculate the product of the gaussians in a more efficient way than
+    simply brute forcing it.
+    """
+    nRep = ctmqc_env['nrep']
     
+    # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
+    prefact = ctmqc_env['sigma']**(-1)
+    # Calculate the exponent
+    exponent = np.zeros((nRep, nRep))
+    for I in range(nRep):
+        RIv = ctmqc_env['pos'][I]
+        for J in range(nRep):
+            RJv = ctmqc_env['pos'][J]
+            sJv = ctmqc_env['sigma'][J]
+            
+            exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
+    return np.exp(exponent * 0.5) * prefact
 
-def test_QM_calc(ctmqc_env):
+
+def calc_WIJ(ctmqc_env, reps_to_complete=False):
     """
-    Will compare the output of the analytic QM calculation and the finite
-    difference one.
+    Will calculate alpha for all replicas and atoms
     """
-    allDiffs = calc_QM_analytic(ctmqc_env) - calc_QM_FD(ctmqc_env)
-    allPos = ctmqc_env['pos']
+    nRep = ctmqc_env['nrep']
+    WIJ = np.zeros((nRep, nRep))
+    allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env)
 
-    print("Avg Abs Diff = %.2g +/- %.2g" % (np.mean(allDiffs),
-                                              np.std(allDiffs)))
-    print("Max Abs Diff = %.2g" % np.max(np.abs(allDiffs)))
-    print("Min Abs Diff = %.2g" % np.min(np.abs(allDiffs)))
-    if np.max(np.abs(allDiffs)) > 1e-5:
-        raise SystemExit("Analytic Quantum Momentum != Finite Difference")
+    if reps_to_complete is not False:
+        for I in reps_to_complete:
+            # Calc WIJ and alpha
+            sigma2 = ctmqc_env['sigma']**2
+            WIJ[I, :] = allProdGauss_IJ[I, :] \
+                            / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
+        WIJ /= 2.
+    else:
+         for I in range(nRep):
+            # Calc WIJ and alpha
+            sigma2 = ctmqc_env['sigma']**2
+            WIJ[I, :] = allProdGauss_IJ[I, :] \
+                            / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
+    return WIJ
 
-    return allDiffs, allPos
+
+def calc_Ylk(ctmqc_env):
+    """
+    Will calculate the Ylk value that appears in the Rlk quantity
+    """
+    Ylk = np.zeros((ctmqc_env['nrep'],
+                    ctmqc_env['nstate'],
+                    ctmqc_env['nstate']))
+    
+    # Can eventually use antisymmtery for this.
+    for I in range(ctmqc_env['nrep']):
+        for l in range(ctmqc_env['nstate']):
+            for k in range(ctmqc_env['nstate']):
+                Clk = ctmqc_env['adPops'][I, l] * ctmqc_env['adPops'][I, k]
+                fl = ctmqc_env['adMom'][I, l]
+                fk = ctmqc_env['adMom'][I, k]
+                Ylk[I, l, k] = Clk  * (fk - fl)
+    return Ylk
 
 
+def calc_Rlk(ctmqc_env, alpha):
+    """
+    Will calculate the pair-wise state dependence intercept used in the
+    calculation of Qlk
+    """
+    Ylk = calc_Ylk(ctmqc_env)
+    summed_Ylk = np.sum(Ylk, axis=0)
+    Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))
+    
+    for l in range(ctmqc_env['nstate']):
+        for k in range(ctmqc_env['nstate']):
+            for I in range(ctmqc_env['nrep']):
+                RI = ctmqc_env['pos'][I]
+                Ylk_sum = summed_Ylk[l, k]
+                if summed_Ylk[l, k] != 0:
+                    Rlk[l, k] += RI * alpha[I] * Ylk[I, l, k] / Ylk_sum
+
+    return Rlk
+
+
+def calc_Gossel_sigma(ctmqc_env):
+    """
+    Will calculate the sigma parameter as laid out in Gossell, 18.
+    """
+    for I in range(ctmqc_env['nrep']):
+        ctmqc_env['const'] = float(ctmqc_env['const'])
+        R0 = ctmqc_env['const'] * ctmqc_env['sigma'][I]
+        distances = ctmqc_env['pos'][I] - ctmqc_env['pos']
+        mask = np.arange(len(distances))[np.abs(distances) < R0]
+        distances = distances[mask]
+
+        posSig = ctmqc_env['sigma'][ctmqc_env['sigma'] > 0.05]
+        if len(posSig):
+           sigma0 = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.min(posSig)
+        else:
+           sigma0 = 0.1
+        nrep = float(len(mask))
+       
+        avg_squared_dist = np.mean(distances**2)
+        avg_dist = np.mean(np.abs(distances))
+        newSigma = np.sqrt(avg_squared_dist - (avg_dist**2))
+
+        if newSigma < sigma0:
+            newSigma = sigma0
+
+        ctmqc_env['sigma'][I] = newSigma
+        
+
+def calc_Qlk_Min17(ctmqc_env):
+    """
+    Will calculate the quantum momentum as written in Min, 17.
+    """
+    if ctmqc_env['do_sigma_calc']:
+        calc_Gossel_sigma(ctmqc_env)
+
+    
+    # Verified by hand for a 3 rep system
+    WIJ = calc_WIJ(ctmqc_env)
+    alpha = np.sum(WIJ, axis=1)
+    R0 = np.sum(WIJ * ctmqc_env['pos'], axis=1)
+
+    # Now calculate intercept
+    Rlk = calc_Rlk(ctmqc_env, alpha)
+    
+    effR = get_effectiveR(ctmqc_env, Rlk, R0)
+    ctmqc_env['Rl'] = R0
+    ctmqc_env['Rlk'] = Rlk
+    ctmqc_env['effR'] = effR
+    
+    # Finally calculate Qlk
+    Qlk = np.zeros((ctmqc_env['nrep'],
+                    ctmqc_env['nstate'],
+                    ctmqc_env['nstate']))
+    for I in range(ctmqc_env['nrep']):
+        Qlk[I, :, :] = (alpha[I] * ctmqc_env['pos'][I]) - effR
+        for l in range(ctmqc_env['nstate']):
+            Qlk[I, l, l] = 0.0
+    
+    # Only for 2 states
+    if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
+        raise SystemExit("Qlk not symmetric!")
+    
+    return Qlk / ctmqc_env['mass']
 #test_norm_gauss()
     
 
@@ -351,7 +475,7 @@ def calc_QM_FD(ctmqc_env):
     
         QM[I] = -gradNuclDens/(2*nuclDens)
         
-    return QM / ctmqc_env['mass'][0]
+    return QM / ctmqc_env['mass']
 
 
 def calc_QM_analytic(ctmqc_env):
@@ -373,52 +497,11 @@ def calc_QM_analytic(ctmqc_env):
         # Calc QM
         QM[I] = np.sum(WIJ * (RIv - ctmqc_env['pos']))
         
-    return QM / ctmqc_env['mass'][0]
+    return QM / ctmqc_env['mass']
 
 
-def calc_all_prod_gauss(ctmqc_env):
-    """
-    Will calculate the product of the gaussians in a more efficient way than
-    simply brute forcing it.
-    """
-    nRep = ctmqc_env['nrep']
-    
-    # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
-    prefact = ctmqc_env['sigma']**(-1)
-    # Calculate the exponent
-    exponent = np.zeros((nRep, nRep))
-    for I in range(nRep):
-        RIv = ctmqc_env['pos'][I]
-        for J in range(nRep):
-            RJv = ctmqc_env['pos'][J]
-            sJv = ctmqc_env['sigma'][J]
-            
-            exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
-    return np.exp(exponent * 0.5) * prefact
 
 
-def calc_WIJ(ctmqc_env, reps_to_complete=False):
-    """
-    Will calculate alpha for all replicas and atoms
-    """
-    nRep = ctmqc_env['nrep']
-    WIJ = np.zeros((nRep, nRep))
-    allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env)
-
-    if reps_to_complete is not False:
-        for I in reps_to_complete:
-            # Calc WIJ and alpha
-            sigma2 = ctmqc_env['sigma']**2
-            WIJ[I, :] = allProdGauss_IJ[I, :] \
-                            / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
-        WIJ /= 2.
-    else:
-         for I in range(nRep):
-            # Calc WIJ and alpha
-            sigma2 = ctmqc_env['sigma']**2
-            WIJ[I, :] = allProdGauss_IJ[I, :] \
-                            / (2. * sigma2 * np.sum(allProdGauss_IJ[I, :]))
-    return WIJ
 
 
 def calc_Qlk(ctmqc_env):
@@ -492,7 +575,7 @@ def calc_Qlk(ctmqc_env):
             for l in range(nState):
                 for k in range(l):
                     if Rlk[l, k] > maxRI0 or Rlk[l, k] < minRI0:
-#                        Qlk[I] = ctmqc_env['Qlk_tm'][I] * ctmqc_env['mass'][0]
+#                        Qlk[I] = ctmqc_env['Qlk_tm'][I] * ctmqc_env['mass']
                         R[l, k] = RI0[I]
                         R[k, l] = RI0[I]
                     else:
@@ -504,9 +587,28 @@ def calc_Qlk(ctmqc_env):
             ctmqc_env['EffR'][I, :, :] = R
 
         # Divide by mass2
-        Qlk[:, :, :] /= ctmqc_env['mass'][0]
+        Qlk[:, :, :] /= ctmqc_env['mass']
     
 #        for I in ctmqc_env['QM_reps']
 
     return Qlk
+        
+
+def test_QM_calc(ctmqc_env):
+    """
+    Will compare the output of the analytic QM calculation and the finite
+    difference one.
+    """
+    allDiffs = calc_QM_analytic(ctmqc_env) - calc_QM_FD(ctmqc_env)
+    allPos = ctmqc_env['pos']
+
+    print("Avg Abs Diff = %.2g +/- %.2g" % (np.mean(allDiffs),
+                                              np.std(allDiffs)))
+    print("Max Abs Diff = %.2g" % np.max(np.abs(allDiffs)))
+    print("Min Abs Diff = %.2g" % np.min(np.abs(allDiffs)))
+    if np.max(np.abs(allDiffs)) > 1e-5:
+        raise SystemExit("Analytic Quantum Momentum != Finite Difference")
+
+    return allDiffs, allPos
+
 '''

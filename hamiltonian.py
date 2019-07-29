@@ -141,18 +141,18 @@ def calcNACV(irep, ctmqc_env):
     """
     pos = ctmqc_env['pos'][irep]
 
-    return calcNACVgradPhi(pos, ctmqc_env)
+    return calcNACVgradH(pos, ctmqc_env)
 
-def calcNACVgradH(irep, ctmqc_env):
+def calcNACVgradH(pos, ctmqc_env):
     """
     Will calculate the adiabatic NACV for replica irep
     """
     dx = ctmqc_env['dx']
     nState = ctmqc_env['nstate']
 
-    H_xm = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] - dx)
-    H_x = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep])
-    H_xp = ctmqc_env['Hfunc'](ctmqc_env['pos'][irep] + dx)
+    H_xm = ctmqc_env['Hfunc'](pos - dx)
+    H_x = ctmqc_env['Hfunc'](pos)
+    H_xp = ctmqc_env['Hfunc'](pos + dx)
 
     allH = [H_xm, H_x, H_xp]
     gradH = np.gradient(allH, dx, axis=0)[1]
@@ -182,7 +182,7 @@ def calcNACVgradH(irep, ctmqc_env):
 def test_Hfunc(Hfunc, minX=-15, maxX=15, stride=0.01):
     import matplotlib.pyplot as plt
     allR = np.arange(minX, maxX, stride)
-    allH = [Hfunc(x) for x in allR]
+    allH = [Hfunc({}, x) for x in allR]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     allE = np.array(allE)
     plt.plot(allR, allE[:, 0], 'g', label=r"E$_{1}^{ad}$")
@@ -210,18 +210,18 @@ def test_NACV(Hfunc):
     avgCase = np.mean(diff)
     std = np.std(diff)
     
-    import matplotlib.pyplot as plt
+    #import matplotlib.pyplot as plt
 
     print("Worst Case: {0}".format(worstCase))
     print("Best Case: {0}".format(bestCase))
     print("Mean Case: {0} +/- {1}".format(avgCase, std))
     
-    plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
-             label="calcNACV")
-    plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',
-             label="calcNACVgradPhi")
-    plt.legend()
-    plt.show()
+    #plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
+    #         label="calcNACV")
+    #plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',
+    #         label="calcNACVgradPhi")
+    #plt.legend()
+    #plt.show()
 
 
 #test_Hfunc(create_Hlin)

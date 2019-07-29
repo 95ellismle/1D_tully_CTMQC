@@ -22,7 +22,7 @@ Created on Tue Jun 18 15:54:51 2019
     
             ax = axes[0]
             fl_fk = (data.allAdMom[:, :, 0, 0] - data.allAdMom[:, :, 0, 1])
-            QM = data.allQlk[:, :, 0, 0, 1] * data.ctmqc_env['mass'][0]
+            QM = data.allQlk[:, :, 0, 0, 1] * data.ctmqc_env['mass']
             fl_fk *= QM
     
             def init_QM_fl_fk():
@@ -104,7 +104,7 @@ Created on Tue Jun 18 15:54:51 2019
             params = {'lw': 2, 'alpha': 1, 'ls': '--', 'color': 'b'}
             plot.plot_ad_pops(data.allt, avgData[:, 0, 1], params)
             plt.xlabel("Time [au_t]")
-            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
+            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass']),
                          (10, 0.5), fontsize=24)
     
     #        plt.title("Sigma = %.2f" % s_mean)
@@ -119,7 +119,7 @@ Created on Tue Jun 18 15:54:51 2019
     
             minD, maxD = np.min(avgDeco), np.max(avgDeco)
             rD = maxD - minD
-            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass'][0]),
+            plt.annotate(r"K$_0$ = %.1f au" % (v_mean * data.ctmqc_env['mass']),
                          (10, minD+(rD/2.)), fontsize=24)
             plt.ylabel("Coherence")
             plt.xlabel("Time [au_t]")
