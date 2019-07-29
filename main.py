@@ -22,9 +22,11 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
+inputs = "custom"
+
 
 #inputs = "FullCTMQC"
-inputs = "FullCTMQCGossel"
+#inputs = "FullCTMQCGossel"
 #inputs = "FullCTMQCGosselQuick"
 #inputs = "FullCTMQCEhren"
 #inputs = "quickFullCTMQC"
@@ -32,7 +34,6 @@ inputs = "FullCTMQCGossel"
 #inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren2"
 #inputs = "FullEhrenGossel"
-#inputs = "custom"
 
 rootSaveFold = "/scratch/mellis/TullyModelData"
 mfolder_structure = ['ctmqc', 'model', 'mom']
@@ -181,13 +182,13 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1
     mfolder_structure = []
-    all_nRep = [200]  # , 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300] 
-    all_velMultiplier = [3] * numRepeats * len(all_nRep)
-    all_maxTime = [1500] * numRepeats * len(all_nRep)
-    all_model = [3] * numRepeats * len(all_nRep)
+    all_nRep = [20]  # , 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300] 
+    all_velMultiplier = [2.5] * numRepeats * len(all_nRep)
+    all_maxTime = [2500] * numRepeats * len(all_nRep)
+    all_model = [2] * numRepeats * len(all_nRep)
     all_p_mean = [-15] * numRepeats * len(all_nRep)
     all_doCTMQC_C = ([True] * 2) * numRepeats * len(all_nRep)
-    all_doCTMQC_F = ([True] * 2)  * numRepeats * len(all_nRep)
+    all_doCTMQC_F = ([False] * 2)  * numRepeats * len(all_nRep)
     rootFolder = False #'%s/EhrenData' % rootSaveFold
 
 
@@ -204,12 +205,12 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'C': coeff,  # Intial WF |nrep, 2| -
+            'u': coeff,  # Intial WF |nrep, 2| -
             'mass': mass,  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 0.5,  # The timestep | |au_t
+            'dt': 1,  # The timestep | |au_t
             'elec_steps': 2,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
@@ -710,16 +711,10 @@ class CTMQC(object):
         """
         # Propagate WF
 #        t1 = time.time()
-        if self.ctmqc_env['do_QM_C']:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_QM(self.ctmqc_env)
-            else:
-                e_prop.do_diab_prop_QM(self.ctmqc_env)
+        if self.adiab_diab == 'adiab':
+            e_prop.do_adiab_prop(self.ctmqc_env)
         else:
-            if self.adiab_diab == 'adiab':
-                e_prop.do_adiab_prop_ehren(self.ctmqc_env)
-            else:
-                e_prop.do_diab_prop_ehren(self.ctmqc_env)
+            e_prop.do_diab_prop(self.ctmqc_env)
         t2 = time.time()
 
         # Check the norm
@@ -915,8 +910,8 @@ class CTMQC(object):
         
         # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
         if any([all([self.ctmqc_env['do_QM_F'],
-                self.ctmqc_env['do_QM_C']]),
-               self.ctmqc_env['iter'] < 10]) is False:
+                     self.ctmqc_env['do_QM_C']]),
+                self.ctmqc_env['iter'] < 10]) is False:
             self.__checkVV()
         
         # Print some useful info

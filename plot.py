@@ -12,7 +12,7 @@ def plotEcons(runData, f=False, a=False):
     energies.
     """
     lw = 0.5
-    alpha = 0.6    
+    alpha = 0.2  
     
     if a is False or f is False: f, a = plt.subplots(3)
 
@@ -22,7 +22,7 @@ def plotEcons(runData, f=False, a=False):
     totE = potE + kinE
     #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
     #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
-    a[0].plot(runData.allt, kinE[:, 0],
+    a[0].plot(runData.allt, kinE[:, :],
               label="Kin E", lw=lw, alpha=alpha)
     a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-',
               label="$\langle E$_{kin} \rangle$")
@@ -33,7 +33,7 @@ def plotEcons(runData, f=False, a=False):
     #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
     a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E")
     
-    a[2].plot(runData.allt, potE[:, 0],
+    a[2].plot(runData.allt, potE[:, :],
               label="E$_{1}$", lw=lw, alpha=alpha)
     a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
               label="$\langle E$_{pot} \rangle$")
