@@ -33,9 +33,9 @@ inputs = "custom"
 #inputs = "quickFullEhren"
 #inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren2"
-#inputs = "FullEhrenGossel"
+inputs = "FullEhrenGossel"
 
-rootSaveFold = "/scratch/mellis/TullyModelData"
+rootSaveFold = "./Data"
 mfolder_structure = ['ctmqc', 'model', 'mom']
 
 if inputs == "MomentumEhren1":
@@ -97,14 +97,15 @@ elif inputs == "quickFullEhrenGossel":
 elif inputs == "FullEhrenGossel":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 10
+    mfolder_structure = ['model', 'mom']
     all_velMultiplier = [4, 3, 3, 2.5,      1,    1,    1.6,  1.5] * numRepeats
     all_maxTime = [2000, 1500, 1500, 4000,  6000, 5000, 2500, 6000] * numRepeats
     all_model = [4, 3, 2, 1,                4,    3,    2,    1] * numRepeats
     all_p_mean = [-20, -15, -8, -20,        -20, -15,  -8,   -20] * numRepeats
     all_doCTMQC_C = ([False] * 8) * numRepeats
-    all_doCTMQC_F = ([False] * 8)  * numRepeats
-    rootFolder = '/scratch/mellis/TullyModelData/EhrenData/Repeat'
-    all_nRep = [200] * len(all_p_mean)
+    all_doCTMQC_F = ([False] * 8 )  * numRepeats
+    rootFolder = '%s/FullEhrenGossel' % rootSaveFold
+    all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQC":
     print("Carrying out full CTMQC testing!")
@@ -164,7 +165,7 @@ elif inputs == "FullCTMQCGossel":
     all_p_mean = [-20, -15, -8, -20,        -20, -15,  -8,   -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8 )  * numRepeats
-    rootFolder = '/scratch/mellis/TullyModelData/FullCTMQCGossel_ConstSig/'
+    rootFolder = '%s/FullCTMQCGossel' % rootSaveFold
     all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCGosselQuick":

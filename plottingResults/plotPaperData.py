@@ -7,8 +7,8 @@ import re
 MOMENTA = ['low', 'high']
 MODELS = [1, 2, 3, 4]
 QUANTITIES = ['pops', 'coherence']
-CT_or_EHs = ['CTMQC']
-root_folder = "/scratch/mellis/TullyModelData/FullCTMQCGossel_ConstSig"
+CT_or_EHs = ['ehrenfest']
+root_folder = "/home/oem/Documents/PhD/Code/1D_tully_CTMQC/Data/FullEhrenGossel"
 #root_folder = "/scratch/mellis/TullyModelData/EhrenData/Repeat_10"
 
 Q = raw_input("Turn autosave on?\n[y/n]:   ")
