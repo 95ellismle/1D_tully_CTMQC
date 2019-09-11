@@ -143,7 +143,7 @@ def plotAdFrc(runData, f=False, a=False):
 
 def plotFrc(runData, f=False, a=False):
     """ 
-    Will plot the adiabatic momentum
+    Will plot the total force
     """
     if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
@@ -226,7 +226,9 @@ def plotNorm(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
     dt = runData.ctmqc_env['dt']
+    # Sum over states
     allNorms = np.sum(runData.allAdPop, axis=2)
+    # Mean over all reps
     avgNorms = np.mean(allNorms, axis=1)
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)

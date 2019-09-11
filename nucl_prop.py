@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -21,19 +22,14 @@ def calc_ehren_adiab_force(irep, adFrc, adPops, ctmqc_env):
     
     # NACV bit
     for k in range(nstate):
-        for l in range(nstate):
+        for l in range(k):
+            if (l==k): continue
             Cl = np.conjugate(ctmqc_env['C'][irep, l])
             Ck = ctmqc_env['C'][irep, k]
             Clk = Cl * Ck
             Ekl = E[k] - E[l]
-            F -= Clk * Ekl * NACV[l, k]
-
-    if F.imag > 1e-12:
-        msg = "Something's gone wrong ehrenfest force "
-        msg += "-it has a imaginary component!"
-        raise SystemExit(msg)
-
-    return F.real
+            F -= 2 * (Clk * Ekl * NACV[l, k]).real
+    return F
 
 
 def calc_QM_force(C, QM, f, ctmqc_env):
@@ -46,6 +42,9 @@ def calc_QM_force(C, QM, f, ctmqc_env):
     F = 0.0
     for l in range(ctmqc_env['nstate']):
         for k in range(ctmqc_env['nstate']):
-            F += QM * f[l] * (f[k] - f[l]) * C[l] * C[k]
+            if l == k: continue
+            F += f[l] * (f[k] - f[l]) * C[k] * C[l]
+        
+    F *= -2 * QM
 
-    return -F * 2
+    return F

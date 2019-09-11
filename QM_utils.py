@@ -22,7 +22,7 @@ def calc_ad_frc(pos, ctmqc_env):
     allH = [H_xm, H_x, H_xp]
     allE = [np.linalg.eigh(H)[0] for H in allH]
     gradE = np.array(np.gradient(allE, dx, axis=0))[1]
-
+    
     return -gradE
 
 
@@ -244,11 +244,13 @@ def calc_Ylk(ctmqc_env):
     # Can eventually use antisymmtery for this.
     for I in range(ctmqc_env['nrep']):
         for l in range(ctmqc_env['nstate']):
-            for k in range(ctmqc_env['nstate']):
+            for k in range(l):
                 Clk = ctmqc_env['adPops'][I, l] * ctmqc_env['adPops'][I, k]
                 fl = ctmqc_env['adMom'][I, l]
                 fk = ctmqc_env['adMom'][I, k]
+                
                 Ylk[I, l, k] = Clk  * (fk - fl)
+                Ylk[I, k, l] = -Ylk[I, l, k]
     return Ylk
 
 
@@ -259,8 +261,8 @@ def calc_Rlk(ctmqc_env, alpha):
     """
     Ylk = calc_Ylk(ctmqc_env)
     summed_Ylk = np.sum(Ylk, axis=0)
-    Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))
-    
+
+    Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))  
     for l in range(ctmqc_env['nstate']):
         for k in range(ctmqc_env['nstate']):
             for I in range(ctmqc_env['nrep']):
@@ -288,7 +290,6 @@ def calc_Gossel_sigma(ctmqc_env):
            sigma0 = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.min(posSig)
         else:
            sigma0 = 0.1
-        nrep = float(len(mask))
        
         avg_squared_dist = np.mean(distances**2)
         avg_dist = np.mean(np.abs(distances))
@@ -316,10 +317,14 @@ def calc_Qlk_Min17(ctmqc_env):
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env, alpha)
     
-    effR = get_effectiveR(ctmqc_env, Rlk, R0)
-    ctmqc_env['Rl'] = R0
-    ctmqc_env['Rlk'] = Rlk
-    ctmqc_env['effR'] = effR
+    # Smooth out the intercept
+    effR = Rlk
+    if ctmqc_env['iter'] > 0:
+        effR = get_effectiveR(ctmqc_env, Rlk, R0)
+        ctmqc_env['Rl'] = R0
+        ctmqc_env['Rlk'] = Rlk
+        ctmqc_env['effR'] = effR
+    
     
     # Finally calculate Qlk
     Qlk = np.zeros((ctmqc_env['nrep'],
@@ -334,7 +339,9 @@ def calc_Qlk_Min17(ctmqc_env):
     if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
         raise SystemExit("Qlk not symmetric!")
     
-    return Qlk / ctmqc_env['mass']
+    Qlk /= ctmqc_env['mass']
+
+    return Qlk
 #test_norm_gauss()
     
 

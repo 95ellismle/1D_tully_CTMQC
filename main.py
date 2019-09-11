@@ -14,6 +14,7 @@ import datetime as dt
 import time
 import os
 import collections
+import re
 import subprocess
 
 import hamiltonian as Ham
@@ -24,7 +25,11 @@ import plot
 #from plottingResults import plotPaperData as plotPaper
 inputs = "custom"
 
-
+#inputs = "AllCTMQCNoDC"
+#inputs = "EhrenEnerCons"
+#inputs = "custom"
+#inputs = "EhrenNormCons"
+#inputs = "AllEhrenfestTest"
 #inputs = "FullCTMQC"
 #inputs = "FullCTMQCGossel"
 #inputs = "FullCTMQCGosselQuick"
@@ -33,12 +38,50 @@ inputs = "custom"
 #inputs = "quickFullEhren"
 #inputs = "quickFullEhrenGossel"
 #inputs = "MomentumEhren2"
-inputs = "FullEhrenGossel"
+#inputs = "FullEhrenGossel"
 
 rootSaveFold = "./Data"
-mfolder_structure = ['ctmqc', 'model', 'mom']
 
-if inputs == "MomentumEhren1":
+mfolder_structure = ['ctmqc', 'model', 'mom']
+all_dt = False
+all_elec_steps = False
+all_DC = False
+if inputs == "EhrenNormCons":
+    print("Ehrenfest Norm Data Creation")
+    all_elec_steps = [1, 5, 10, 25, 50, 75, 100, 250, 500, 700, 1000] * 4
+    numRepeats = len(all_elec_steps) // 4
+    mfolder_structure = ['elec_steps', 'model']
+    all_model = [1, 2, 3, 4] * numRepeats
+    all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
+    all_velMultiplier = [25, 3, 3, 4] * numRepeats
+    all_p_mean = [-8, -8, -15, -15] * numRepeats
+    all_doCTMQC_C = ([False] * 4) * numRepeats
+    all_doCTMQC_F = ([False] * 4)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/NormCons_vs_ElecDT'
+    all_nRep = [10] * 8 * numRepeats
+
+elif inputs == "EhrenEnerCons":
+    print("Ehrenfest Norm Data Creation")
+    all_dt = [1, 0.7, 0.5, 0.3, 0.1, 0.07, 0.05, 0.03, 0.01] * 4
+    all_elec_steps = [int(round(i / 0.01)) for i in all_dt
+                      if int(round(i / 0.01)) == round(i / 0.01)]
+    if len(all_dt) != len(all_elec_steps):
+        print("Nuclear and Electronic timesteps have different length arrays")
+        print("This is probably due to the if statement in the all_elec_steps")
+        print(" list comphrension.")
+        raise SystemExit("Float Rounding Error!")
+    numRepeats = len(all_elec_steps) // 4
+    mfolder_structure = ['dt', 'model']
+    all_model = [1, 2, 3, 4] * numRepeats
+    all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
+    all_velMultiplier = [25, 3, 3, 4] * numRepeats
+    all_p_mean = [-8, -8, -15, -15] * numRepeats
+    all_doCTMQC_C = ([False] * 4) * numRepeats
+    all_doCTMQC_F = ([False] * 4)  * numRepeats
+    rootFolder = '/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT'
+    all_nRep = [10] * 8 * numRepeats
+
+elif inputs == "MomentumEhren1":
     mfolder_structure = ['model', 'mom']
     all_velMultiplier = np.arange(0.02, 3, 0.02)
     all_maxTime = [(35.) / (v * 5e-3) for v in all_velMultiplier]
@@ -82,6 +125,50 @@ elif inputs == "MomentumEhren4":
     rootFolder = '%s/MomentumRuns' % rootSaveFold
     all_nRep = [1] * len(all_velMultiplier)
 
+elif inputs == "AllEhrenfestTest":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 8
+    all_velMultiplier = [4, 3, 3, 2.5, 
+                         1, 1, 1.6, 1.5,
+                         2, 1
+                         ] * numRepeats
+    all_maxTime = [3000, 1500, 1500, 4000,
+                   6000, 5500, 2500, 6000,
+                   2500, 3500] * numRepeats
+    all_model = [4, 3, 2, 1,
+                 4, 3, 2, 1,
+                 4, 1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,
+                  -20, -15, -8, -15,
+                  -15, -15] * numRepeats
+    all_doCTMQC_C = ([False] * 10) * numRepeats
+    all_doCTMQC_F = ([False] * 10)  * numRepeats
+    mfolder_structure = ['model', 'mom']
+    rootFolder = '/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare'
+    all_nRep = [200] * len(all_p_mean)
+    
+elif inputs == "AllCTMQCNoDC":
+    print("Carrying out Ehrenfest simulations!")
+    numRepeats = 5
+    all_velMultiplier = [4, 3, 3, 2.5, 
+                         1, 1, 1.6, 1.5,
+                         2, 1
+                         ] * numRepeats
+    all_maxTime = [3000, 1500, 1500, 4000,
+                   6000, 5500, 2500, 6000,
+                   2500, 3500] * numRepeats
+    all_model = [4, 3, 2, 1,
+                 4, 3, 2, 1,
+                 4, 1] * numRepeats
+    all_p_mean = [-20, -15, -8, -15,
+                  -20, -15, -8, -15,
+                  -15, -15] * numRepeats
+    all_doCTMQC_C = ([True] * 10) * numRepeats
+    all_doCTMQC_F = ([True] * 10)  * numRepeats
+    mfolder_structure = ['model', 'mom']
+    rootFolder = '/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare'
+    all_nRep = [200] * len(all_p_mean)
+    
 elif inputs == "quickFullEhrenGossel":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 1
@@ -183,14 +270,16 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1
     mfolder_structure = []
-    all_nRep = [20]  # , 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300] 
-    all_velMultiplier = [2.5] * numRepeats * len(all_nRep)
-    all_maxTime = [2500] * numRepeats * len(all_nRep)
-    all_model = [2] * numRepeats * len(all_nRep)
+    all_nRep = [1]  # , 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300] 
+    all_model = [3] * numRepeats * len(all_nRep)
+    all_velMultiplier = [3] * numRepeats * len(all_nRep)
+    all_maxTime = [1500] * numRepeats * len(all_nRep)
     all_p_mean = [-15] * numRepeats * len(all_nRep)
-    all_doCTMQC_C = ([True] * 2) * numRepeats * len(all_nRep)
+    all_dt = [0.5]
+    all_elec_steps = [10]
+    all_doCTMQC_C = ([False] * 2) * numRepeats * len(all_nRep)
     all_doCTMQC_F = ([False] * 2)  * numRepeats * len(all_nRep)
-    rootFolder = False #'%s/EhrenData' % rootSaveFold
+    rootFolder = False
 
 
 s_mean = 0.3
@@ -201,18 +290,40 @@ nSim = min([len(all_velMultiplier), len(all_maxTime),
             len(all_doCTMQC_F), len(all_nRep)])
 print("Nsim = %i" % nSim)
 
-def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F):
+
+# A quick dirty function to see how similar 2 floats are
+def get_sig_figs_diff(num1, num2):
+    min_len = min([len(re.sub("[^0-9]", "", str(num)))
+                   for num in (num1, num2)])
+    for sig_figs in range(1, 12):
+        str1 = ("%."+'%i' % sig_figs +'g') % num1
+        str2 = ("%."+'%i' % sig_figs +'g') % num2
+        if sig_figs == min_len-1:
+             break
+        if str1 != str2:
+            if sig_figs == 1:
+                print("The numbers don't share any common s.f")
+                return 0
+            print("Same to %i sf" % sig_figs)
+            return sig_figs
+
+    print("The numbers are the same") 
+    return np.inf
+
+    
+def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
+          dt=0.41341373336565040, elec_steps=5):
     # All units must be atomic units
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'u': coeff,  # Intial WF |nrep, 2| -
+            'C': coeff,  # Intial WF |nrep, 2| -
             'mass': mass,  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
             'dx': 1e-5,  # The increment for the NACV and grad E calc | | bohr
-            'dt': 1,  # The timestep | |au_t
-            'elec_steps': 2,  # Num elec. timesteps per nucl. one | | -
+            'dt': dt,  # The timestep | |au_t
+            'elec_steps': elec_steps,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': False,  # Dynamically adapt the value of sigma
@@ -575,6 +686,7 @@ class CTMQC(object):
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
             self.ctmqc_env['E'][irep], self.ctmqc_env['U'][irep] = E, U
 
+
         # Transform the coefficieints
         if 'u' in self.ctmqc_env:
             self.ctmqc_env['C'] = np.zeros((nrep, nstate),
@@ -637,6 +749,7 @@ class CTMQC(object):
                 self.ctmqc_env['Qlk'] = qUt.calc_Qlk_Min17(self.ctmqc_env)
             if self.ctmqc_env['Qlk_type'] == 'sigmal':
                 self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
+#        print("\n")
 
     def __main_loop(self):
         """
@@ -674,8 +787,11 @@ class CTMQC(object):
     #            print(" "*200, end="\r")
                 print(msg,
                       end="\r")
-            except (KeyboardInterrupt, SystemExit):
+            except (KeyboardInterrupt, SystemExit) as E:
+                print("\n\n\n\n\n\n\n\n\n------------\n\n\n\n\n\n\n\n\n\n\n\n")
                 print("\n\nOk Exiting Safely")
+                print("\n\n\n\n\n\n\n\n\n------------\n\n\n\n\n\n\n\n\n\n\n\n")
+                print(E)
                 return
 
     def __calc_F(self):
@@ -704,6 +820,8 @@ class CTMQC(object):
             self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
             self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass']
+#        print("\n")
+#        raise SystemExit("BREAK")
 
     def __prop_wf(self):
         """
@@ -1014,6 +1132,8 @@ def doSim(iSim):
     
     coeff = [[complex(1, 0), complex(0, 0)]
               for iRep in range(nRep)]
+#    coeff = [[complex(1/np.sqrt(2), 0), complex(1/np.sqrt(2), 0)]
+#              for iRep in range(nRep)]
     
     pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
@@ -1031,9 +1151,17 @@ def doSim(iSim):
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
+    elec_steps = 5
+    if all_elec_steps:
+        elec_steps = all_elec_steps[iSim]
+        
+    dt = 0.41341373336565040
+    if all_dt:
+        dt = all_dt[iSim]
+
     # Now run the simulation
     ctmqc_env = setup(pos, vel, coeff, sigma, maxTime, model,
-                      doCTMQC_C, doCTMQC_F)
+                      doCTMQC_C, doCTMQC_F, dt, elec_steps)
     runData = CTMQC(ctmqc_env, rootFolder, mfolder_structure)
     save_vitals(runData)
     return runData
@@ -1083,6 +1211,7 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 #    plotPaper.params['whichQuantity'] = 'pops'
 #    f, a = plotPaper.plot_data(plotPaper.params)
     plot.plotPops(runData)
+    plot.plotNorm(runData)
     #plot.plotRabi(runData)
     #plot.plotDeco(runData)
     #plot.plotRlk_Rl(runData)

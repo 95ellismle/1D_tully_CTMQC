@@ -51,7 +51,7 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
     else:
         V12 = B
     V22 = -A
-
+#    print(np.matrix([[V11, V12], [V12, V22]]))
     return np.matrix([[V11, V12], [V12, V22]])
 
 
@@ -94,12 +94,16 @@ def calcNACVgradPhi(pos, ctmqc_env):
     Will use a different method to calculate the NACV. This function will
     simply use:
         d = <phil | grad phik>
+        
+    This is slightly more unstable because sometimes the eigen solver sometimes
+    mixes up the order of the eigenvectors/eigenvalues which causes large
+    differences in phi for different pos.
     """
     dx = ctmqc_env['dx']
     H_xm = ctmqc_env['Hfunc'](pos - dx)
     H_x = ctmqc_env['Hfunc'](pos)
     H_xp = ctmqc_env['Hfunc'](pos + dx)
-    nstate = len(H_x)
+#    nstate = len(H_x)
 
     allU = [np.linalg.eigh(H)[1]
             for H in (H_xm, H_x, H_xp)]
@@ -111,24 +115,24 @@ def calcNACVgradPhi(pos, ctmqc_env):
         for k in range(2):
             NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
     
-    ## Check the anti-symettry of the NACV
-    #for l in range(len(NACV)):
-    #    for k in range(l+1, len(NACV)):
-    #        if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
-    #            print("\n\n\nPos: ", pos)
-    #            print("\nH_x: ", H_x)
-    #            print("\nH_xp: ", H_xp)
-    #            print("\nH_xm: ", H_xm)
-    #            print("\nU_xm: ", allU[0])
-    #            print("\nU_x: ", allU[1])
-    #            print("\nU_xp: ", allU[2])
-    #            print("\ngradU: ", gradU)
-    #            print("\nNACV:")
-    #            print(NACV)
-    #            print("\nNACV[%i, %i]: " % (l, k), NACV[l, k])
-    #            print("\nNACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
-    #            print("\n\n\n")
-    #            raise SystemExit("NACV not antisymetric!")
+    # Check the anti-symettry of the NACV
+    for l in range(len(NACV)):
+        for k in range(l+1, len(NACV)):
+            if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
+                print("\n\n\nPos: ", pos)
+                print("\nH_x: ", H_x)
+                print("\nH_xp: ", H_xp)
+                print("\nH_xm: ", H_xm)
+                print("\nU_xm: ", allU[0])
+                print("\nU_x: ", allU[1])
+                print("\nU_xp: ", allU[2])
+                print("\ngradU: ", gradU)
+                print("\nNACV:")
+                print(NACV)
+                print("\nNACV[%i, %i]: " % (l, k), NACV[l, k])
+                print("\nNACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
+                print("\n\n\n")
+                raise SystemExit("NACV not antisymetric!")
     
     NACV = 0.5*(NACV - NACV.T)
 

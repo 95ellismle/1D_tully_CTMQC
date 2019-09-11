@@ -65,13 +65,13 @@ def plotFredData(rootFolder, model, momentum=False,
                 
             tmpData = pd.read_csv("tmp.csv")
         
-            # Sort by x tmpData
+            # Data above 1 or below 0 is tweaked
             for name in names:
                 xname, yname = name+'_x', name+'_y'
                 tmpData[yname][tmpData[yname] > 1] = 1
                 tmpData[yname][tmpData[yname] < 0] = 0
                 
-            
+            # Plotting
             for iN, name in enumerate(plot_names):
                 col = colors[name]
     
