@@ -126,9 +126,29 @@ class SingleSimData(object):
             
             return slope
 
-        for i in necessary_quants:
-            if i not in self.__dict__keys():
-                print("Sorry I haven't loaded the `%s`" % i)
+        for quant in necessary_quants:
+            if quant not in self.__dict__keys():
+                print("Sorry I haven't loaded the `%s`" % quant)
+                print("Please change the `params_to_load` input to load this")
+    
+    def get_ener_drift(self):
+        """
+        Will get the data from the adiabatic populations
+        """
+        necessary_quants = ('times', 'E', "adPop", "v")
+        if all(j in self.__dict__.keys() for j in necessary_quants):
+            Epot = np.sum(self.E * self.adPop, axis=2)
+            Ekin = 0.5 * (self.v ** 2)
+            Etot = np.mean(Epot + Ekin, axis=1)
+            
+            fit = np.polyfit(self.times, Etot, 1)
+            slope = fit[0] * 1e6
+
+            return slope
+
+        for quant in necessary_quants:
+            if quant not in self.__dict__.keys():
+                print("Sorry I haven't loaded the `%s`" % quant)
                 print("Please change the `params_to_load` input to load this")
 
 
