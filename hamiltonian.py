@@ -116,23 +116,15 @@ def calcNACVgradPhi(pos, ctmqc_env):
             NACV[l, k] = np.dot(allU[1][l], gradU[1][k])[0][0]
     
     # Check the anti-symettry of the NACV
+    badNACV = False
     for l in range(len(NACV)):
         for k in range(l+1, len(NACV)):
             if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
-                print("\n\n\nPos: ", pos)
-                print("\nH_x: ", H_x)
-                print("\nH_xp: ", H_xp)
-                print("\nH_xm: ", H_xm)
-                print("\nU_xm: ", allU[0])
-                print("\nU_x: ", allU[1])
-                print("\nU_xp: ", allU[2])
-                print("\ngradU: ", gradU)
-                print("\nNACV:")
-                print(NACV)
-                print("\nNACV[%i, %i]: " % (l, k), NACV[l, k])
-                print("\nNACV[%i, %i]*: " % (l, k), np.conjugate(NACV[k, l]))
-                print("\n\n\n")
-                raise SystemExit("NACV not antisymetric!")
+                badNACV = True
+    
+    if badNACV:
+        print("gradPhi NACV bad switching to gradH")
+        NACV = calcNACVgradH(pos, ctmqc_env)
     
     NACV = 0.5*(NACV - NACV.T)
 
@@ -141,11 +133,14 @@ def calcNACVgradPhi(pos, ctmqc_env):
 
 def calcNACV(irep, ctmqc_env):
     """
-    Useless wrapper for calcNACVgradPhi function.
+    If we are using model 2 low momentum then use the gradPhi NACV
     """
     pos = ctmqc_env['pos'][irep]
 
-    return calcNACVgradH(pos, ctmqc_env)
+    if ctmqc_env['tullyModel'] == 2 and ctmqc_env['velInit'] < 0.01:
+        return calcNACVgradPhi(pos, ctmqc_env)
+    else:
+        return calcNACVgradH(pos, ctmqc_env)
 
 def calcNACVgradH(pos, ctmqc_env):
     """

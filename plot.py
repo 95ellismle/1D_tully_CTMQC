@@ -6,6 +6,40 @@ import numpy as np
 import os
 
 
+def plotTotE(runData, f=False, a=False):
+    """
+    Will just plot the total energy against time on a single axis (good for
+    plotting with other graphs).
+    """
+    lw = 0.5
+    alpha = 0.2  
+    
+    if a is False or f is False: f, a = plt.subplots()
+
+    
+    potE = np.sum(runData.allAdPop * runData.allE, axis=2)
+    kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
+    totE = potE + kinE
+
+    a.plot(runData.allt, totE, lw=lw, alpha=alpha)
+    avgTotE = np.mean(totE, axis=1)
+    a.plot(runData.allt, avgTotE, 'k', label="Tot. E")
+    
+    # Now get the conservation level
+    dt = runData.ctmqc_env['dt']
+    fit = np.polyfit(runData.allt, avgTotE, 1)
+    slope = fit[0] * dt * 41341.3745758
+    annotateMsg = r"Energy Drift = %.2g" % (slope)
+    annotateMsg += r" [$\frac{Ha}{atom ps}$]"
+    ypos = avgTotE[100] / 2.
+    xpos = runData.allt[100]
+    a.annotate(annotateMsg, (xpos, ypos), fontsize=20)
+
+    a.set_xlabel("Time [au]")
+    a.set_ylabel("Tot. E [au]")
+    print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
+
+
 def plotEcons(runData, f=False, a=False):
     """
     Will plot the conserved quantity along with the kinetice and potential

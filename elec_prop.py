@@ -168,9 +168,10 @@ def lin_interp_check(oldVal, interpVal, name):
     Will check if the linear interpolation went well for the named variable
     """
     if np.max(oldVal) > 1e-13:
-        if abs(np.max(oldVal - interpVal)/np.max(oldVal)) > 1e-10:
+        if abs(np.max(oldVal - interpVal)/np.max(oldVal)) > 1e-5:
             print("\n\nOld Value = ", oldVal)
             print("\n\nInterpolated Value = ", interpVal)
+            print("\n\nDifference = ", oldVal - interpVal)
             print("Quantity = %s" % name)
             raise SystemExit("Something went wrong with the linear " +
                                  "interpolation of the %s" % name)

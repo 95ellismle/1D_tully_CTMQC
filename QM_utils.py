@@ -319,12 +319,12 @@ def calc_Qlk_Min17(ctmqc_env):
     
     # Smooth out the intercept
     effR = Rlk
-    if ctmqc_env['iter'] > 0:
+    if ctmqc_env['iter'] > 0 and ctmqc_env['do_Rlk_smooth']:
         effR = get_effectiveR(ctmqc_env, Rlk, R0)
-        ctmqc_env['Rl'] = R0
-        ctmqc_env['Rlk'] = Rlk
-        ctmqc_env['effR'] = effR
-    
+
+    ctmqc_env['Rl'] = R0
+    ctmqc_env['Rlk'] = Rlk
+    ctmqc_env['effR'] = effR
     
     # Finally calculate Qlk
     Qlk = np.zeros((ctmqc_env['nrep'],
