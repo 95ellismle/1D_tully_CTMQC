@@ -23,9 +23,8 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "CTMQCNormCons"
+inputs = "EhrenEnerCons"
 
-#inputs = "AllCTMQCNoDC"
 #inputs = "EhrenEnerCons"
 #inputs = "custom"
 #inputs = "EhrenNormCons"
@@ -185,28 +184,6 @@ elif inputs == "AllEhrenfestTest":
     rootFolder = '%s/Ehrenfest_Data/Pops_Compare2' % rootSaveFold
     all_nRep = [200] * len(all_p_mean)
     
-elif inputs == "AllCTMQC":
-    print("Carrying out Ehrenfest simulations!")
-    numRepeats = 5
-    all_velMultiplier = [4, 3, 3, 2.5, 
-                         1, 1, 1.6, 1.5,
-                         2, 1
-                         ] * numRepeats
-    all_maxTime = [3000, 1500, 1500, 4000,
-                   6000, 5500, 2500, 6000,
-                   2500, 3500] * numRepeats
-    all_model = [4, 3, 2, 1,
-                 4, 3, 2, 1,
-                 4, 1] * numRepeats
-    all_p_mean = [-20, -15, -8, -15,
-                  -20, -15, -8, -15,
-                  -15, -15] * numRepeats
-    all_doCTMQC_C = ([True] * 10) * numRepeats
-    all_doCTMQC_F = ([True] * 10)  * numRepeats
-    mfolder_structure = ['model', 'mom']
-    rootFolder = '%s/Ehrenfest_Data/Pops_Compare' % rootSaveFold
-    all_nRep = [200] * len(all_p_mean)
-    
 elif inputs == "quickFullEhrenGossel":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 1
@@ -310,9 +287,9 @@ elif inputs == "FullCTMQCGosselQuick":
     all_nRep = [20] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
-    numRepeats = 1
-    mfolder_structure = []
-    all_nRep = [250] * numRepeats
+    numRepeats = 2
+    mfolder_structure = ['mom']
+    all_nRep = [1] * numRepeats
     all_model = [2] * numRepeats
     all_velMultiplier = [1.6] * numRepeats
     all_maxTime = [2500] * numRepeats
@@ -356,17 +333,17 @@ def get_time_taken_ordering_dict(all_nrep, all_max_time,
                                                              all_elec_steps)]
     all_inds = list(range(len(all_estimates)))
     all_sorted_inds = {i: ind[1] for i, ind in enumerate(sorted(zip(all_estimates, all_inds)))}
-    return all_sorted_inds
-    
+    return all_sorted_inds    
                      
 
 
 s_mean = 0.3
 mass = 2000
 
-nSim = min([len(all_velMultiplier), len(all_maxTime),
+all_lens = [len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
-            len(all_doCTMQC_F), len(all_nRep)])
+            len(all_doCTMQC_F), len(all_nRep)]
+nSim = min(all_lens)
 print("Nsim = %i" % nSim)
 
 
@@ -515,7 +492,7 @@ class CTMQC(object):
         elif not self.ctmqc_env['do_QM_F'] and self.ctmqc_env['do_QM_C']:
            CT_str = "e-CTMQC"
 
-        mom = round(self.ctmqc_env['mass'] * self.ctmqc_env['velInit'][0], 7)
+        mom = round(self.ctmqc_env['mass'] * self.ctmqc_env['velInit'], 7)
         if int(mom) == mom: mom = int(mom)
         mom_str = "Kinit=%s" % (str(mom).replace(".", "x").strip())
 
@@ -1268,6 +1245,8 @@ def get_min_procs(nSim, maxProcs):
         which holds due to the way the work is divided into
         blocks.
    """
+   if nSim <= maxProcs:
+       return nSim
    nProc = min([nSim, 16])
    nProc = min([nProc, mp.cpu_count() // 2])
    sims_to_procs = np.ceil(nSim / nProc)
@@ -1310,7 +1289,7 @@ if nSim > 1:
     all_SimSets = []
     newArr = []
     count = 0
-    while count < nSim:
+    while count < len(order_dict):
         if count % nProc == 0:
             if len(newArr) > 0:
                 all_SimSets.append(newArr)

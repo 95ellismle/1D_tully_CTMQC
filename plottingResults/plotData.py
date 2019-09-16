@@ -5,9 +5,9 @@ Created on Wed Sep 11 16:05:11 2019
 
 @author: mellis
 """
+import getData
 
 import matplotlib.pyplot as plt
-
 import numpy as np
 
 def plotNormVsElecDt(allNestedData, model, fig=False, axis=False):
@@ -20,13 +20,29 @@ def plotNormVsElecDt(allNestedData, model, fig=False, axis=False):
     elec_dts = [dt / data.elec_steps for data in allData]
     norms = [abs(data.get_norm_drift()) for data in allData]
 
+    repeats = False
+    if any([j == 0 for j in np.diff(elec_dts)]):
+        repeats = True
+
     if axis is False or fig is False:
         f, axis = plt.subplots()
 
-    axis.plot(elec_dts, norms, 'ko', ls='--')
+    if repeats is False:
+        axis.plot(elec_dts, norms, 'ko', ls='--')
+    else:
+        data = {}
+        for elec_dt, norm in zip(elec_dts, norms):
+            getData.add_to_list_in_dict(data, elec_dt, norm)
+    
+        x = [i for i in data]
+        y = [np.mean(data[i]) for i in data]
+        axis.plot(sorted(x), [i[1] for i in sorted(zip(x,y))],
+                  'ko', ls='--')
+        for i in data:
+            axis.plot([i] * len(data[i]), data[i], 'k-', lw=0.5)
     axis.set_yscale("log")
     axis.grid(color="#dddddd")
-    axis.set_ylabel("Norm Drift")
+    axis.set_ylabel("Norm Drift [$ps^{-1}$]")
     axis.set_xlabel("Electronic Timestep [as]")
     fig.suptitle("Nuclear dt = %.2g [as]" % (dt), fontsize=30)
 

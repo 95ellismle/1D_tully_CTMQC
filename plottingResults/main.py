@@ -68,7 +68,7 @@ choose Gossel.
 """
 plot_pop_lit_compare_ctmqc = False
 
-'''Plot the Ehrenfest norm conservation for model 1, 2, 3 and 4 for the 
+'''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the 
 high momentum cases vs timestep, using the gradPhi NACV and a constant 
 Nuclear timestep of 0.1 au.
 
@@ -300,7 +300,7 @@ if plot_pop_norm_Rlk:
                 a[2].set_ylabel("Intercept [bohr]")
                 
                 savePath = "/homes/mellis/Documents/Graphs/Tully_Models/" + \
-                            "CTMQC_Final_Data/Rlk_Story/AllNorm_Pop_Rlk"
+                            "CTMQC_Final_Data/Bad_Rlk/AllNorm_Pop_Rlk"
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
                 
@@ -351,7 +351,7 @@ if plot_frc_ener_Rlk:
                 a[2].set_ylabel("Rlk [bohr]")
                 
                 savePath = "/homes/mellis/Documents/Graphs/Tully_Models/" + \
-                            "CTMQC_Final_Data/Rlk_Story/AllEner_Frc_Rlk"
+                            "CTMQC_Final_Data/Bad_Rlk/AllEner_Frc_Rlk"
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
                 
