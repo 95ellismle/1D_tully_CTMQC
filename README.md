@@ -34,3 +34,4 @@ To use the code set the variable `inputs' at the top of the main.py code (in the
  - [x] 1 rep Qlk = 0
  - [x] All reps same Qlk = 0
  - [x] Sigma is rep independent Qlk = hbar/2 sigma^2
+ - [x] Equation S26
