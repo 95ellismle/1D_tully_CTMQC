@@ -10,12 +10,20 @@ import getData
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plotNormVsElecDt(allNestedData, model, fig=False, axis=False):
+def plotNormVsElecDt(allNestedData, model, fig=False, axis=False, params={},
+                     legendLabel=''):
     """
     Will plot the electronic timestep vs the norm for all the data in the
     nested data input for a certain model. BOB
     """
     allData = allNestedData.query_data({'tullyModel': model})
+
+    axis.set_yscale("log")
+    axis.grid(color="#dddddd")
+    axis.set_ylabel("Norm Drift [$ps^{-1}$]")
+    axis.set_xlabel("Electronic Timestep [as]")
+
+    if len(allData) == 0: return fig, axis
     dt = allData[0].dt * 24.188843265857  # in as
     elec_dts = [dt / data.elec_steps for data in allData]
     norms = [abs(data.get_norm_drift()) for data in allData]
@@ -37,17 +45,17 @@ def plotNormVsElecDt(allNestedData, model, fig=False, axis=False):
         x = [i for i in data]
         y = [np.mean(data[i]) for i in data]
         axis.plot(sorted(x), [i[1] for i in sorted(zip(x,y))],
-                  'ko', ls='--')
+                  'ko', ls='--', label=legendLabel, **params)
         for i in data:
-            axis.plot([i] * len(data[i]), data[i], 'k-', lw=0.5)
-    axis.set_yscale("log")
-    axis.grid(color="#dddddd")
-    axis.set_ylabel("Norm Drift [$ps^{-1}$]")
-    axis.set_xlabel("Electronic Timestep [as]")
+            axis.plot([i] * len(data[i]), data[i], 'k-', lw=0.5, **params)
+
     fig.suptitle("Nuclear dt = %.2g [as]" % (dt), fontsize=30)
 
+    return fig, axis
 
-def plotEnerVsNuclDt(allNestedData, model, fig=False, axis=False):
+
+def plotEnerVsNuclDt(allNestedData, model, fig=False, axis=False, params={},
+                     legendLabel=''):
     """
     Will plot the electronic timestep vs the norm for all the data in the
     nested data input for a certain model. BOB
@@ -61,7 +69,11 @@ def plotEnerVsNuclDt(allNestedData, model, fig=False, axis=False):
 
     nucl_dt = [data.dt * 24.188843265857 for data in allData]  # in as
     ener_drifts = [abs(data.get_ener_drift()) for data in allData]
-
+    
+    repeats = False
+    if any([j == 0 for j in np.diff(nucl_dt)]):
+        repeats = True
+    
     allD = sorted(zip(nucl_dt, ener_drifts))
     nucl_dt = [i[0] for i in allD]
     ener_drifts = [i[1] for i in allD]
@@ -69,9 +81,25 @@ def plotEnerVsNuclDt(allNestedData, model, fig=False, axis=False):
     if axis is False or fig is False:
         f, axis = plt.subplots()
 
-    axis.plot(nucl_dt, ener_drifts, 'ko', ls='--')
+    if repeats is False:    
+        axis.plot(nucl_dt, ener_drifts, 'ko', ls='--',
+                  label=legendLabel, **params)
+    else:
+        data = {}
+        for dt, eD in zip(nucl_dt, ener_drifts):
+            getData.add_to_list_in_dict(data, dt, eD)
+    
+        x = [i for i in data]
+        y = [np.mean(data[i]) for i in data]
+        axis.plot(sorted(x), [i[1] for i in sorted(zip(x,y))],
+                  'ko', ls='--', label=legendLabel, **params)
+        for i in data:
+            axis.plot([i] * len(data[i]), data[i], 'k-', lw=0.5, **params)
+
+        
     axis.set_yscale("log")
     axis.grid(color="#dddddd")
     axis.set_ylabel(r"Ener Drift [$\frac{Ha}{ps \ atom}$]")
     axis.set_xlabel("Nuclear Timestep [as]")
     fig.suptitle("Elec dt = %.2g [as]" % (elec_dt[0]), fontsize=30)
+    return fig, axis

@@ -47,14 +47,17 @@ class SingleSimData(object):
                  'time': ['T'], 'u': ['diab coeff'], 'C': ['ad coeff'],
                  'Fad': ['ad force'], 'f': ['ad mom'], 'NACV': ['dlk'],
                  'Qlk': ['QM', 'quantum momentum'], 'Rlk': ['intercept'],
-                 'sigma':[], 'vel': ['v'], 'Ftot': ['tot force']}
+                 'sigma':[], 'vel': ['v'], 'Ftot': ['tot force'],
+                 'effR': ['effective_R', 'effectiveR']}
 
     # What the filenames will be saved as
     conv_file_to_param_names = {'|C|^2': 'adPop', 'E': 'E', 'Feh': 'Feh',
                  'H': 'H', 'pos': 'R', 'Fqm': 'Fqm', 'RI0': 'RI0',
                  'sigmal': 'sig_l', 'time': 'times', 'u': 'u', 'C': 'C',
                  'Fad': 'Fad', 'f': 'f', 'NACV': 'dlk', 'Qlk': 'Qlk',
-                 'Rlk': 'Rlk', 'sigma':'sig', 'vel': 'v', 'Ftot': 'F'}
+                 'Rlk': 'Rlk', 'sigma':'sig', 'vel': 'v', 'Ftot': 'F',
+                 'effR':'effR'}
+
     def __init__(self, folderpath, params_to_read=False):
 
         # Check if the folder exists
@@ -143,8 +146,8 @@ class SingleSimData(object):
         check = self._check_necessary_quantities(necessary_quants)
         if not check: return False
 
-        norm = np.sum(self.adPop, axis=2)
-        norm = np.mean(norm, axis=1)
+        norm = np.sum(self.adPop, axis=2)  # Sum populations
+        norm = np.mean(norm, axis=1)  # Average over replicas
 
         fit = np.polyfit(self.times, norm, 1)
         slope = fit[0]
@@ -163,7 +166,7 @@ class SingleSimData(object):
 
         Epot = np.sum(self.adPop * self.E, axis=2)
         Ekin = 1000 * (self.v**2)
-        Etot = np.mean(Ekin + Epot, axis=1)
+        Etot = np.mean(Ekin + Epot, axis=1)  # Average over replicas
 
         fit = np.polyfit(self.times, Etot, 1)
         slope = fit[0] * 41341.3745758

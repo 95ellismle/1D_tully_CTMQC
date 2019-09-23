@@ -23,7 +23,7 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "EhrenEnerCons"
+inputs = "custom"
 
 #inputs = "EhrenEnerCons"
 #inputs = "custom"
@@ -52,7 +52,7 @@ if inputs == "EhrenNormCons":
     mfolder_structure = ['elec_steps', 'model']
     all_model = [1, 2, 3, 4] * numRepeats
     all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
-    all_velMultiplier = [25, 3, 3, 4] * numRepeats
+    all_velMultiplier = [2.5, 3, 3, 4] * numRepeats
     all_p_mean = [-8, -8, -15, -15] * numRepeats
     all_doCTMQC_C = ([False] * 4) * numRepeats
     all_doCTMQC_F = ([False] * 4)  * numRepeats
@@ -73,7 +73,7 @@ elif inputs == "EhrenEnerCons":
     mfolder_structure = ['dt', 'model']
     all_model = [1, 2, 3, 4] * numRepeats
     all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
-    all_velMultiplier = [25, 3, 3, 4] * numRepeats
+    all_velMultiplier = [2.5, 3, 3, 4] * numRepeats
     all_p_mean = [-8, -8, -15, -15] * numRepeats
     all_doCTMQC_C = ([True] * 4) * numRepeats
     all_doCTMQC_F = ([True] * 4)  * numRepeats
@@ -84,22 +84,22 @@ elif inputs == "CTMQCNormCons":
     print("CTMQC Norm Data Creation")
     numRepeats = 3
     
-    all_elec_steps = [1, 5, 10, 25, 50, 75, 100, 250, 500, 700, 1000] * 4 * numRepeats
-    numRepeats = len(all_elec_steps) // 3
+    all_elec_steps = [700, 700, 1000, 1000, 1000] * numRepeats# [1, 5, 10, 25, 50, 75, 100, 250, 500, 700, 1000] * 4 * numRepeats
+    #numRepeats = len(all_elec_steps)
     mfolder_structure = ['elec_steps', 'model']
-    all_model = [1, 2, 3, 4] * numRepeats
-    all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
-    all_velMultiplier = [25, 3, 3, 4] * numRepeats
-    all_p_mean = [-8, -8, -15, -15] * numRepeats
-    all_doCTMQC_C = ([True] * 4) * numRepeats
-    all_doCTMQC_F = ([True] * 4)  * numRepeats
-    rootFolder = '%s/CTMQC_Data/NoDC/NormCons_vs_ElecDT' % rootSaveFold
+    all_model = [2, 4, 2, 3, 4] * numRepeats #, 2, 3, 4] * numRepeats
+    all_maxTime = [2000, 2500, 2000, 1500, 2500] * numRepeats #, 2000, 1500, 2500] * numRepeats
+    all_velMultiplier = [2.5, 4, 2.5, 3, 4] * numRepeats#, 3, 3, 4] * numRepeats
+    all_p_mean = [-8, -15, -8, -15, -15] * numRepeats #, -8, -15, -15] * numRepeats
+    all_doCTMQC_C = ([True] * 5) * numRepeats
+    all_doCTMQC_F = ([True] * 5) * numRepeats
+    rootFolder = '%s/CTMQC_Data/With_DC/NormCons_vs_ElecDT' % rootSaveFold
     all_nRep = [70] * 8 * numRepeats
 
 elif inputs == "CTMQCEnerCons":
     print("CTMQC Ener Cons Data Creation")
     numRepeats = 3
-    all_dt = [1, 0.7, 0.5, 0.3, 0.1, 0.07, 0.05, 0.03, 0.01] * numRepeats
+    all_dt = [0.05, 0.03, 0.01] * numRepeats * 4
     all_elec_steps = [int(round(i / 0.01)) for i in all_dt
                       if int(round(i / 0.01)) == round(i / 0.01)]
     if len(all_dt) != len(all_elec_steps):
@@ -111,12 +111,12 @@ elif inputs == "CTMQCEnerCons":
     mfolder_structure = ['dt', 'model']
     all_model = [1, 2, 3, 4] * numRepeats
     all_maxTime = [2500, 2000, 1500, 2500] * numRepeats
-    all_velMultiplier = [25, 3, 3, 4] * numRepeats
+    all_velMultiplier = [2.5, 3, 3, 4] * numRepeats
     all_p_mean = [-8, -8, -15, -15] * numRepeats
-    all_doCTMQC_C = ([False] * 4) * numRepeats
-    all_doCTMQC_F = ([False] * 4)  * numRepeats
-    rootFolder = '%s/CTMQC_Data/EnerCons_vs_NuclDT' % rootSaveFold
-    all_nRep = [70] * 8 * numRepeats
+    all_doCTMQC_C = ([True] * 4) * numRepeats
+    all_doCTMQC_F = ([True] * 4)  * numRepeats
+    rootFolder = '%s/CTMQC_Data/NoDC/EnerCons_vs_NuclDT' % rootSaveFold
+    all_nRep = [200] * 8 * numRepeats
     
 elif inputs == "MomentumEhren1":
     mfolder_structure = ['model', 'mom']
@@ -271,7 +271,7 @@ elif inputs == "FullCTMQCGossel":
                   -20, -15, -8, -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8)  * numRepeats
-    rootFolder = '%s/CTMQC_Data/No_DC' % rootSaveFold
+    rootFolder = '%s/CTMQC_Data/With_DC' % rootSaveFold
     all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCGosselQuick":
@@ -287,30 +287,27 @@ elif inputs == "FullCTMQCGosselQuick":
     all_nRep = [20] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
-    numRepeats = 2
+    numRepeats = 1
     mfolder_structure = ['mom']
     all_nRep = [1] * numRepeats
-    all_model = [2] * numRepeats
-    all_velMultiplier = [1.6] * numRepeats
-    all_maxTime = [2500] * numRepeats
-    all_p_mean = [-8] * numRepeats
-    all_dt = [0.7] * numRepeats
-    all_elec_steps = [2] * numRepeats
+    all_model = [3] * numRepeats
+    all_velMultiplier = [3] * numRepeats
+    all_maxTime = [1300] * numRepeats
+    all_p_mean = [-15] * numRepeats
     all_doCTMQC_C = [False] * numRepeats
     all_doCTMQC_F = [False]  * numRepeats
-    rootFolder = './test'
-#    numRepeats = 7
-#    mfolder_structure = ['model', 'mom']
-#    all_nRep = [200, 200] * numRepeats
-#    all_model = [2, 3] * numRepeats
-#    all_velMultiplier = [1.6, 3] * numRepeats
-#    all_maxTime = [2500, 1300] * numRepeats
-#    all_p_mean = [-8, -15] * numRepeats
-#    all_dt = [0.1, 0.1] * numRepeats
-#    all_elec_steps = [2, 10] * numRepeats
-#    all_doCTMQC_C = ([True] * 2) * numRepeats
-#    all_doCTMQC_F = ([True] * 2)  * numRepeats
-#    rootFolder = '%s/CTMQC_Data/NoDC/GoodBad_RlkData' % rootSaveFold
+    rootFolder = False  #'%s/test' % rootSaveFold
+    #print("Carrying out custom input file")
+    #numRepeats = 4
+    #mfolder_structure = ['model', 'mom']
+    #all_velMultiplier = [1, 1.5] * numRepeats
+    #all_maxTime = [6000, 6000] * numRepeats
+    #all_model = [4, 1] * numRepeats
+    #all_p_mean = [-20, -20] * numRepeats
+    #all_doCTMQC_C = ([True] * 2) * numRepeats
+    #all_doCTMQC_F = ([True] * 2)  * numRepeats
+    #rootFolder = '%s/CTMQC_Data/With_DC' % rootSaveFold
+    #all_nRep = [200] * 2 * numRepeats
 
 
 def get_time_taken_ordering_dict(all_nrep, all_max_time,
@@ -343,6 +340,8 @@ mass = 2000
 all_lens = [len(all_velMultiplier), len(all_maxTime),
             len(all_model), len(all_p_mean), len(all_doCTMQC_C),
             len(all_doCTMQC_F), len(all_nRep)]
+if all_dt is not False: all_lens.append(len(all_dt))
+if all_elec_steps is not False: all_lens.append(len(all_elec_steps))
 nSim = min(all_lens)
 print("Nsim = %i" % nSim)
 
@@ -389,7 +388,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'gradTol': 0.9,  # The maximum allowed gradient in Rlk in time.
             'renorm': False,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
-            'do_Rlk_smooth': False,  # Apply the smoothing algorithm to Rlk
+            'do_Rlk_smooth': True,  # Apply the smoothing algorithm to Rlk
                 }
     return ctmqc_env
 
@@ -445,7 +444,8 @@ class CTMQC(object):
                  folder_structure=['ctmqc', 'model', 'mom'], para=False):
         
         # Set everything up
-        self.root_folder = os.path.abspath(root_folder)
+        self.root_folder = root_folder
+        if root_folder: self.root_folder = os.path.abspath(self.root_folder)
         self.ctmqc_env = ctmqc_env
         self.para = para
         self.save_folder = False
@@ -649,6 +649,11 @@ class CTMQC(object):
             self.ctmqc_env['mass'] = np.array(self.ctmqc_env['mass'])
         else:
             raise SystemExit("Mass not specified in startup")
+        self.saveIter = 0
+        self.tenSteps = False
+        if nstep > 10000:
+            nstep = int(np.ceil(nstep / 10)) + 1
+            self.tenSteps = True
 
         # For saving the data
         self.allR = np.zeros((nstep, nrep))
@@ -828,7 +833,10 @@ class CTMQC(object):
         for istep in range(nstep):
             try:
                 t1 = time.time()
-                self.__save_data()
+                if self.tenSteps and self.ctmqc_env['iter'] % 10 == 0:
+                   self.__save_data()
+                elif self.tenSteps is False:
+                   self.__save_data()
                 self.__ctmqc_step()
                 self.ctmqc_env['t'] += self.ctmqc_env['dt']
                 self.ctmqc_env['iter'] += 1
@@ -963,7 +971,7 @@ class CTMQC(object):
         """
         Will save data to RAM (arrays within this class)
         """
-        istep = self.ctmqc_env['iter']
+        istep = self.saveIter
         self.allR[istep] = self.ctmqc_env['pos']
         self.allNACV[istep] = self.ctmqc_env['NACV']
         self.allF[istep] = self.ctmqc_env['frc']
@@ -986,6 +994,8 @@ class CTMQC(object):
         self.allAlphal[istep] = self.ctmqc_env['alphal']
 
         self.allt[istep] = self.ctmqc_env['t']
+
+        self.saveIter += 1
 
     def __chop_arrays(self):
         """
@@ -1041,12 +1051,12 @@ class CTMQC(object):
 
         names = ["pos", "time", "Ftot", "Feh", "Fqm", "E", "C", "u", "|C|^2",
                 "H", "f", "Fad", "vel", "Qlk", "Rlk", "sigma", "sigmal",
-                "NACV", "RI0"]
+                "NACV", "RI0", "effR"]
         arrs = [self.allR, self.allt, self.allF, self.allFeh, self.allFqm,
                 self.allE, self.allC, self.allu, self.allAdPop, self.allH,
                 self.allAdMom, self.allAdFrc, self.allv, self.allQlk,
                 self.allRlk, self.allSigma, self.allSigmal,
-                self.allNACV, self.allRl]
+                self.allNACV, self.allRl, self.allEffR]
         for name, arr in zip(names, arrs):
             savepath = "%s/%s" % (self.save_folder, name)
             np.save(savepath, arr)
@@ -1095,7 +1105,8 @@ class CTMQC(object):
         if any([all([self.ctmqc_env['do_QM_F'],
                      self.ctmqc_env['do_QM_C']]),
                 self.ctmqc_env['iter'] < 10]) is False:
-            self.__checkVV()
+            if self.tenSteps is False:
+               self.__checkVV()
         
         # Print some useful info
         if not self.para:
@@ -1215,6 +1226,7 @@ def doSim(iSim, para=False):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
+    
 
     sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
 
@@ -1247,8 +1259,9 @@ def get_min_procs(nSim, maxProcs):
    """
    if nSim <= maxProcs:
        return nSim
-   nProc = min([nSim, 16])
-   nProc = min([nProc, mp.cpu_count() // 2])
+   nProc = min([nSim, maxProcs])
+   nProc = min([nProc, mp.cpu_count()-2])
+   print(nProc)
    sims_to_procs = np.ceil(nSim / nProc)
    for i in range(nProc+1, 1, -1):
        if np.ceil(nSim / i) == sims_to_procs:
@@ -1275,7 +1288,7 @@ if nSim > 1:
     import multiprocessing as mp
     
 
-    nProc = get_min_procs(nSim, 16)
+    nProc = get_min_procs(nSim, 24)
     print("Using %i processes for %i sims" % (nProc, nSim))
     pool = mp.Pool(nProc)
     print("Doing %i sims with %i processes" % (nSim, nProc))
@@ -1288,7 +1301,7 @@ if nSim > 1:
                                               all_dt, all_elec_steps)
     all_SimSets = []
     newArr = []
-    count = 0
+    count = 24
     while count < len(order_dict):
         if count % nProc == 0:
             if len(newArr) > 0:
@@ -1298,8 +1311,10 @@ if nSim > 1:
         count += 1
     all_SimSets.append(newArr)
     
+    print("Doing %i simulations" % count)
     for simulation_set in all_SimSets:
         allRunData = pool.map(para_doSim, simulation_set)
+        print("\n\n\nCompleted all procs, writing data\n\n\n")
         for runData in allRunData:
             runData.create_folderpath()
             runData.store_data()
@@ -1311,21 +1326,21 @@ else:
 #        test.vel_is_diff_x(runData)
 
 if nSim == 1 and runData.ctmqc_env['iter'] > 50:
-#    plotPaper.params['tullyModel'] = runData.ctmqc_env['tullyModel']
-#    plotPaper.params['momentum'] = (runData.allv[0, 0] / 0.0005) > 20
-#    plotPaper.params['whichSimType'] = ['CTMQC']
-#    plotPaper.params['whichQuantity'] = 'pops'
-#    f, a = plotPaper.plot_data(plotPaper.params)
-    plot.plotPops(runData)
+##    plotPaper.params['tullyModel'] = runData.ctmqc_env['tullyModel']
+##    plotPaper.params['momentum'] = (runData.allv[0, 0] / 0.0005) > 20
+##    plotPaper.params['whichSimType'] = ['CTMQC']
+##    plotPaper.params['whichQuantity'] = 'pops'
+##    f, a = plotPaper.plot_data(plotPaper.params)
+#    plot.plotPops(runData)
     plot.plotNorm(runData)
-    #plot.plotRabi(runData)
-    #plot.plotDeco(runData)
-    #plot.plotRlk_Rl(runData)
-    #plot.plotNorm(runData)
-    #plot.plotEcons(runData)
-    #plot.plotSigmal(runData)
-    #plot.plotQlk(runData)
-    #plot.plotS26(runData)
-#    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
-#                      saveFolder='/scratch/mellis/Pics')
-    plt.show()
+#    #plot.plotRabi(runData)
+#    plot.plotDeco(runData)
+#    #plot.plotRlk_Rl(runData)
+#    #plot.plotNorm(runData)
+    plot.plotEcons(runData)
+#    #plot.plotSigmal(runData)
+#    #plot.plotQlk(runData)
+#    #plot.plotS26(runData)
+##    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
+##                      saveFolder='/scratch/mellis/Pics')
+#    plt.show()

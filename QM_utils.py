@@ -63,13 +63,18 @@ def do_Rlk_smoothing(effR, ctmqc_env):
     """
     # Do the smoothing between Rl and Rlk
     ctmqc_env['currGoodPoint'] = effR
+    # Boundary conditions
+    #   Start spiking
     if ctmqc_env['isSpiking'] != ctmqc_env['prevSpike']:
         ctmqc_env['iSmoothStep']  = 1
         ctmqc_env['lastGoodPoint'] = ctmqc_env['effR']
         ctmqc_env['smoothInitT'] = ctmqc_env['dt'] * (ctmqc_env['iter'] - 1)
         effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
+    #   End Spiking
     elif ctmqc_env['iSmoothStep'] == ctmqc_env['nSmoothStep']:
         ctmqc_env['iSmoothStep'] = -1
+    
+    # Smoothing between boundaries
     elif 0 < ctmqc_env['iSmoothStep'] and ctmqc_env['iSmoothStep'] < ctmqc_env['nSmoothStep']:
         effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
         ctmqc_env['iSmoothStep'] += 1
