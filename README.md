@@ -5,7 +5,7 @@ CTMQC is an alternative to surface hopping and can be used to simulate nonadiaba
 
 To use the code set the variable `inputs' at the top of the main.py code (in the root folder) to one of the commented out values (or leave it as custom). If you wished to run a custom simulation change the parameters in the else statement around line 288. To run multiple simulations at once put multiple values into the lists when choosing your parameters.
 
-**The code is not very user-friendly and as it is just for testing my implementation/sandboxing ideas it isn't designed to be. You may need to be confident with python to use it**
+**The code is not particularly user-friendly (or space/time efficient). It has been created for testing my implementation/sandboxing ideas for a simple system. You may need to be confident with python to use it!**
 
 
 ## The most recent version of the code should pass the following tests
