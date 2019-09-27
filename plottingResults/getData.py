@@ -205,6 +205,7 @@ class NestedSimData(object):
         Will read the data from many simulations that are nested and return a dict
         that has the same nested structure as the folders.
         """
+        ignore_keys = ('lastGoodPoint', 'effR', )
 
         self.allData = []
         self.__allDataMap = {}
@@ -215,15 +216,18 @@ class NestedSimData(object):
                 trajData = SingleSimData(fold, params_to_read)
                 self.allData.append(trajData)
                 add_to_list_in_dict(self.__allDataMap, "index", count)
-
                 # Now create the map to query the data
                 for key, value in trajData.__dict__.items():
-                    if type(value) is not list:
+                    if key in ignore_keys:
+                        continue
+                    if not isinstance(value, (list, np.ndarray)):
                         if key == 'dt':
                             value = round(value, 3)
                         add_to_list_in_dict(self.__allDataMap, key, value)
-
+                        
                 count += 1
+#        print({key: len(self.__allDataMap[key]) for key in self.__allDataMap})
+#        print(self.__allDataMap.get('effR'))
         self.__allDataMap = pd.DataFrame(self.__allDataMap)
 
     def query_data(self, query_dict):

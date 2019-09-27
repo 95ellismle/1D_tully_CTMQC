@@ -36,7 +36,9 @@ def plotNormVsElecDt(allNestedData, model, fig=False, axis=False, params={},
         f, axis = plt.subplots()
 
     if repeats is False:
-        axis.plot(elec_dts, norms, 'ko', ls='--')
+        axis.plot(sorted(elec_dts),
+                  [i[1] for i in sorted(zip(elec_dts, norms))],
+                  'o', ls='--', label=legendLabel, **params)
     else:
         data = {}
         for elec_dt, norm in zip(elec_dts, norms):
@@ -45,7 +47,7 @@ def plotNormVsElecDt(allNestedData, model, fig=False, axis=False, params={},
         x = [i for i in data]
         y = [np.mean(data[i]) for i in data]
         axis.plot(sorted(x), [i[1] for i in sorted(zip(x,y))],
-                  'ko', ls='--', label=legendLabel, **params)
+                  'o', ls='--', label=legendLabel, **params)
         for i in data:
             axis.plot([i] * len(data[i]), data[i], 'k-', lw=0.5, **params)
 

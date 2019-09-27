@@ -10,17 +10,18 @@ Created on Fri Sep 13 10:25:28 2019
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import re
 
 import getData
 import plotData
 
 norm_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/NormCons_vs_ElecDT"
-norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/NormCons_vs_ElecDT"
+norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Ehren_DC/NormCons_vs_ElecDT"
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
 pops_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare2"
-pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/Pops_Compare"
-pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
+pops_ctmqc_root_folder = "/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/test/Sig_0.2/Kinit_30/Repeat_19"
+pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Extrap_DC/Pops_Compare"
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
 
@@ -68,7 +69,7 @@ the Gossel and Agostini (CTMQC) data.
 If the Agostini and Gossel data have different initial momenta then it will
 choose Gossel.
 """
-plot_pop_lit_compare_ctmqc = False
+plot_pop_lit_compare_ctmqc = True
 
 '''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the 
 high momentum cases vs timestep, using the gradPhi NACV and a constant 
@@ -76,7 +77,7 @@ Nuclear timestep of 0.1 au.
 
 If different parameters are required please re-run the code and point the
 variable norm_root_folder to the data folder.'''
-plot_norms_ctmqc = True
+plot_norms_ctmqc = False
 
 '''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the 
 high momentum cases vs timestep, using the gradPhi NACV and a constant 
@@ -84,11 +85,11 @@ Nuclear timestep of 0.1 au.
 
 If different parameters are required please re-run the code and point the
 variable norm_root_folder to the data folder.'''
-plot_ener_cons_ctmqc = True
+plot_ener_cons_ctmqc = False
 
 # Whether or not to compare the Non-divergence corrected and diveregence
 #  corrected data.
-compare_DC = True
+compare_DC = False
 ###############################################################################
 
 if plot_norms:
@@ -116,15 +117,21 @@ if plot_norms:
 
 
 if plot_norms_ctmqc:
-    with_DC = 'With_DC' in norm_root_ctmqc_folder
     allData = getData.NestedSimData(norm_root_ctmqc_folder, ['|C|^2', 'time'])
+    lab1 = "No DC Corr"
     if compare_DC:
-        if with_DC:
-            folderPath = norm_root_ctmqc_folder.replace("With_DC", "NoDC")
+        if len(re.findall("With_.*_DC", norm_root_ctmqc_folder)) > 0:
+            folderPath = re.sub("With.*_DC", "NoDC", norm_root_ctmqc_folder)
+            lab, col, lab1, col1 = 'No DC Corr', 'r', "Ehren DC", 'b'
         else:
             folderPath = norm_root_ctmqc_folder.replace("NoDC", "With_DC")
+            lab, col, lab1, col1 = 'With DC Corr', 'b', "No DC Corr", 'r'
         allData2 = getData.NestedSimData(folderPath, ['|C|^2', 'time'])
-    
+#        allData3 = getData.NestedSimData(folderPath.replace("NoDC", "With_DC"),
+#                                         ['|C|^2', 'time'])
+#        allData4 = getData.NestedSimData(folderPath.replace("NoDC", "With_Extrap_DC"),
+#                                         ['|C|^2', 'time'])
+
     fa = plt.subplots(2, 2)
     
     color = 'k'
@@ -133,11 +140,18 @@ if plot_norms_ctmqc:
         for y in range(2):
             ax = fa[1][x][y]
             ax.set_title("Model %i" % model, fontsize=25)
-            plotData.plotNormVsElecDt(allData, model, fa[0], ax,
-                                      {'color': 'r'}, 'No DC Corr')
+
+#            plotData.plotNormVsElecDt(allData3, model, fa[0], ax,
+#                                          {'color': 'g'}, 'RI0 DC')
+#            plotData.plotNormVsElecDt(allData4, model, fa[0], ax,
+#                                          {'color': 'k'}, 'Extrap DC')
             if compare_DC:
                 plotData.plotNormVsElecDt(allData2, model, fa[0], ax,
-                                          {'color': 'b'}, 'With DC Corr')
+                                          {'color': col}, lab)
+                color = col1
+            plotData.plotNormVsElecDt(allData, model, fa[0], ax,
+                                      {'color': color}, lab1)
+            if compare_DC:
                 ax.legend()
             if x == 0:
                 ax.set_xlabel("")
@@ -146,7 +160,7 @@ if plot_norms_ctmqc:
             model += 1
             
     plt.tight_layout()
-    plt.show()
+    fa[0].savefig('/homes/mellis/tmp.png')
 
 
 ###############################################################################
@@ -499,16 +513,22 @@ if plot_pop_lit_compare_ctmqc:
             return myPops, myCoh, pop_mask
         return False, False, False
     
-    def plot_myData(myData, legend="My Data", color='r'):
+    def plot_myData(myData, legend="My Data", color='#ff0000'):
         myPops, myCoh, pop_mask = get_myPops_myCoh(myData)
-
+        
+        darkenColor = 0.7
+        colCodes = [color.strip('#')[i*2:i*2+2] for i in range(3)]
+        color1 = [hex(int(eval('0x%s'%i) * darkenColor)).strip('0x')
+                  for i in colCodes]
+        color1 = [i if len(i) > 1 else '00' for i in color1]
+        color1 = '#'+''.join(color1)
         # Plot the populations
         if myPops is not False:
             ax.plot(myData[pop_mask[0]].times*0.024188843265857,
                     myPops[:, 0], label=legend, color=color)
             for data in myData:
                 ax.plot(data.times*0.024188843265857,
-                        np.mean(data.adPop, axis=1)[:, 0], color, lw=0.5,
+                        np.mean(data.adPop, axis=1)[:, 0], color1, lw=0.6,
                         alpha=0.4)
         # Plot the Coherences
         if myCoh is not False:
@@ -517,7 +537,7 @@ if plot_pop_lit_compare_ctmqc:
             for data in myData:
                 coherences = data.adPop[:, :, 0] * data.adPop[:, :, 1] 
                 axD.plot(data.times*0.024188843265857,
-                        np.mean(coherences, axis=1), color, lw=0.5,
+                        np.mean(coherences, axis=1), color1, lw=0.6,
                         alpha=0.4)
 
     def get_ExtData(extData, model, mom):
@@ -532,7 +552,11 @@ if plot_pop_lit_compare_ctmqc:
     
     allData = getData.NestedSimData(pops_ctmqc_root_folder, ['time', '|C|^2'])
     if compare_DC:
-        allDCData = getData.NestedSimData(pops_ctmqc_DC_root_folder,
+        allDCDataEx = getData.NestedSimData(pops_ctmqc_DC_root_folder,
+                                          ['time', '|C|^2'])
+        allDCDataEh = getData.NestedSimData(pops_ctmqc_DC_root_folder.replace("Extrap", "Ehren"),
+                                          ['time', '|C|^2'])
+        allDCDataRI0 = getData.NestedSimData(pops_ctmqc_DC_root_folder.replace("Extrap_", ""),
                                           ['time', '|C|^2'])
     fredData = getData.FredericaData()
     gossData = getData.GosselData()
@@ -552,21 +576,27 @@ if plot_pop_lit_compare_ctmqc:
                                                              mom)
                 dfGossPop, dfGossDeco, gossMom = get_ExtData(gossData, model,
                                                              mom)
+
     
                 myData = allData.query_data({'tullyModel': model,
                                              'velInit': gossMom * 5e-4})
                 plot_myData(myData)
                 if compare_DC:
-                    myDCData = allDCData.query_data({'tullyModel': model,
+                    for data, col, lab in zip((allDCDataEx, allDCDataEh, allDCDataRI0),
+                                         ('#0000ff', '#555555', '#00bb00'),
+                                         ('Extrap DC', 'Ehren DC', 'RI0 DC')):
+                       myDCData = data.query_data({'tullyModel': model,
                                                      'velInit': gossMom * 5e-4})
-                    plot_myData(myDCData, "My DC Data", color='b')
+                       plot_myData(myDCData, lab, color=col)
 
                 
                 ax.plot(dfGossPop['CTMQC_x']*0.024188843265857,
-                dfGossPop['CTMQC_y'], label="Gossel, 18", color='k')    
-                if gossMom == fredMom:
-                    ax.plot(dfFredPop['CTMQC_x']*0.024188843265857,
-                            dfFredPop['CTMQC_y'], label="Agostini, 16", color='g')
+                        dfGossPop['CTMQC_y'], label="Gossel, 18", color='k')    
+                ax.plot(dfGossPop['exact_x']*0.024188843265857,
+                        dfGossPop['exact_y'], label="Exact", color='b')
+#                if gossMom == fredMom:
+#                    ax.plot(dfFredPop['CTMQC_x']*0.024188843265857,
+#                            dfFredPop['CTMQC_y'], label="Agostini, 16", color='g')
     
                 xlimmax = max(np.nanmax(dfGossPop['CTMQC_x']),
                               np.nanmax(dfFredPop['CTMQC_x'])
@@ -574,7 +604,7 @@ if plot_pop_lit_compare_ctmqc:
                 ax.set_xlim([-1.9, xlimmax])
                 
                 if x == 1:
-                    ax.set_xlabel("Timestep [fs]")
+                    ax.set_xlabel("Sim. Time [fs]")
                 if y == 0:
                     ax.set_ylabel("Ad. Pop.")
                 ax.set_title("Model %i" % model, fontsize=24)
@@ -586,9 +616,11 @@ if plot_pop_lit_compare_ctmqc:
                 # Plot the coherences
                 axD.plot(dfGossDeco['CTMQC_x']*0.024188843265857,
                         dfGossDeco['CTMQC_y'], label="Gossel, 18", color='k')
-                if gossMom == fredMom:
-                    axD.plot(dfFredDeco['CTMQC_x']*0.024188843265857,
-                            dfFredDeco['CTMQC_y'], label="Agostini, 16", color='g')
+                axD.plot(dfGossDeco['exact_x']*0.024188843265857,
+                        dfGossDeco['exact_y'], label="Exact", color='b')
+#                if gossMom == fredMom:
+#                    axD.plot(dfFredDeco['CTMQC_x']*0.024188843265857,
+#                            dfFredDeco['CTMQC_y'], label="Agostini, 16", color='g')
     
                 xlimmax = max(np.nanmax(dfGossDeco['CTMQC_x']),
                               np.nanmax(dfFredDeco['CTMQC_x'])
@@ -596,7 +628,7 @@ if plot_pop_lit_compare_ctmqc:
                 axD.set_xlim([-1.9, xlimmax])
                 
                 if x == 1:
-                    axD.set_xlabel("Timestep [fs]")
+                    axD.set_xlabel("Sim. Time [fs]")
                 if y == 0:
                     axD.set_ylabel("Coherence")
                 axD.set_title("Model %i" % model, fontsize=24)
@@ -608,17 +640,19 @@ if plot_pop_lit_compare_ctmqc:
 
     
         f.suptitle("%s Momentum -Populations" % mom.title(), fontsize=30)
-        f.subplots_adjust(top=0.899,
-                            bottom=0.099,
-                            left=0.078,
-                            right=0.989,
+        f.subplots_adjust(top=0.884,
+                            bottom=0.109,
+                            left=0.073,
+                            right=0.979,
                             hspace=0.269,
                             wspace=0.152)
         
         fD.suptitle("%s Momentum -Coherences" % mom.title(), fontsize=30)
-        fD.subplots_adjust(top=0.899,
-                            bottom=0.099,
-                            left=0.078,
-                            right=0.989,
+        fD.subplots_adjust(top=0.884,
+                            bottom=0.109,
+                            left=0.073,
+                            right=0.979,
                             hspace=0.269,
                             wspace=0.152)
+        fD.savefig('/homes/mellis/tmpD%s.png' % mom)
+        f.savefig('/homes/mellis/tmp%s.png' % mom)

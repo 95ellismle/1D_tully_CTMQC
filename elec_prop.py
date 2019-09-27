@@ -183,7 +183,6 @@ def makeX_adiab_ehren(NACV, vel, E):
     Will make the adiabatic X matrix
     """
     X = (-1j * np.identity(2) * E) - (NACV * vel)
-    
     return X
 
 
@@ -207,6 +206,48 @@ def do_adiab_prop(ctmqc_env):
         f = ctmqc_env['adMom_tm'][irep]
         df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
         
+        
+        adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+        doQM = abs(QM[0, 1]) > 1e-10
+#        print(doQM)
+        
+
+        X1 = makeX_adiab_ehren(NACV, v, E)
+        if doQM: X1 -= makeX_adiab_Qlk(QM, f, adPops)
+#        print("X1: ", X1)
+        for Estep in range(ctmqc_env['elec_steps']):
+            E += 0.5 * dE_E
+            NACV += 0.5 * dNACV_E
+            v += 0.5 * dv_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X12 = makeX_adiab_ehren(NACV, v, E)
+#            print("X12: ", X12)
+
+            E = E + 0.5 * dE_E
+            NACV = NACV + 0.5 * dNACV_E
+            v = v + 0.5 * dv_E
+            QM += 0.5 * dQM_E
+            f += 0.5 * df_E
+            X2 = makeX_adiab_ehren(NACV, v, E)
+            if doQM:
+                adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+                X12 -= makeX_adiab_Qlk(QM, f, adPops)
+                X2 -= makeX_adiab_Qlk(QM, f, adPops)
+#            print("X2: ", X2)
+
+            coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
+                          ctmqc_env)
+            ctmqc_env['C'][irep] = coeff
+
+            X1 = X2[:]
+        
+#        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
+        lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
+        lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
+        lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
+        lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
+        lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
 #        print("VARS")
 #        print("----")
 #        print("iter = ", ctmqc_env['iter'])
@@ -233,48 +274,7 @@ def do_adiab_prop(ctmqc_env):
 #        print("df = ", df_E)
 #        print("END VARS")
 #        raise SystemExit("BREAK")
-        
-        adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
-        doQM = abs(QM[0, 1]) > 1e-10
-        
-
-        X1 = makeX_adiab_ehren(NACV, v, E)
-        if doQM: X1 -= makeX_adiab_Qlk(QM, f, adPops)
-#        print("X1: ", X1)
-        for Estep in range(ctmqc_env['elec_steps']):
-            E += 0.5 * dE_E
-            NACV += 0.5 * dNACV_E
-            v += 0.5 * dv_E
-            QM += 0.5 * dQM_E
-            f += 0.5 * df_E
-            X12 = makeX_adiab_ehren(NACV, v, E)
-            if doQM:
-                adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
-                X12 -= makeX_adiab_Qlk(QM, f, adPops)
-#            print("X12: ", X12)
-
-            E = E + 0.5 * dE_E
-            NACV = NACV + 0.5 * dNACV_E
-            v = v + 0.5 * dv_E
-            QM += 0.5 * dQM_E
-            f += 0.5 * df_E
-            X2 = makeX_adiab_ehren(NACV, v, E)
-            if doQM: X2 -= makeX_adiab_Qlk(QM, f, adPops)
-#            print("X2: ", X2)
-
-            coeff = __RK4(ctmqc_env['C'][irep], X1, X12, X2,
-                          ctmqc_env)
-            ctmqc_env['C'][irep] = coeff
-
-            X1 = X2[:]
-        
-#        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
-        lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
-        lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
-        lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
-        lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
-        lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
-
+#    raise SystemExit("BREAK")
 
 def makeX_adiab_Qlk(Qlk, f, adPops):
     """
@@ -314,6 +314,7 @@ def __RK4(coeff, X1, X12, X2, ctmqc_env):
     K4 = np.array(dTe * np.matmul(X2, coeff + K3))
 
     Ktot = (1./6.) * (K1 + (2.*K2) + (2.*K3) + K4)
+#    print(Ktot, "\n")
     coeff = coeff + Ktot
 
     return coeff

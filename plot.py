@@ -120,15 +120,21 @@ def plotS26(runData, f=False, a=False):
     Will plot the equation S26 that the Qlk should obey.
     """
     l, k = 0, 1
-    S26 = 2 * runData.allQlk[:, :, l, k] * (runData.allAdMom[:, :, k] - runData.allAdMom[:, :, l]) * runData.allAdPop[:, :, k] * runData.allAdPop[:, :, l]
-    S26 = np.sum(S26, axis=1)
+    S2612 = 2 * runData.allQlk[:, :, l, k] * (runData.allAdMom[:, :, k] - runData.allAdMom[:, :, l]) * runData.allAdPop[:, :, k] * runData.allAdPop[:, :, l]
+    l, k = 1, 0
+    S2621 = 2 * runData.allQlk[:, :, l, k] * (runData.allAdMom[:, :, k] - runData.allAdMom[:, :, l]) * runData.allAdPop[:, :, k] * runData.allAdPop[:, :, l]
+
+    S2621 = np.sum(S2621, axis=1) # sum over reps
+    S2612 = np.sum(S2612, axis=1) # sum over reps
     lw = 1
     alpha = 1
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, S26, 'k-', lw=lw, alpha=alpha)
+    a.plot(runData.allt, S2612, lw=lw, alpha=alpha, label=r"S26$_{12}$")
+    a.plot(runData.allt, S2621, lw=lw, alpha=alpha, label=r"S26$_{21}$")
     a.set_xlabel("Time [au]")
     a.set_ylabel("S26")
+    a.legend()
 
 
 def plotAdMom(runData, f=False, a=False):
@@ -204,15 +210,43 @@ def plotRlk_Rl(runData, f=False, a=False):
         a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
         a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
     else:
-        a.plot(runData.allt, runData.allR[:, 0], 'k', lw=lw, alpha=alpha,
+        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allR[:, 1:], 'k', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allRlk[:, 0, 1], label="Rlk")
-    a.plot(runData.allt, runData.allEffR[:, 0, 1], label=r"R$_{eff}$")
+        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk")
+    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$")
     a.set_xlabel("Time [au]")
     a.set_ylabel("Intercept [au]")
     a.legend()
 
+
+def plotRlk_gradRlk(runData, f=False, a=False):
+    """
+    Will plot the Rlk and Rl term on the same axis
+    """
+    lw = 0.5
+    alpha = 0.5
+    if a is False or f is False: f, ax = plt.subplots(2)
+    a = ax[0]
+    if runData.allRl.shape[1] == 2:
+        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
+        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
+    else:
+        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
+               label=r"$R_{\nu, 0}^{(I)}$")
+        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
+    
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk")
+    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$")
+    
+    a.set_ylabel("Intercept [au]")
+    a.legend()
+    
+    a = ax[1]
+    a.plot(runData.allt,
+           np.gradient(runData.allRlk, runData.ctmqc_env['dt'], axis=0)[:, 0, 1])
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\frac{\delta R_{lk, \nu}^{0}}{\delta t}$ [au]")
 
 def plotQlk(runData, f=False, a=False):
     lw = 0.1
