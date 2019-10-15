@@ -381,11 +381,16 @@ def calc_Rlk(ctmqc_env, reps_to_do=False):
     summed_Ylk = np.sum(Ylk, axis=0)
 
     Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))
+#    new_reps_to_do = reps_to_do[:]
     if reps_to_do is not False:
         for l in range(ctmqc_env['nstate']):
             for k in range(ctmqc_env['nstate']):
                 for I in reps_to_do:
                     RI = ctmqc_env['pos'][I]
+#                    if Ylk[I, l, k] <= 1e-8:
+#                        new_reps_to_do = new_reps_to_do[new_reps_to_do != I]
+#                        print(new_reps_to_do)
+#                        continue
                     Ylk_sum = summed_Ylk[l, k]
                     if summed_Ylk[l, k] != 0:
                         Rlk[l, k] += (RI * ctmqc_env['alpha'][I] 
@@ -399,7 +404,8 @@ def calc_Rlk(ctmqc_env, reps_to_do=False):
                     if summed_Ylk[l, k] != 0:
                         Rlk[l, k] += (RI * ctmqc_env['alpha'][I] 
                                          * Ylk[I, l, k]) / Ylk_sum
-
+#    print(new_reps_to_do)
+#    raise SystemExit("BREAK")
     return Rlk
 
 
@@ -407,27 +413,63 @@ def calc_Gossel_sigma(ctmqc_env):
     """
     Will calculate the sigma parameter as laid out in Gossell, 18.
     """
+    multiplier = float(ctmqc_env['const']) / float(ctmqc_env['nrep'])
+    minSig = np.min(ctmqc_env['sigma'])
+
+    for I in range(ctmqc_env['nrep']):
+        distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
+        cutoffR = ctmqc_env['const'] * ctmqc_env['sigma'][I]
+        distances = distances[np.abs(distances) < cutoffR]
+        
+        ctmqc_env['sigma'][I] = np.std(np.abs(distances)) * multiplier
+    
+    mask = ctmqc_env['sigma'] < minSig
+    if sum(mask):
+        ctmqc_env['sigma'][mask] = minSig
+    
+#    print(ctmqc_env['sigma'])
+#    raise SystemExit("BREAK")
+
+
+def calc_sigmaStdCorr(ctmqc_env):
+    """
+    A function to calculate sigma keeping it constrained by a maximum and 
+    minimum value.
+    """        
     for I in range(ctmqc_env['nrep']):
         ctmqc_env['const'] = float(ctmqc_env['const'])
         R0 = ctmqc_env['const'] * ctmqc_env['sigma'][I]
         distances = ctmqc_env['pos'][I] - ctmqc_env['pos']
         mask = np.arange(len(distances))[np.abs(distances) < R0]
         distances = distances[mask]
+        
+        sig = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.std(distances)
+        if len(distances) == 0:
+            sig = 0.1  
+        
+#        minSig = 0.08 # (ctmqc_env['const'] / ctmqc_env['nrep']) * np.sqrt(2)
+#        maxSig = np.sqrt(2) # (ctmqc_env['const'] / ctmqc_env['nrep']) * np.sqrt(2) * 3
+#        avgPos = 0.3 # (minSig + maxSig) * 0.5
+#        width = 0.5 # avgPos / 2
+    
+#        ctmqc_env['sigma'][I] = (0.5 * (maxSig - minSig) * (np.tanh((sig - avgPos)/width))) + minSig
+        ctmqc_env['sigma'][I] = sig
+#        print(ctmqc_env['sigma'][I], sig)
+#        ctmqc_env['sigma'][I] = sig
+    
+    goodSigs = ctmqc_env['sigma'][ctmqc_env['sigma'] > 0.08]
+    if len(goodSigs) > 0:
+        ctmqc_env['sigma'][ctmqc_env['sigma'] < 0.08] = np.min(goodSigs)
+    else:
+        ctmqc_env['sigma'][ctmqc_env['sigma'] < 0.08] = 0.08
 
-        posSig = ctmqc_env['sigma'][ctmqc_env['sigma'] > 0.05]
-        if len(posSig):
-           sigma0 = (ctmqc_env['const'] / ctmqc_env['nrep']) * np.min(posSig)
-        else:
-           sigma0 = 0.1
-       
-        avg_squared_dist = np.mean(distances**2)
-        avg_dist = np.mean(np.abs(distances))
-        newSigma = np.sqrt(avg_squared_dist - (avg_dist**2))
 
-        if newSigma < sigma0:
-            newSigma = sigma0
 
-        ctmqc_env['sigma'][I] = newSigma
+def calc_deBroglie_sigma(ctmqc_env):
+    """
+    Will calculate sigma from 50 * the De-Broglie wavelength.
+    """
+    ctmqc_env['sigma'] = 60 / (2 * np.pi * ctmqc_env['mass'] * abs(ctmqc_env['vel']))
 
 
 def calc_Qlk_Min17_opt(runData):
@@ -435,24 +477,35 @@ def calc_Qlk_Min17_opt(runData):
     Will calculate the quantum momentum as written in Min, 17.
     """
     ctmqc_env = runData.ctmqc_env
-
+#
 #    for I in range(ctmqc_env['nrep']):
 #        pops = ctmqc_env['adPops'][I, 0]
-#        ctmqc_env['sigma'][I] = 0.6 - (np.exp(-(pops-0.5)**2/0.1) * 0.5)
-
-    if ctmqc_env['do_sigma_calc']:
+#        ctmqc_env['sigma'][I] = 2 - (np.exp(-(pops-0.5)**2/0.08) * 1.9)
+#    ctmqc_env['sigma'] = 0.2
+    if ctmqc_env['do_sigma_calc'].lower() == 'gossel':
         calc_Gossel_sigma(ctmqc_env)
+    elif ctmqc_env['do_sigma_calc'].lower() == 'de-broglie':
+        calc_deBroglie_sigma(ctmqc_env)
+    elif ctmqc_env['do_sigma_calc'].lower() == 'smooth_gossel':
+        calc_sigmaStdCorr(ctmqc_env)
+    elif ctmqc_env['do_sigma_calc'].lower() == 'no':
+        pass
+    else:
+        print("I don't know how to treat the sigma parameter")
+        print("Options are:\n\t* 'Gossel'\n\t* 'De-Broglie'\n\t* 'No'")
+        raise SystemExit("Unkown Input")
 
     threshold = 0.995
     mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
     reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
     
-    # Verified by hand for a 3 rep system
+    # Now calculate intercept
+    Rlk = calc_Rlk(ctmqc_env, reps_to_do)
+    
+    # Calculate slope
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
 
-    # Now calculate intercept
-    Rlk = calc_Rlk(ctmqc_env, reps_to_do)
 
     
     # Smooth out the intercept
@@ -474,9 +527,11 @@ def calc_Qlk_Min17_opt(runData):
     
     # Only for 2 states
     if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
+        print(Qlk)
         raise SystemExit("Qlk not symmetric!")
     
     Qlk /= ctmqc_env['mass']
+#    print(Qlk)
 #    print("Qlk = ", Qlk)
     return Qlk
 #test_norm_gauss()

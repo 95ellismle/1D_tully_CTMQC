@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import re
+import random
 
 import getData
 import plotData
@@ -20,7 +21,7 @@ norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTM
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
 pops_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare2"
-pops_ctmqc_root_folder = "/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/test/Sig_0.2/Kinit_30/Repeat_19"
+pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/ProperInit_diffConst/const=30.0"
 pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Extrap_DC/Pops_Compare"
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
@@ -513,7 +514,7 @@ if plot_pop_lit_compare_ctmqc:
             return myPops, myCoh, pop_mask
         return False, False, False
     
-    def plot_myData(myData, legend="My Data", color='#ff0000'):
+    def plot_myData(myData, axes, legend="My Data", color='#ff0000'):
         myPops, myCoh, pop_mask = get_myPops_myCoh(myData)
         
         darkenColor = 0.7
@@ -524,19 +525,19 @@ if plot_pop_lit_compare_ctmqc:
         color1 = '#'+''.join(color1)
         # Plot the populations
         if myPops is not False:
-            ax.plot(myData[pop_mask[0]].times*0.024188843265857,
+            axes[0].plot(myData[pop_mask[0]].times*0.024188843265857,
                     myPops[:, 0], label=legend, color=color)
             for data in myData:
-                ax.plot(data.times*0.024188843265857,
+                axes[0].plot(data.times*0.024188843265857,
                         np.mean(data.adPop, axis=1)[:, 0], color1, lw=0.6,
                         alpha=0.4)
         # Plot the Coherences
         if myCoh is not False:
-            axD.plot(myData[pop_mask[0]].times*0.024188843265857,
+            axes[1].plot(myData[pop_mask[0]].times*0.024188843265857,
                     myCoh, label=legend, color=color)
             for data in myData:
                 coherences = data.adPop[:, :, 0] * data.adPop[:, :, 1] 
-                axD.plot(data.times*0.024188843265857,
+                axes[1].plot(data.times*0.024188843265857,
                         np.mean(coherences, axis=1), color1, lw=0.6,
                         alpha=0.4)
 
@@ -549,110 +550,147 @@ if plot_pop_lit_compare_ctmqc:
                           "mod%i_%sMom" % (model, mom))
         return dfPop, dfDeco, mom
 
-    
-    allData = getData.NestedSimData(pops_ctmqc_root_folder, ['time', '|C|^2'])
-    if compare_DC:
-        allDCDataEx = getData.NestedSimData(pops_ctmqc_DC_root_folder,
-                                          ['time', '|C|^2'])
-        allDCDataEh = getData.NestedSimData(pops_ctmqc_DC_root_folder.replace("Extrap", "Ehren"),
-                                          ['time', '|C|^2'])
-        allDCDataRI0 = getData.NestedSimData(pops_ctmqc_DC_root_folder.replace("Extrap_", ""),
-                                          ['time', '|C|^2'])
+    def big_dirty_function(folderpath, fredData, gossData,
+                           params={'label': 'My Data', 'color': '#ff0000'},
+                           fredPlot={'CTMQC': ['Agostini, 16', {'color': 'k'}]},
+                           gossPlot={'CTMQC': ['Gossel, 18', {'color': 'r'}],
+                                     'exact':['Gossel Exact, 16', {'color': 'b'}]},
+                           figs_axes=False):
+        """
+        A function to plot the CTMQC populations and decoherences. This was originally just
+        procedural and I popped it in a function to make it easier to loop over for many
+        folders. I haven't divided the bits up yet and it is very messy!
+        """
+        allData = getData.NestedSimData(folderpath, ['time', '|C|^2'])
+        
+        for imom, mom in enumerate(['high', 'low']):
+            model = 1           
+            if figs_axes is False:
+                f, a = plt.subplots(2, 2)
+                fD, aD = plt.subplots(2, 2)
+            else:
+                f, a, fD, aD = figs_axes[imom]
+            for x in range(2):
+                for y in range(2):
+                    ax = a[x][y]
+                    axD = aD[x][y]
+                    
+                    looper = []
+                    if gossData is not False:
+                        dfGossPop, dfGossDeco, gossMom = get_ExtData(gossData,
+                                                                     model,
+                                                                     mom)
+                        looper.append((gossPlot, dfGossPop, ax))
+                        looper.append((gossPlot, dfGossDeco, axD))
+                    else:
+                        data = getData.GosselData()
+                        _, _, gossMom = get_ExtData(data, model, mom)
+
+                    if fredData is not False:
+                        dfFredPop, dfFredDeco, fredMom = get_ExtData(fredData,
+                                                                     model,
+                                                                     mom)
+                        looper.append((fredPlot, dfFredPop, ax))
+                        looper.append((fredPlot, dfFredDeco, axD))
+   
+                    # Plot the literature data
+                    for litPlot, litData, axis in looper:
+                        for key in litPlot:
+                            axis.plot(litData['%s_x' % key]*0.024188843265857,
+                                    litData['%s_y' % key], label=litPlot[key][0],
+                                    **litPlot[key][1])
+                    
+                    # Plot the my data
+                    myData = allData.query_data({'tullyModel': model,
+                                                 'velInit': gossMom * 5e-4})
+                    plot_myData(myData, (ax, axD), params['label'],
+                                params['color'])
+                    
+                    # Put labels on axes
+                    for axis in (ax, axD):
+                        if x == 1:
+                            axis.set_xlabel("Sim. Time [fs]")
+                        if y == 0:
+                            axis.set_ylabel("Ad. Pop.")
+                        
+                        axis.set_title("Model %i" % model, fontsize=24)
+           
+                        axis.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
+                                    xycoords='axes fraction', fontsize=15)
+                        axis.legend(fontsize=18)
+           
+                    model += 1
+            
+            f.suptitle("%s Momentum -Populations" % mom.title(), fontsize=30)
+            f.subplots_adjust(top=0.894,
+                                bottom=0.109,
+                                left=0.073,
+                                right=0.979,
+                                hspace=0.259,
+                                wspace=0.112)
+            
+            fD.suptitle("%s Momentum -Coherences" % mom.title(), fontsize=30)
+            fD.subplots_adjust(top=0.894,
+                                bottom=0.109,
+                                left=0.073,
+                                right=0.979,
+                                hspace=0.259,
+                                wspace=0.112)
+
+        
     fredData = getData.FredericaData()
     gossData = getData.GosselData()
     
-    for mom in ['high', 'low']:
-        model = 1
-        f, a = plt.subplots(2, 2)
-        fD, aD = plt.subplots(2, 2)
-    
-    
-        for x in range(2):
-            for y in range(2):
-                ax = a[x][y]
-                axD = aD[x][y]
+    fL, aL = plt.subplots(2, 2)
+    fDL, aDL = plt.subplots(2, 2)
+    fH, aH = plt.subplots(2, 2)
+    fDH, aDH = plt.subplots(2, 2)
+    folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/diffConst/const=20.0"
+    folder = pops_ctmqc_root_folder
+    big_dirty_function(folder, fredData, gossData,
+                       {'label': 'Sigma = var', 'color':'#00ff00'},
+                       fredPlot={},
+                       gossPlot={'CTMQC': ['Gossel, 18', {'color': 'r', 'lw': 2.5, 'ls': '--'}],
+                                 'exact':['Gossel Exact, 18', {'color': 'b', 'lw': 2.5, 'ls': '--'}]},
+                       figs_axes=((fL, aL, fDL, aDL),
+                                  (fH, aH, fDH, aDH)))
+    print("Done 0.3")
+#    sigmas = [0.1, 0.2, 0.5, 2]
+#    for sig in sigmas:
+#        folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/Sig_%.2g" % sig
+#        randCol = "#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
+#        big_dirty_function(folder, fredData, gossData,
+#                           params={'label': 'Sigma = %.2g'%sig,
+#                                   'color':randCol},
+#                           fredPlot={},
+#                           gossPlot={},
+#                           figs_axes=((fL, aL, fDL, aDL),
+#                                      (fH, aH, fDH, aDH)))
+#        print("Done %.2g" % sig)
+   
+   
 
-                dfFredPop, dfFredDeco, fredMom = get_ExtData(fredData, model,
-                                                             mom)
-                dfGossPop, dfGossDeco, gossMom = get_ExtData(gossData, model,
-                                                             mom)
 
-    
-                myData = allData.query_data({'tullyModel': model,
-                                             'velInit': gossMom * 5e-4})
-                plot_myData(myData)
-                if compare_DC:
-                    for data, col, lab in zip((allDCDataEx, allDCDataEh, allDCDataRI0),
-                                         ('#0000ff', '#555555', '#00bb00'),
-                                         ('Extrap DC', 'Ehren DC', 'RI0 DC')):
-                       myDCData = data.query_data({'tullyModel': model,
-                                                     'velInit': gossMom * 5e-4})
-                       plot_myData(myDCData, lab, color=col)
 
-                
-                ax.plot(dfGossPop['CTMQC_x']*0.024188843265857,
-                        dfGossPop['CTMQC_y'], label="Gossel, 18", color='k')    
-                ax.plot(dfGossPop['exact_x']*0.024188843265857,
-                        dfGossPop['exact_y'], label="Exact", color='b')
-#                if gossMom == fredMom:
-#                    ax.plot(dfFredPop['CTMQC_x']*0.024188843265857,
-#                            dfFredPop['CTMQC_y'], label="Agostini, 16", color='g')
-    
-                xlimmax = max(np.nanmax(dfGossPop['CTMQC_x']),
-                              np.nanmax(dfFredPop['CTMQC_x'])
-                              )*0.024188843265857*1.1
-                ax.set_xlim([-1.9, xlimmax])
-                
-                if x == 1:
-                    ax.set_xlabel("Sim. Time [fs]")
-                if y == 0:
-                    ax.set_ylabel("Ad. Pop.")
-                ax.set_title("Model %i" % model, fontsize=24)
-    
-                ax.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
-                            xycoords='axes fraction', fontsize=15)
-                ax.legend(fontsize=18)
+"""
+                   # Plot the coherences
+                   
 
-                # Plot the coherences
-                axD.plot(dfGossDeco['CTMQC_x']*0.024188843265857,
-                        dfGossDeco['CTMQC_y'], label="Gossel, 18", color='k')
-                axD.plot(dfGossDeco['exact_x']*0.024188843265857,
-                        dfGossDeco['exact_y'], label="Exact", color='b')
-#                if gossMom == fredMom:
-#                    axD.plot(dfFredDeco['CTMQC_x']*0.024188843265857,
-#                            dfFredDeco['CTMQC_y'], label="Agostini, 16", color='g')
-    
-                xlimmax = max(np.nanmax(dfGossDeco['CTMQC_x']),
-                              np.nanmax(dfFredDeco['CTMQC_x'])
-                              )*0.024188843265857*1.1
-                axD.set_xlim([-1.9, xlimmax])
-                
-                if x == 1:
-                    axD.set_xlabel("Sim. Time [fs]")
-                if y == 0:
-                    axD.set_ylabel("Coherence")
-                axD.set_title("Model %i" % model, fontsize=24)
-    
-                axD.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
-                            xycoords='axes fraction', fontsize=15)
-                axD.legend(fontsize=18)
-                model += 1
-
-    
-        f.suptitle("%s Momentum -Populations" % mom.title(), fontsize=30)
-        f.subplots_adjust(top=0.884,
-                            bottom=0.109,
-                            left=0.073,
-                            right=0.979,
-                            hspace=0.269,
-                            wspace=0.152)
-        
-        fD.suptitle("%s Momentum -Coherences" % mom.title(), fontsize=30)
-        fD.subplots_adjust(top=0.884,
-                            bottom=0.109,
-                            left=0.073,
-                            right=0.979,
-                            hspace=0.269,
-                            wspace=0.152)
-        fD.savefig('/homes/mellis/tmpD%s.png' % mom)
-        f.savefig('/homes/mellis/tmp%s.png' % mom)
+#                   if gossMom == fredMom:
+#                       axD.plot(dfFredDeco['CTMQC_x']*0.024188843265857,
+#                               dfFredDeco['CTMQC_y'], label="Agostini, 16", color='g')
+              fredData = getData.FredericaData()
+       gossData = getData.GosselData()
+                   xlimmax = max(np.nanmax(dfGossDeco['CTMQC_x']),
+                                 np.nanmax(dfFredDeco['CTMQC_x'])
+                                 )*0.024188843265857*1.1
+                   axD.set_xlim([-1.9, xlimmax])
+                   
+                   
+                                               
+               
+                    xlimmax = max(np.nanmax(dfGossPop['CTMQC_x']),
+                                  np.nanmax(dfFredPop['CTMQC_x'])
+                                  )*0.024188843265857*1.1
+                    ax.set_xlim([-1.9, xlimmax])
+"""

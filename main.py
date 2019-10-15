@@ -271,7 +271,7 @@ elif inputs == "FullCTMQCGossel":
                   -20, -15, -8, -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8)  * numRepeats
-    rootFolder = '%s/CTMQC_Data' % rootSaveFold
+    rootFolder = '%s/CTMQC_Data/ProperInit_diffConst/ConstSig' % rootSaveFold
     all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCGosselQuick":
@@ -288,17 +288,18 @@ elif inputs == "FullCTMQCGosselQuick":
 else:
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
-    mfolder_structure = ['sigma', 'mom']  # What the folderstructure of the outputted data looks like.
-    all_nRep = [10] * numRepeats  # How many replicas
-    all_model = [2] * numRepeats  # What tully model to use
+    mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
+    all_nRep = [70] * numRepeats  # How many replicas
+    all_model = [3] * numRepeats  # What tully model to use
     all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
-    all_maxTime = [1500] * numRepeats  # How long to run for
-    all_p_mean = [-8] * numRepeats  # The average initial position
+    all_maxTime = [1300] * numRepeats  # How long to run for
+    all_p_mean = [-15] * numRepeats  # The average initial position
     all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
     all_elec_steps = [5]
+    all_dt = [1]
     rootFolder = './test'  #'%s/test' % rootSaveFold  # Where to save the data.
-#    all_dt = [0.05]  # The nuclear timestep
+    all_dt = [1]  # The nuclear timestep
 #    all_elec_steps = [5]  # How many electronic timesteps in the nuclear one.
     
     #print("Carrying out custom input file")
@@ -338,7 +339,7 @@ def get_time_taken_ordering_dict(all_nrep, all_max_time,
                      
 
 
-s_mean = 0.5
+s_min = 0.2
 mass = 2000
 
 all_lens = [len(all_velMultiplier), len(all_maxTime),
@@ -385,12 +386,12 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'elec_steps': elec_steps,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': False,  # Dynamically adapt the value of sigma
+            'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 5,  # The constant in the sigma calc
+            'const': 20,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
             'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
-            'renorm': False,  # Choose whether renormalise the wf
+            'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
                 }
@@ -1234,8 +1235,8 @@ def doSim(iSim, para=False):
     nRep = all_nRep[iSim]
     
     v_mean = 5e-3 * velMultiplier
-    v_std = 0  # 2.5e-4 * 0.7
-    p_std = 0.6  # 15. / float(v_mean * mass)
+    p_std = np.sqrt(2)  # 15. / float(v_mean * mass)
+    v_std = 5e-3 /p_std
     s_std = 0
     
     coeff = [[complex(1, 0), complex(0, 0)]
@@ -1256,30 +1257,8 @@ def doSim(iSim, para=False):
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
-#    pos = np.array([-13.276119768497454, -9.3996678603251489, 
-#                    -14.410049934535484, -12.146706047917021, 
-#                    -18.468728133701951])
-    #pos = np.array([ -9.12135015, -9.13609128, -7.72261857, -7.30150427,
-    #                 -5.97536782, -9.33584456, -9.69426891, -6.53349334,
-    #                 -8.11764304, -9.95336119, -8.6064831 , -9.9440167 ,
-    #                 -8.33659954, -7.80929543, -9.48116853, -9.50119698,
-    #                 -5.81093262, -7.88304407, -6.2562794 , -7.25322983,
-    #                 -7.99286931, -8.30076168, -7.4825499 , -7.73070214,
-    #                 -8.88449302, -7.79177668, -7.79727793,-10.43458305,
-    #                 -8.08632716, -9.38289791, -8.14546481, -6.24934187,
-    #                 -9.37544997, -8.92904118, -8.70884742, -7.68745298,
-    #                 -7.12527982, -5.42112214, -7.10268418, -9.50775164,
-    #                 -7.72937901, -9.03770927, -7.38914573, -7.24568231,
-    #                 -11.00693419, -8.21760535, -8.74474179, -8.07768211,
-    #                 -7.06489451, -6.5893569 , -6.65141666, -7.29697918,
-    #                 -9.15616937, -8.22582671, -7.68959513, -7.0724765 ,
-    #                 -7.72160159, -5.07036669, -6.60068811, -9.87158961,
-    #                 -8.97870315, -4.07685487, -7.44930946, -7.73404064,
-    #                 -8.87831475, -8.47970292, -6.29032772, -10.16124744,
-    #                 -8.45993536, -7.12125884])
 
-
-    sigma = [rd.gauss(s_mean, s_std) for I in range(nRep)]
+    sigma = [rd.gauss(s_min, s_std) for I in range(nRep)]
 
     elec_steps = 5
     if all_elec_steps:
@@ -1388,6 +1367,7 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 #    plot.plotNorm(runData)
 #    #plot.plotRabi(runData)
     plot.plotDeco(runData)
+    plot.plotSigma(runData)
 #    #plot.plotRlk_Rl(runData)
 #    #plot.plotNorm(runData)
 #    plot.plotEcons(runData)

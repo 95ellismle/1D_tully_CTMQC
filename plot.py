@@ -4,7 +4,18 @@ import multiprocessing
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from plottingResults import getData
 
+
+def get_ExtData(extData, model, mom):
+    dfDeco = getattr(extData,
+                         "mod%i_%sMom_deco" % (model, mom))
+    dfPop = getattr(extData,
+                        "mod%i_%sMom_pops" % (model, mom))
+    mom = getattr(extData,
+                      "mod%i_%sMom" % (model, mom))
+    return dfPop, dfDeco, mom
+    
 
 def plotTotE(runData, f=False, a=False):
     """
@@ -261,7 +272,16 @@ def plotQlk(runData, f=False, a=False):
 def plotPops(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
+    
+    gossData = getData.GosselData()
+    model = runData.ctmqc_env['tullyModel']
+    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+    if mom > 20: mom = 'high'
+    else: mom = 'low'
+    dfPops, _, _ = get_ExtData(gossData, model, mom)
+    
     if a is False or f is False: f, a = plt.subplots()
+    a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r')
     a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
@@ -313,9 +333,16 @@ def plotDeco(runData, f=False, a=False):
     lw = 0.1
     alpha = 0.5
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-
+    gossData = getData.GosselData()
+    model = runData.ctmqc_env['tullyModel']
+    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+    if mom > 20: mom = 'high'
+    else: mom = 'low'
+    _, dfDeco, _ = get_ExtData(gossData, model, mom)
+    
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
+    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r')
     a.plot(runData.allt, np.mean(deco, axis=1), 'k')
     a.set_ylabel("Coherence")
     a.set_xlabel("Time [au]")
@@ -359,7 +386,21 @@ def plotPos(runData, f=False, a=False):
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
-    a.set_ylabel(r"$R^{(I)}$")
+    a.set_ylabel(r"$\mathbf{R}^{(I)}$")
+    a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
+
+
+def plotVel(runData, f=False, a=False):
+    """ 
+    Will plot sigmal against time
+    """
+    lw = 0.3 
+    alpha = 0.7 
+    
+    if a is False or f is False: f, a = plt.subplots()
+    a.plot(runData.allt, runData.allv, lw=lw, alpha=alpha)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\mathbf{v}^{(I)}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 

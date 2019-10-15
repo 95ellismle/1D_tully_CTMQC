@@ -205,7 +205,7 @@ class NestedSimData(object):
         Will read the data from many simulations that are nested and return a dict
         that has the same nested structure as the folders.
         """
-        ignore_keys = ('lastGoodPoint', 'effR', )
+        ignore_keys = ('lastGoodPoint', 'effR', 'smoothInitT',)
 
         self.allData = []
         self.__allDataMap = {}
