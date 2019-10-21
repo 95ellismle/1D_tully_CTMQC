@@ -15,7 +15,7 @@ def get_ExtData(extData, model, mom):
     mom = getattr(extData,
                       "mod%i_%sMom" % (model, mom))
     return dfPop, dfDeco, mom
-    
+
 
 def plotTotE(runData, f=False, a=False):
     """
@@ -23,11 +23,11 @@ def plotTotE(runData, f=False, a=False):
     plotting with other graphs).
     """
     lw = 0.5
-    alpha = 0.2  
-    
+    alpha = 0.2
+
     if a is False or f is False: f, a = plt.subplots()
 
-    
+
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
     #kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
     kinE = 0.5 * 2000. * (runData.allv**2)
@@ -36,7 +36,7 @@ def plotTotE(runData, f=False, a=False):
     a.plot(runData.allt, totE, lw=lw, alpha=alpha)
     avgTotE = np.mean(totE, axis=1)
     a.plot(runData.allt, avgTotE, 'k', label="Tot. E")
-    
+
     # Now get the conservation level
     dt = runData.ctmqc_env['dt']
     fit = np.polyfit(runData.allt, avgTotE, 1)
@@ -58,11 +58,11 @@ def plotEcons(runData, f=False, a=False):
     energies.
     """
     lw = 0.5
-    alpha = 0.2  
-    
+    alpha = 0.2
+
     if a is False or f is False: f, a = plt.subplots(3)
 
-    
+
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
     kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
     totE = potE + kinE
@@ -73,12 +73,12 @@ def plotEcons(runData, f=False, a=False):
     a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-',
               label="$\langle E$_{kin} \rangle$")
     a[1].plot(runData.allt, totE, lw=lw, alpha=alpha)
-    
+
     avgTotE = np.mean(totE, axis=1)
     #a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E")
     #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
     a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E")
-    
+
     a[2].plot(runData.allt, potE[:, :],
               label="E$_{1}$", lw=lw, alpha=alpha)
     a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
@@ -99,7 +99,7 @@ def plotEcons(runData, f=False, a=False):
     a[2].set_ylabel(r"Pot. E [au]")
     a[0].set_title(annotateMsg)
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
-    
+
 
 def Rabi(runData, f=False, a=False):
     H = runData.allH[0, 0]
@@ -150,21 +150,21 @@ def plotS26(runData, f=False, a=False):
 
 
 def plotAdMom(runData, f=False, a=False):
-    """ 
+    """
     Will plot the adiabatic momentum
     """
     if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
-    avgf = np.mean(runData.allAdMom, axis=1)    
+    avgf = np.mean(runData.allAdMom, axis=1)
 
-    a.plot(runData.allt, runData.allAdMom[:, :, 0], 
+    a.plot(runData.allt, runData.allAdMom[:, :, 0],
            color='r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allAdMom[:, :, 1], 
+    a.plot(runData.allt, runData.allAdMom[:, :, 1],
            color='b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf[:, 0], 
+    a.plot(runData.allt, avgf[:, 0],
            label=r"$\mathbf{f}^{(I)}_{0}$", color='r')
-    a.plot(runData.allt, avgf[:, 1], 
+    a.plot(runData.allt, avgf[:, 1],
            label=r"$\mathbf{f}^{(I)}_{1}$", color='b')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{f}_{l}^{(I)}$ [au]")
@@ -172,21 +172,21 @@ def plotAdMom(runData, f=False, a=False):
 
 
 def plotAdFrc(runData, f=False, a=False):
-    """ 
+    """
     Will plot the adiabatic momentum
     """
     if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
-    avgf = np.mean(runData.allAdFrc, axis=1)    
+    avgf = np.mean(runData.allAdFrc, axis=1)
 
-    a.plot(runData.allt, runData.allAdFrc[:, :, 0], 
+    a.plot(runData.allt, runData.allAdFrc[:, :, 0],
            color='r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allAdFrc[:, :, 1], 
+    a.plot(runData.allt, runData.allAdFrc[:, :, 1],
            color='b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf[:, 0], 
+    a.plot(runData.allt, avgf[:, 0],
            label=r"$\mathbf{Fad}^{(I)}_{0}$", color='r')
-    a.plot(runData.allt, avgf[:, 1], 
+    a.plot(runData.allt, avgf[:, 1],
            label=r"$\mathbf{Fad}^{(I)}_{1}$", color='b')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{Fad}_{l}^{(I)}$ [au]")
@@ -194,17 +194,17 @@ def plotAdFrc(runData, f=False, a=False):
 
 
 def plotFrc(runData, f=False, a=False):
-    """ 
+    """
     Will plot the total force
     """
     if a is False or f is False: f, a = plt.subplots()
     lw = 0.5
     alpha = 0.5
-    avgf = np.mean(runData.allF, axis=1)    
+    avgf = np.mean(runData.allF, axis=1)
 
-    a.plot(runData.allt, runData.allF, 
+    a.plot(runData.allt, runData.allF,
            color='r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf, 
+    a.plot(runData.allt, avgf,
            label=r"$\mathbf{F}^{(I)}_{0}$", color='r')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{F}_{l}^{(I)}$ [au]")
@@ -247,13 +247,13 @@ def plotRlk_gradRlk(runData, f=False, a=False):
         a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
         a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
-    
+
     a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk")
     a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$")
-    
+
     a.set_ylabel("Intercept [au]")
     a.legend()
-    
+
     a = ax[1]
     a.plot(runData.allt,
            np.gradient(runData.allRlk, runData.ctmqc_env['dt'], axis=0)[:, 0, 1])
@@ -263,7 +263,7 @@ def plotRlk_gradRlk(runData, f=False, a=False):
 def plotQlk(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
-    
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha)
@@ -274,14 +274,14 @@ def plotQlk(runData, f=False, a=False):
 def plotPops(runData, f=False, a=False):
     lw = 0.25
     alpha = 0.5
-    
+
     gossData = getData.GosselData()
     model = runData.ctmqc_env['tullyModel']
     mom = int(runData.ctmqc_env['velInit'] / 0.0005)
     if mom > 20: mom = 'high'
     else: mom = 'low'
     dfPops, _, _ = get_ExtData(gossData, model, mom)
-    
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r')
     a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
@@ -326,25 +326,26 @@ def plotNorm(runData, f=False, a=False):
     a.set_ylabel("Norm")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
-    
+
     fit = np.polyfit(runData.allt, avgNorms, 1)
     print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758 * dt))
 
 
 def plotDeco(runData, f=False, a=False):
+    if a is False or f is False: f, a = plt.subplots()
+
     lw = 0.1
     alpha = 0.5
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-    gossData = getData.GosselData()
-    model = runData.ctmqc_env['tullyModel']
-    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
-    if mom > 20: mom = 'high'
-    else: mom = 'low'
-    _, dfDeco, _ = get_ExtData(gossData, model, mom)
-    
-    if a is False or f is False: f, a = plt.subplots()
+#    gossData = getData.GosselData()
+#    model = runData.ctmqc_env['tullyModel']
+#    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+#    if mom > 20: mom = 'high'
+#    else: mom = 'low'
+#    _, dfDeco, _ = get_ExtData(gossData, model, mom)
+
     a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
-    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r')
+#    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r')
     a.plot(runData.allt, np.mean(deco, axis=1), 'k')
     a.set_ylabel("Coherence")
     a.set_xlabel("Time [au]")
@@ -379,12 +380,12 @@ def plotSigmal(runData, f=False, a=False):
 
 
 def plotPos(runData, f=False, a=False):
-    """ 
+    """
     Will plot sigmal against time
     """
-    lw = 0.3 
-    alpha = 0.7 
-    
+    lw = 0.3
+    alpha = 0.7
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
@@ -393,12 +394,12 @@ def plotPos(runData, f=False, a=False):
 
 
 def plotVel(runData, f=False, a=False):
-    """ 
+    """
     Will plot sigmal against time
     """
-    lw = 0.3 
-    alpha = 0.7 
-    
+    lw = 0.3
+    alpha = 0.7
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allv, lw=lw, alpha=alpha)
     a.set_xlabel("Time [au]")
@@ -407,12 +408,12 @@ def plotVel(runData, f=False, a=False):
 
 
 def plotNACV(runData, f=False, a=False):
-    """ 
+    """
     Will plot NACV against position
     """
-    lw = 1 
-    alpha = 0.7 
-    
+    lw = 1
+    alpha = 0.7
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha)
@@ -424,12 +425,12 @@ def plotNACV(runData, f=False, a=False):
 
 
 def plotH(runData, f=False, a=False):
-    """ 
+    """
     Will plot NACV against position
     """
-    lw = 1 
-    alpha = 0.7 
-    
+    lw = 1
+    alpha = 0.7
+
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allH[:, :, 0, 1], lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allH[:, :, 0, 0], lw=lw, alpha=alpha)
@@ -442,7 +443,7 @@ def plotH(runData, f=False, a=False):
 
 def plot_single_Epot_frame(data, istep, saveFolder=False, f=False, a=False):
     """
-    Will plot a single frame 
+    Will plot a single frame
     """
     potE = np.sum(data['|C|^2'][istep] * data['E'][istep], axis=1)
     if a is False or f is False: f, a = plt.subplots()
@@ -483,13 +484,13 @@ def orderFiles(folder, ext, badStr=False, replacer=False):
         allFiles = [f.replace(replacer, "") for f in allFiles]
     allNums = [int(f.replace(ext, "")) for f in allFiles]
     allFiles = [i[1] for i in sorted(zip(allNums, allFiles))]
-    
+
     # Now change the names
     maxZeros = len(str(len(allFiles)))
     for i, oldF in enumerate(allFiles):
         newF = "0" * (maxZeros - len(str(i))) + str(i) + ".png"
         os.rename("%s/%s" % (folder, oldF), "%s/%s" % (folder, newF))
-    
+
     ffmpegCmd = "ffmpeg -framerate 120 "
     ffmpegCmd += "-i %s/%%0%id.png potE_ani.mp4" % (folder, maxZeros)
     print("Use the following command to stitch the pics together:")
@@ -517,16 +518,16 @@ def plotEpotTime(runData, which_steps=False, saveFolder=False, step=1):
                              " inputted incorrectly. It should be an int, " +
                              "a list or a numpy array.")
         pool = multiprocessing.Pool()
-        
+
         # First create the arguments to feed into the wrapper function
         data = {'x': runData.allR, 'E': runData.allE,
                 '|C|^2': runData.allAdPop}
         data = [data] * len(which_steps)
         saveFolders = [saveFolder] * len(which_steps)
-        
+
         # Feed in the arguments zipped up
         pool.map(plot_Epot_wrapper_func,
                             zip(data, which_steps, saveFolders))
 
         orderFiles(saveFolder, ".png")
-        
+

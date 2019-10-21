@@ -23,7 +23,7 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "FullCTMQCGossel"
+inputs = "custom"
 
 #inputs = "EhrenEnerCons"
 #inputs = "custom"
@@ -80,11 +80,11 @@ elif inputs == "EhrenEnerCons":
     all_doCTMQC_F = ([True] * 4)  * numRepeats
     rootFolder = '%s/Ehrenfest_Data/EnerCons_vs_NuclDT' % rootSaveFold
     all_nRep = [100] * 8 * numRepeats
-    
+
 elif inputs == "CTMQCNormCons":
     print("CTMQC Norm Data Creation")
     numRepeats = 3
-    
+
     all_elec_steps = [1, 5, 10, 25, 50, 75, 100, 250, 500, 700, 1000] * 4
     numRepeats = len(all_elec_steps) // 4
     mfolder_structure = ['elec_steps', 'model']
@@ -118,7 +118,7 @@ elif inputs == "CTMQCEnerCons":
     all_doCTMQC_F = ([True] * 4)  * numRepeats
     rootFolder = '%s/CTMQC_Data/NoDC/EnerCons_vs_NuclDT' % rootSaveFold
     all_nRep = [200] * 8 * numRepeats
-    
+
 elif inputs == "MomentumEhren1":
     mfolder_structure = ['model', 'mom']
     all_velMultiplier = np.arange(0.02, 3, 0.02)
@@ -166,7 +166,7 @@ elif inputs == "MomentumEhren4":
 elif inputs == "AllEhrenfestTest":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 8
-    all_velMultiplier = [4, 3, 3, 2.5, 
+    all_velMultiplier = [4, 3, 3, 2.5,
                          1, 1, 1.6, 1.5,
                          2, 1
                          ] * numRepeats
@@ -184,7 +184,7 @@ elif inputs == "AllEhrenfestTest":
     mfolder_structure = ['model', 'mom']
     rootFolder = '%s/Ehrenfest_Data/Pops_Compare2' % rootSaveFold
     all_nRep = [200] * len(all_p_mean)
-    
+
 elif inputs == "quickFullEhrenGossel":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 1
@@ -291,10 +291,10 @@ else:
     numRepeats = 1  # How many repeated simulations (each with different init pos)
     mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
     all_nRep = [200] * numRepeats  # How many replicas
-    all_model = [1] * numRepeats  # What tully model to use
-    all_velMultiplier = [2.5] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
-    all_maxTime = [1300] * numRepeats  # How long to run for
-    all_p_mean = [-20] * numRepeats  # The average initial position
+    all_model = [3] * numRepeats  # What tully model to use
+    all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
+    all_maxTime = [1800] * numRepeats  # How long to run for
+    all_p_mean = [-15] * numRepeats  # The average initial position
     all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
     all_elec_steps = [5]
@@ -302,7 +302,7 @@ else:
     rootFolder = './test'  #'%s/test' % rootSaveFold  # Where to save the data.
     all_dt = [1]  # The nuclear timestep
 #    all_elec_steps = [5]  # How many electronic timesteps in the nuclear one.
-    
+
     #print("Carrying out custom input file")
     #numRepeats = 4
     #mfolder_structure = ['model', 'mom']
@@ -326,18 +326,18 @@ def get_time_taken_ordering_dict(all_nrep, all_max_time,
         all_max_time = [i/0.41341373336565040 for i in all_max_time]
     else:
         all_max_time = [float(i)/dt for i, dt in zip(all_max_time, all_dt)]
-    
+
     if all_elec_steps is False:
         all_elec_steps = [5 for i in range(len(all_nrep))]
-    
+
     all_estimates = [nrep * max_time * elec_steps
                      for (nrep, max_time, elec_steps) in zip(all_nrep,
                                                              all_max_time,
                                                              all_elec_steps)]
     all_inds = list(range(len(all_estimates)))
     all_sorted_inds = {i: ind[1] for i, ind in enumerate(sorted(zip(all_estimates, all_inds)))}
-    return all_sorted_inds    
-                     
+    return all_sorted_inds
+
 
 
 s_min = 0.08
@@ -368,10 +368,10 @@ def get_sig_figs_diff(num1, num2):
             print("Same to %i sf" % sig_figs)
             return sig_figs
 
-    print("The numbers are the same") 
+    print("The numbers are the same")
     return np.inf
 
-    
+
 def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
           dt=0.41341373336565040, elec_steps=5):
     # All units must be atomic units
@@ -448,7 +448,7 @@ class CTMQC(object):
 
     def __init__(self, ctmqc_env, root_folder = False,
                  folder_structure=['ctmqc', 'model', 'mom'], para=False):
-        
+
         # Set everything up
         self.root_folder = root_folder
         if root_folder: self.root_folder = os.path.abspath(self.root_folder)
@@ -469,10 +469,10 @@ class CTMQC(object):
         self.__init_step()  # Get things prepared for RK4 (propagate positions)
         self.__main_loop()  # Loop over all steps and propagate
         self.__finalise()  # Finish up and tidy
-    
+
     def create_folderpath(self):
         """
-        Will determine where to store the data. 
+        Will determine where to store the data.
 
         Inputs: folder_sStructure [list <str>] a list of keys to the ctmqc_env
            dictionary that determines the folderstructure of the
@@ -488,7 +488,7 @@ class CTMQC(object):
         if bool(self.root_folder) is False:
             self.save_folder = False
             return
-        
+
         # First determine some special params
         CT_str = "Ehren"
         if self.ctmqc_env['do_QM_C'] and self.ctmqc_env['do_QM_F']:
@@ -509,7 +509,7 @@ class CTMQC(object):
         params['model'] = model_str
         params['mom'] = mom_str
         params['sigma'] = "Sig_%.3g" % np.mean(self.ctmqc_env['sigma'])
-        
+
         # Create the folderpath from the structure given
         folderPath = "/".join([params[i] for i in self.folder_structure])
         self.save_folder = "%s/%s" % (self.root_folder, folderPath)
@@ -523,18 +523,18 @@ class CTMQC(object):
             if not os.path.isdir(self.save_folder):
                os.mkdir(self.save_folder)
                for f in os.listdir(oSaveF):
-                  oldFile = "%s/%s" % (oSaveF, f) 
+                  oldFile = "%s/%s" % (oSaveF, f)
                   if os.path.isfile(oldFile) and '.npy' in oldFile:
                      os.rename(oldFile, "%s/%s" % (self.save_folder, f))
-            
+
             # Create a new repeat
             count = 1
             oSaveF = self.save_folder[:]
             while os.path.isdir(self.save_folder):
                 self.save_folder = oSaveF + "_%i" % count
                 count += 1
-        
-    
+
+
     def __init_nsteps(self):
         """
         Will calculate the number of steps from the maximum time needed and the
@@ -568,8 +568,8 @@ class CTMQC(object):
         """
         if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
             v_std = np.std(self.ctmqc_env['vel'])
-            p_std = np.std(self.ctmqc_env['pos'])
-            if p_std == 0 and v_std == 0:
+            pos_std = np.std(self.ctmqc_env['pos'])
+            if pos_std == 0 and v_std == 0:
                 print("\n\n\nWARNING\n\n")
                 print("The initial positions and velocities are all the same,")
                 print(" meaning that the quantum momentum will be 0. If this ")
@@ -626,7 +626,7 @@ class CTMQC(object):
             msg = "Can't find initial velocities\n\t"
             msg += "(specify this as 'vel')"
             raise SystemExit(msg)
-        
+
         if changes:
             print("\n\nWARNING: Not all arrays have same num of replicas")
             print("Changing size of arrays so num of replicas is consistent\n")
@@ -797,8 +797,8 @@ class CTMQC(object):
 #        print("H: ", self.ctmqc_env['H'])
 #        print("E: ", self.ctmqc_env['E'])
 #        print("dlk: ", self.ctmqc_env['NACV'])
-        
-        
+
+
 #        print("F: ", self.ctmqc_env['frc'])
 
 
@@ -812,7 +812,7 @@ class CTMQC(object):
         if np.any(np.abs(adPops.imag) > 0):
             raise SystemExit("Something funny with adiabatic populations")
         self.ctmqc_env['adPops'] = adPops.real
-        
+
         # Do for each rep
         for irep in range(self.ctmqc_env['nrep']):
             # Get Hamiltonian
@@ -976,7 +976,7 @@ class CTMQC(object):
         self.__calc_F()
         self.ctmqc_env['vel'] += 0.5 * self.ctmqc_env['acc'] * dt  # full dt
         t4 = time.time()
-        
+
         self.allTimes['prep'].append(t2 - t1)
 #        self.allTimes['wf_prop'].append(t3 - t2)
         self.allTimes['force'].append(t4 - t3)
@@ -1065,7 +1065,7 @@ class CTMQC(object):
         fk = self.ctmqc_env['adMom'][:, k]
         Cl = self.ctmqc_env['adPop'][:, l]
         Ck = self.ctmqc_env['adPop'][:, k]
-        
+
         S26 = 2 * Qlk * (fk - fl) * Ck * Cl
         S26 = np.sum(S26, axis=0)
         if S26 > 1e-5:
@@ -1095,11 +1095,11 @@ class CTMQC(object):
 
         # Save little things like the strs and int vars etc...
         saveTypes = (str, int, float)
-        tullyInfo = {i:self.ctmqc_env[i] 
+        tullyInfo = {i:self.ctmqc_env[i]
                        for i in self.ctmqc_env
                        if isinstance(self.ctmqc_env[i], saveTypes)}
         np.save("%s/tullyInfo" % self.save_folder, tullyInfo)
-        
+
 
     def __checkVV(self):
         """
@@ -1132,14 +1132,14 @@ class CTMQC(object):
         # Small runs are probably tests
         if self.ctmqc_env['iter'] > 30 and self.save_folder and not self.para:
             self.store_data()
-        
+
         # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
         if any([all([self.ctmqc_env['do_QM_F'],
                      self.ctmqc_env['do_QM_C']]),
                 self.ctmqc_env['iter'] < 10]) is False:
             if self.tenSteps is False:
                self.__checkVV()
-        
+
         # Print some useful info
         if not self.para:
             sumTime = np.sum(self.allTimes['step'])
@@ -1152,7 +1152,7 @@ class CTMQC(object):
             msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
             msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
             msg += "  All Done!\n***\n"
-    
+
             msg += "\n\nAverage Times:"
             print(msg)
         if self.save_folder is not False:
@@ -1203,10 +1203,10 @@ def save_vitals(runData):
     if not os.path.isfile(normEnerFile):
         with open(normEnerFile, "w") as f:
             f.write(firstLine)
-    
+
     with open(normEnerFile, 'a') as f:
         model = runData.ctmqc_env['tullyModel']
-        
+
         CTMQC = "CTMQC"
         if not runData.ctmqc_env['do_QM_C'] and runData.ctmqc_env['do_QM_F']:
             CTMQC = "n-CTMQC"
@@ -1214,18 +1214,18 @@ def save_vitals(runData):
             CTMQC = "e-CTMQC"
         elif not runData.ctmqc_env['do_QM_F'] and not runData.ctmqc_env['do_QM_C']:
             CTMQC = "Ehrenfest"
-        
+
         nrep = runData.ctmqc_env['nrep']
         Ndt = runData.ctmqc_env['dt']
         Edt = Ndt / float(runData.ctmqc_env['elec_steps'])
         norm = get_norm_drift(runData)
         ener = get_ener_drift(runData)
         commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode("utf-8").strip("\n")
-    
+
         line = (model, CTMQC, nrep, str(Ndt), str(Edt), norm, ener, commit)
         f.write("%i,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
 
-    
+
 def doSim(iSim, para=False):
     velMultiplier = all_velMultiplier[iSim]
     maxTime = all_maxTime[iSim]
@@ -1234,26 +1234,26 @@ def doSim(iSim, para=False):
     doCTMQC_C = all_doCTMQC_C[iSim]
     doCTMQC_F = all_doCTMQC_F[iSim]
     nRep = all_nRep[iSim]
-    
+
     v_mean = 5e-3 * velMultiplier
-    p_std = np.sqrt(2)  # 15. / float(v_mean * mass)
-    v_std = 1. /(2000. * p_std)
+    pos_std = np.sqrt(2)  # 15. / float(v_mean * mass)
+    v_std = 1. /(2000. * pos_std)
     s_std = 0
-    
+
     coeff = [[complex(1, 0), complex(0, 0)]
               for iRep in range(nRep)]
 #    coeff = [[complex(1/np.sqrt(2), 0), complex(1/np.sqrt(2), 0)]
 #              for iRep in range(nRep)]
-    
-    pos = [rd.gauss(p_mean, p_std) for I in range(nRep)]
+
+    pos = [rd.gauss(p_mean, pos_std) for I in range(nRep)]
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
-    
+
 
     corrV = 1
     if np.mean(vel) != 0:
         corrV = v_mean / np.mean(vel)
     vel = np.array(vel) * corrV
-    
+
     corrP = 1
     if np.mean(pos) != 0:
         corrP = p_mean / np.mean(pos)
@@ -1264,7 +1264,7 @@ def doSim(iSim, para=False):
     elec_steps = 5
     if all_elec_steps:
         elec_steps = all_elec_steps[iSim]
-        
+
     dt = 0.41341373336565040
     if all_dt:
         dt = all_dt[iSim]
@@ -1301,7 +1301,7 @@ def get_min_procs(nSim, maxProcs):
            break
 
    if nProc > 1 and nSim % (nProc-1) == 0:
-       nProc -= 1 
+       nProc -= 1
    return nProc
 
 
@@ -1317,20 +1317,20 @@ def para_doSim(iSim):
 
 if nSim > 1:
     import multiprocessing as mp
-    
+
 
     nProc = get_min_procs(nSim, 24)
     print("Using %i processes" % (nProc))
     pool = mp.Pool(nProc)
 #    print("Doing %i sims with %i processes" % (nSim, nProc))
-    
+
     # This divides the runs into blocks of nProc simulations. Once the block is
     #  complete then the data is saved and the code moves onto the next block.
     # This means that often all the data isn't lost if the code crashes in an
     #  unsafe way.
     order_dict = get_time_taken_ordering_dict(all_nRep, all_maxTime,
                                               all_dt, all_elec_steps)
-    
+
     all_SimSets = []
     newArr = []
     count = 0
@@ -1342,7 +1342,7 @@ if nSim > 1:
         newArr.append(order_dict[count])
         count += 1
     all_SimSets.append(newArr)
-    
+
     print("Doing %i simulations" % count)
     for simulation_set in all_SimSets:
         allRunData = pool.map(para_doSim, simulation_set)
