@@ -29,7 +29,8 @@ def plotTotE(runData, f=False, a=False):
 
     
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
-    kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
+    #kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
+    kinE = 0.5 * 2000. * (runData.allv**2)
     totE = potE + kinE
 
     a.plot(runData.allt, totE, lw=lw, alpha=alpha)
@@ -260,13 +261,14 @@ def plotRlk_gradRlk(runData, f=False, a=False):
     a.set_ylabel(r"$\frac{\delta R_{lk, \nu}^{0}}{\delta t}$ [au]")
 
 def plotQlk(runData, f=False, a=False):
-    lw = 0.1
+    lw = 0.25
     alpha = 0.5
-    plt.figure()
-    plt.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha)
-    plt.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha)
+    
+    if a is False or f is False: f, a = plt.subplots()
+    a.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha)
 
 
 def plotPops(runData, f=False, a=False):

@@ -40,6 +40,7 @@ inputs = "FullCTMQCGossel"
 #inputs = "FullEhrenGossel"
 
 rootSaveFold = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test"
+#rootSaveFold = "/scratch/mellis/TullyModelData/Test"
 
 mfolder_structure = ['ctmqc', 'model', 'mom']
 all_dt = False
@@ -260,7 +261,7 @@ elif inputs == 'quickFullEhren':
 elif inputs == "FullCTMQCGossel":
     print("Carrying out full Gossel CTMQC testing!")
     numRepeats = 7
-    mfolder_structure = ['sigma', 'model', 'mom']
+    mfolder_structure = ['const', 'model', 'mom']
     all_velMultiplier = [4, 3, 3, 2.5,
                          1, 1, 1.6, 1.5] * numRepeats
     all_maxTime = [2000, 1500, 1500, 4000,
@@ -271,7 +272,7 @@ elif inputs == "FullCTMQCGossel":
                   -20, -15, -8, -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8)  * numRepeats
-    rootFolder = '%s/CTMQC_Data/ProperInit_diffConst/ConstSig' % rootSaveFold
+    rootFolder = '%s/CTMQC_Data/WignerV/VarSig' % rootSaveFold
     all_nRep = [200] * 8 * numRepeats
 
 elif inputs == "FullCTMQCGosselQuick":
@@ -289,11 +290,11 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
     mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
-    all_nRep = [70] * numRepeats  # How many replicas
-    all_model = [3] * numRepeats  # What tully model to use
-    all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
+    all_nRep = [200] * numRepeats  # How many replicas
+    all_model = [1] * numRepeats  # What tully model to use
+    all_velMultiplier = [2.5] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
     all_maxTime = [1300] * numRepeats  # How long to run for
-    all_p_mean = [-15] * numRepeats  # The average initial position
+    all_p_mean = [-20] * numRepeats  # The average initial position
     all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
     all_elec_steps = [5]
@@ -339,7 +340,7 @@ def get_time_taken_ordering_dict(all_nrep, all_max_time,
                      
 
 
-s_min = 0.2
+s_min = 0.08
 mass = 2000
 
 all_lens = [len(all_velMultiplier), len(all_maxTime),
@@ -386,9 +387,9 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'elec_steps': elec_steps,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
+            'do_sigma_calc': 'gossel',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 20,  # The constant in the sigma calc
+            'const': 30,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
             'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
@@ -1236,7 +1237,7 @@ def doSim(iSim, para=False):
     
     v_mean = 5e-3 * velMultiplier
     p_std = np.sqrt(2)  # 15. / float(v_mean * mass)
-    v_std = 5e-3 /p_std
+    v_std = 1. /(2000. * p_std)
     s_std = 0
     
     coeff = [[complex(1, 0), complex(0, 0)]

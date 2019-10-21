@@ -21,7 +21,7 @@ norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTM
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
 pops_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare2"
-pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/ProperInit_diffConst/const=30.0"
+pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Test/CTMQC_Data/WignerV/VarSig/const=80.0"
 pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Extrap_DC/Pops_Compare"
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
@@ -645,7 +645,7 @@ if plot_pop_lit_compare_ctmqc:
     fDL, aDL = plt.subplots(2, 2)
     fH, aH = plt.subplots(2, 2)
     fDH, aDH = plt.subplots(2, 2)
-    folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/diffConst/const=20.0"
+#    folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/diffConst/const=20.0"
     folder = pops_ctmqc_root_folder
     big_dirty_function(folder, fredData, gossData,
                        {'label': 'Sigma = var', 'color':'#00ff00'},
@@ -654,6 +654,9 @@ if plot_pop_lit_compare_ctmqc:
                                  'exact':['Gossel Exact, 18', {'color': 'b', 'lw': 2.5, 'ls': '--'}]},
                        figs_axes=((fL, aL, fDL, aDL),
                                   (fH, aH, fDH, aDH)))
+
+    for i, fig in enumerate((fL, fDL, fH, fDH)):
+         fig.savefig("%i.jpg" % i)
     print("Done 0.3")
 #    sigmas = [0.1, 0.2, 0.5, 2]
 #    for sig in sigmas:

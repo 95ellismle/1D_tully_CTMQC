@@ -417,11 +417,16 @@ def calc_Gossel_sigma(ctmqc_env):
     minSig = np.min(ctmqc_env['sigma'])
 
     for I in range(ctmqc_env['nrep']):
-        distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
-        cutoffR = ctmqc_env['const'] * ctmqc_env['sigma'][I]
-        distances = distances[np.abs(distances) < cutoffR]
+        distances = np.abs(ctmqc_env['pos'][I] - ctmqc_env['pos'])
+        cutoffR = 2 * np.std(ctmqc_env['pos'])
+#        stdPos = ctmqc_env['pos'][distances < cutoffR]
+        distances = distances[distances < cutoffR]
         
-        ctmqc_env['sigma'][I] = np.std(np.abs(distances)) * multiplier
+        avgD = np.mean(distances)
+        Dsquared = np.mean(distances**2)
+        ctmqc_env['sigma'][I] = np.sqrt(Dsquared - (avgD**2)) * multiplier
+        
+#        ctmqc_env['sigma'][I] = np.std(stdPos) * multiplier
     
     mask = ctmqc_env['sigma'] < minSig
     if sum(mask):
@@ -641,7 +646,7 @@ def calc_sigma(ctmqc_env):
         cnst = ctmqc_env['const']
         sigma_tm = ctmqc_env['sigma_tm'][I]
         cutoff_rad = cnst * sigma_tm
-        sig_thresh = cnst/ctmqc_env['nrep'] * np.min(ctmqc_env['sigma_tm'])
+        sig_thresh = cnst/ctmqc_env['nrep'] * np.sqrt(2)
 
         distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
         distMask = distances < cutoff_rad

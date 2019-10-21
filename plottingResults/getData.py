@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -58,7 +59,7 @@ class SingleSimData(object):
                  'Rlk': 'Rlk', 'sigma':'sig', 'vel': 'v', 'Ftot': 'F',
                  'effR':'effR'}
 
-    def __init__(self, folderpath, params_to_read=False):
+    def __init__(self, folderpath, params_to_read=False, model=False):
 
         # Check if the folder exists
         self.folderpath = check_folder(folderpath)
@@ -68,8 +69,11 @@ class SingleSimData(object):
         self._store_tully_data()
 
         # Read any params that have been requested
-        if params_to_read:
-            self._get_all_data(params_to_read)
+        if model is not False:
+            if self.tullyModel == model and params_to_read:
+                self._get_all_data(params_to_read)
+        elif params_to_read:
+                self._get_all_data(params_to_read)
 
     def _store_tully_data(self):
         """
@@ -191,16 +195,16 @@ class NestedSimData(object):
     acess the data one can use the function `query_data`. The data is stored in
     a flat list and a map is created that can be queried.
     """
-    def __init__(self, folderpath, params_to_read=False):
+    def __init__(self, folderpath, params_to_read=False, model=False):
 
         # Check the folder exists
         self.folderpath = check_folder(folderpath)
         if not self.folderpath: return None
 
         # Get all the data and store it in a list
-        self._get_data(params_to_read)
+        self._get_data(params_to_read, model)
 
-    def _get_data(self, params_to_read):
+    def _get_data(self, params_to_read, model=False):
         """
         Will read the data from many simulations that are nested and return a dict
         that has the same nested structure as the folders.
@@ -213,7 +217,9 @@ class NestedSimData(object):
         for fold, folders, files in os.walk(self.folderpath):
             if any('.npy' in i for i in files):
                 # Save the data
-                trajData = SingleSimData(fold, params_to_read)
+                print("\rReading Data from %s                                               " % fold,
+                      end="\r")
+                trajData = SingleSimData(fold, params_to_read, model)
                 self.allData.append(trajData)
                 add_to_list_in_dict(self.__allDataMap, "index", count)
                 # Now create the map to query the data
