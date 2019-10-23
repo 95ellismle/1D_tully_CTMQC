@@ -17,7 +17,7 @@ def get_ExtData(extData, model, mom):
     return dfPop, dfDeco, mom
 
 
-def plotTotE(runData, f=False, a=False):
+def plotTotE(runData, f=False, a=False, params={}):
     """
     Will just plot the total energy against time on a single axis (good for
     plotting with other graphs).
@@ -33,9 +33,9 @@ def plotTotE(runData, f=False, a=False):
     kinE = 0.5 * 2000. * (runData.allv**2)
     totE = potE + kinE
 
-    a.plot(runData.allt, totE, lw=lw, alpha=alpha)
+    a.plot(runData.allt, totE, lw=lw, alpha=alpha, **params)
     avgTotE = np.mean(totE, axis=1)
-    a.plot(runData.allt, avgTotE, 'k', label="Tot. E")
+    a.plot(runData.allt, avgTotE, 'k', label="Tot. E", **params)
 
     # Now get the conservation level
     dt = runData.ctmqc_env['dt']
@@ -52,7 +52,7 @@ def plotTotE(runData, f=False, a=False):
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
 
 
-def plotEcons(runData, f=False, a=False):
+def plotEcons(runData, f=False, a=False, params={}):
     """
     Will plot the conserved quantity along with the kinetice and potential
     energies.
@@ -66,23 +66,23 @@ def plotEcons(runData, f=False, a=False):
     potE = np.sum(runData.allAdPop * runData.allE, axis=2)
     kinE = 0.5 * runData.ctmqc_env['mass'] * (runData.allv**2)
     totE = potE + kinE
-    #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha)
-    #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha)
+    #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha, **params)
     a[0].plot(runData.allt, kinE[:, :],
               label="Kin E", lw=lw, alpha=alpha)
     a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-',
-              label="$\langle E$_{kin} \rangle$")
-    a[1].plot(runData.allt, totE, lw=lw, alpha=alpha)
+              label="$\langle E$_{kin} \rangle$", **params)
+    a[1].plot(runData.allt, totE, lw=lw, alpha=alpha, **params)
 
     avgTotE = np.mean(totE, axis=1)
-    #a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E")
-    #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E")
-    a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E")
+    #a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E", **params)
+    #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E", **params)
+    a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E", **params)
 
     a[2].plot(runData.allt, potE[:, :],
               label="E$_{1}$", lw=lw, alpha=alpha)
     a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
-              label="$\langle E$_{pot} \rangle$")
+              label="$\langle E$_{pot} \rangle$", **params)
 
     dt = runData.ctmqc_env['dt']
     fit = np.polyfit(runData.allt, avgTotE, 1)
@@ -101,7 +101,7 @@ def plotEcons(runData, f=False, a=False):
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
 
 
-def Rabi(runData, f=False, a=False):
+def Rabi(runData, f=False, a=False, params={}):
     H = runData.allH[0, 0]
     t = runData.allt
     delE = H[0, 0] - H[1, 1]
@@ -112,7 +112,7 @@ def Rabi(runData, f=False, a=False):
     return rabiPops
 
 
-def plotRabi(runData, f=False, a=False):
+def plotRabi(runData, f=False, a=False, params={}):
     f, a = plt.subplots()
     rabiPops = Rabi(runData)
     diPops = np.conjugate(runData.allu) * runData.allu
@@ -127,7 +127,7 @@ def plotRabi(runData, f=False, a=False):
     plt.show()
 
 
-def plotS26(runData, f=False, a=False):
+def plotS26(runData, f=False, a=False, params={}):
     """
     Will plot the equation S26 that the Qlk should obey.
     """
@@ -142,14 +142,14 @@ def plotS26(runData, f=False, a=False):
     alpha = 1
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, S2612, lw=lw, alpha=alpha, label=r"S26$_{12}$")
-    a.plot(runData.allt, S2621, lw=lw, alpha=alpha, label=r"S26$_{21}$")
+    a.plot(runData.allt, S2612, lw=lw, alpha=alpha, label=r"S26$_{12}$", **params)
+    a.plot(runData.allt, S2621, lw=lw, alpha=alpha, label=r"S26$_{21}$", **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel("S26")
     a.legend()
 
 
-def plotAdMom(runData, f=False, a=False):
+def plotAdMom(runData, f=False, a=False, params={}):
     """
     Will plot the adiabatic momentum
     """
@@ -171,7 +171,7 @@ def plotAdMom(runData, f=False, a=False):
     a.legend()
 
 
-def plotAdFrc(runData, f=False, a=False):
+def plotAdFrc(runData, f=False, a=False, params={}):
     """
     Will plot the adiabatic momentum
     """
@@ -193,7 +193,7 @@ def plotAdFrc(runData, f=False, a=False):
     a.legend()
 
 
-def plotFrc(runData, f=False, a=False):
+def plotFrc(runData, f=False, a=False, params={}):
     """
     Will plot the total force
     """
@@ -211,7 +211,7 @@ def plotFrc(runData, f=False, a=False):
     a.legend()
 
 
-def plotRlk_Rl(runData, f=False, a=False):
+def plotRlk_Rl(runData, f=False, a=False, params={}):
     """
     Will plot the Rlk and Rl term on the same axis
     """
@@ -219,20 +219,45 @@ def plotRlk_Rl(runData, f=False, a=False):
     alpha = 0.5
     if a is False or f is False: f, a = plt.subplots()
     if runData.allRl.shape[1] == 2:
-        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
-        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
+        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
+        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
     else:
         a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk")
-    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$")
+        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk", **params)
+    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel("Intercept [au]")
     a.legend()
 
 
-def plotRlk_gradRlk(runData, f=False, a=False):
+def plotRlk(runData, f=False, a=False, params={}):
+    """
+    Will plot the Rlk and Rl term on the same axis
+    """
+    if a is False or f is False: f, a = plt.subplots()
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'k', label="Rlk", **params)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel("Intercept [au]")
+    a.legend()
+
+
+def plotDenom(runData, f=False, a=False, params={}):
+    """
+    Will plot the Rlk and Rl term on the same axis
+    """
+    if a is False or f is False: f, a = plt.subplots()
+    C = runData.allAdPop
+    f = runData.allAdMom
+    denom = np.sum(C[:,:,0] * C[:,:,1] * (C[:,:,0] - C[:,:,1]), axis=1)
+    a.plot(runData.allt, denom, 'k', **params)
+    a.set_xlabel("Time [au]")
+    a.set_ylabel("Intercept Denominator [au]")
+#    a.legend()
+
+
+def plotRlk_gradRlk(runData, f=False, a=False, params={}):
     """
     Will plot the Rlk and Rl term on the same axis
     """
@@ -241,15 +266,15 @@ def plotRlk_gradRlk(runData, f=False, a=False):
     if a is False or f is False: f, ax = plt.subplots(2)
     a = ax[0]
     if runData.allRl.shape[1] == 2:
-        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$")
-        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$")
+        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
+        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
     else:
         a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
+        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
 
-    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk")
-    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$")
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk", **params)
+    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
 
     a.set_ylabel("Intercept [au]")
     a.legend()
@@ -260,18 +285,27 @@ def plotRlk_gradRlk(runData, f=False, a=False):
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\frac{\delta R_{lk, \nu}^{0}}{\delta t}$ [au]")
 
-def plotQlk(runData, f=False, a=False):
+
+def plotQlk(runData, f=False, a=False, params={}):
     lw = 0.25
     alpha = 0.5
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha, **params)
 
 
-def plotPops(runData, f=False, a=False):
+def plotAlpha(runData, f=False, a=False, params={}):
+   lw = 0.25
+   alpha = 0.5
+
+   if a is False or f is False: f, a = plt.subplots()
+   a.plot(runData.allt, runData.allAlpha, lw=lw, alpha=alpha, **params)
+
+
+def plotPops(runData, f=False, a=False, params={}):
     lw = 0.25
     alpha = 0.5
 
@@ -283,36 +317,36 @@ def plotPops(runData, f=False, a=False):
     dfPops, _, _ = get_ExtData(gossData, model, mom)
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r')
-    a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha)
+    a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r', **params)
+    a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
-           label=r"|C$_{1}$|$^2$")
+           label=r"|C$_{1}$|$^2$", **params)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
-           label=r"|C$_{2}$|$^2$")
+           label=r"|C$_{2}$|$^2$", **params)
     a.set_ylabel("Adiab. Pop.")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     a.legend()
 
 
-def plotDiPops(runData, f=False, a=False):
+def plotDiPops(runData, f=False, a=False, params={}):
     lw = 0.25
     alpha = 0.5
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allu[:, :, 1], 'b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allu[:, :, 0], 'r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allu[:, :, 1], 'b', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allu[:, :, 0], 'r', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, np.mean(runData.allu[:, :, 0], axis=1), 'r',
-           label=r"|C$_{1}$|$^2$")
+           label=r"|C$_{1}$|$^2$", **params)
     a.plot(runData.allt, np.mean(runData.allu[:, :, 1], axis=1), 'b',
-           label=r"|C$_{2}$|$^2$")
+           label=r"|C$_{2}$|$^2$", **params)
     a.set_ylabel("Diab. Pop.")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     a.legend()
 
 
-def plotNorm(runData, f=False, a=False):
+def plotNorm(runData, f=False, a=False, params={}):
     lw = 0.25
     alpha = 0.5
     dt = runData.ctmqc_env['dt']
@@ -321,8 +355,8 @@ def plotNorm(runData, f=False, a=False):
     # Mean over all reps
     avgNorms = np.mean(allNorms, axis=1)
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgNorms, 'r')
+    a.plot(runData.allt, allNorms, 'r', lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, avgNorms, 'r', **params)
     a.set_ylabel("Norm")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
@@ -331,28 +365,28 @@ def plotNorm(runData, f=False, a=False):
     print("Norm Drift = %.2g [$ps^{-1}$]" % (fit[0] * 41341.3745758 * dt))
 
 
-def plotDeco(runData, f=False, a=False):
+def plotDeco(runData, f=False, a=False, params={}):
     if a is False or f is False: f, a = plt.subplots()
 
     lw = 0.1
     alpha = 0.5
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-#    gossData = getData.GosselData()
-#    model = runData.ctmqc_env['tullyModel']
-#    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
-#    if mom > 20: mom = 'high'
-#    else: mom = 'low'
-#    _, dfDeco, _ = get_ExtData(gossData, model, mom)
+    gossData = getData.GosselData()
+    model = runData.ctmqc_env['tullyModel']
+    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+    if mom > 20: mom = 'high'
+    else: mom = 'low'
+    _, dfDeco, _ = get_ExtData(gossData, model, mom)
 
-    a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha)
-#    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r')
-    a.plot(runData.allt, np.mean(deco, axis=1), 'k')
+    a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha, **params)
+    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r', **params)
+    a.plot(runData.allt, np.mean(deco, axis=1), 'k', **params)
     a.set_ylabel("Coherence")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotSigma(runData, f=False, a=False):
+def plotSigma(runData, f=False, a=False, params={}):
     """
     Will plot sigmal against time
     """
@@ -360,26 +394,26 @@ def plotSigma(runData, f=False, a=False):
     a.plot(runData.allt, runData.allSigma[:, :], 'k',
            lw=0.5, alpha=0.5)
     a.plot(runData.allt, np.mean(runData.allSigma, axis=1),
-           'k', label=r"$\langle \sigma_{I}\rangle_{I}$")
+           'k', label=r"$\langle \sigma_{I}\rangle_{I}$", **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\sigma^{(I)}$ [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotSigmal(runData, f=False, a=False):
+def plotSigmal(runData, f=False, a=False, params={}):
     """
     Will plot sigmal against time
     """
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$")
-    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$")
+    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$", **params)
+    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$", **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\sigma_{l}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
     a.legend()
 
 
-def plotPos(runData, f=False, a=False):
+def plotPos(runData, f=False, a=False, params={}):
     """
     Will plot sigmal against time
     """
@@ -387,13 +421,13 @@ def plotPos(runData, f=False, a=False):
     alpha = 0.7
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allR, lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{R}^{(I)}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotVel(runData, f=False, a=False):
+def plotVel(runData, f=False, a=False, params={}):
     """
     Will plot sigmal against time
     """
@@ -401,13 +435,13 @@ def plotVel(runData, f=False, a=False):
     alpha = 0.7
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allv, lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allv, lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{v}^{(I)}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotNACV(runData, f=False, a=False):
+def plotNACV(runData, f=False, a=False, params={}):
     """
     Will plot NACV against position
     """
@@ -415,16 +449,16 @@ def plotNACV(runData, f=False, a=False):
     alpha = 0.7
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"NACV")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plotH(runData, f=False, a=False):
+def plotH(runData, f=False, a=False, params={}):
     """
     Will plot NACV against position
     """
@@ -432,24 +466,24 @@ def plotH(runData, f=False, a=False):
     alpha = 0.7
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allH[:, :, 0, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allH[:, :, 0, 0], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allH[:, :, 1, 1], lw=lw, alpha=alpha)
-    a.plot(runData.allt, runData.allH[:, :, 1, 0], lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allH[:, :, 0, 1], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allH[:, :, 0, 0], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allH[:, :, 1, 1], lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, runData.allH[:, :, 1, 0], lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"H [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
 
 
-def plot_single_Epot_frame(data, istep, saveFolder=False, f=False, a=False):
+def plot_single_Epot_frame(data, istep, saveFolder=False, f=False, a=False, params={}):
     """
     Will plot a single frame
     """
     potE = np.sum(data['|C|^2'][istep] * data['E'][istep], axis=1)
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(data['x'], data['E'][:, :, 0], 'r')
-    a.plot(data['x'], data['E'][:, :, 1], 'b')
-    a.plot(data['x'][istep], potE, 'k.')
+    a.plot(data['x'], data['E'][:, :, 0], 'r', **params)
+    a.plot(data['x'], data['E'][:, :, 1], 'b', **params)
+    a.plot(data['x'][istep], potE, 'k.', **params)
     a.set_ylabel("Energy [Ha]")
     a.set_xlabel("Nucl. Pos [bohr]")
     if isinstance(saveFolder, str):
@@ -472,7 +506,7 @@ def plot_Epot_wrapper_func(args):
     plot_single_Epot_frame(*args)
 
 
-def orderFiles(folder, ext, badStr=False, replacer=False):
+def orderFiles(folder, ext, badStr=False, replacer=False, params={}):
     """
     Will rename files to reorder them for ffmpeg.
     """

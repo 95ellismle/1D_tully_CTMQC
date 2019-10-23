@@ -105,3 +105,34 @@ def plotEnerVsNuclDt(allNestedData, model, fig=False, axis=False, params={},
     axis.set_xlabel("Nuclear Timestep [as]")
     fig.suptitle("Elec dt = %.2g [as]" % (elec_dt[0]), fontsize=30)
     return fig, axis
+
+
+class PlotClass(object):
+   """
+   A wrapper class to pass the data in the correct format to the existing
+   plotting code
+   """
+   ctmqc_env = {}
+
+   changeNames = {'adPop': 'allAdPop', 'E': 'allE', 'Feh': 'Feh',
+                  'H': 'allH', 'R': 'allR', 'Fqm': 'Fqm', 'RI0': 'allRl',
+                  'sigmal': 'allSigmal', 'times': 'allt', 'u': 'allu',
+                  'Fad': 'allAdFrc', 'f': 'allAdMom', 'dlk': 'allNACV',
+                  'Qlk': 'allQlk', 'Rlk': 'allRlk', 'sig':'allSigma',
+                  'v': 'allv', 'F': 'allF', 'effR':'allEffR'}
+   def __init__(self, tullyData):
+      if type(tullyData) == list:
+         print("Sorry I can only create the PlotClass for 1 simulation")
+         print("Make sure you aren't feeding a list of simulation data into the PlotClass")
+         raise SystemExit("TypeError")
+
+      # Fill the ctmqc_env
+      for i in tullyData.__dict__:
+         if i not in self.changeNames:
+            self.ctmqc_env[i] = tullyData.__dict__[i]
+
+      # Populate the data arrays
+      for key in tullyData.__dict__:
+         if key in self.changeNames:
+             newName = self.changeNames[key]
+             setattr(self, newName, tullyData.__dict__[key])

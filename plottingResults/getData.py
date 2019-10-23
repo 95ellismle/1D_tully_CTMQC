@@ -220,8 +220,13 @@ class NestedSimData(object):
                 print("\rReading Data from %s                                               " % fold,
                       end="\r")
                 trajData = SingleSimData(fold, params_to_read, model)
+
+                if not (model is False or model == trajData.tullyModel):
+                    continue
+
                 self.allData.append(trajData)
                 add_to_list_in_dict(self.__allDataMap, "index", count)
+                count += 1
                 # Now create the map to query the data
                 for key, value in trajData.__dict__.items():
                     if key in ignore_keys:
@@ -231,7 +236,6 @@ class NestedSimData(object):
                             value = round(value, 3)
                         add_to_list_in_dict(self.__allDataMap, key, value)
                         
-                count += 1
 #        print({key: len(self.__allDataMap[key]) for key in self.__allDataMap})
 #        print(self.__allDataMap.get('effR'))
         self.__allDataMap = pd.DataFrame(self.__allDataMap)
