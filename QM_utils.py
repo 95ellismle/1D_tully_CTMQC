@@ -205,7 +205,7 @@ def get_effective_R(runData, Rlk):
 #    ctmqc_env['isSpiking'] = True
     
     effR = Rlk
-    #oldEffR = ctmqc_env['effR']
+    oldEffR = ctmqc_env['effR']
     ctmqc_env['intercept_type'] = 'Rlk'
     if ctmqc_env['isSpiking']:
         if ctmqc_env['Rlk_smooth'] == '<RI0>':
@@ -232,8 +232,8 @@ def get_effective_R(runData, Rlk):
             print("and the 'Rlk_smooth' = '%s'." % ctmqc_env['Rlk_smooth'])
             raise SystemExit("No Rlk Smooth Method Inputted")
             
-    #if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > ctmqc_env['gradTol']:
-    #    effR = oldEffR
+    if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > 40:
+        effR = oldEffR
     if ctmqc_env['nSmoothStep'] > 0:  effR = do_Rlk_smoothing(effR, ctmqc_env)
 
     ctmqc_env['prevSpike'] = ctmqc_env['isSpiking']

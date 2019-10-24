@@ -109,3 +109,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Data folder
+./test
+test/*
+test
