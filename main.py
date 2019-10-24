@@ -23,7 +23,7 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "custom"
+inputs = "FullCTMQCGosselQuick"
 
 #inputs = "EhrenEnerCons"
 #inputs = "custom"
@@ -279,14 +279,19 @@ elif inputs == "FullCTMQCGossel":
 elif inputs == "FullCTMQCGosselQuick":
     print("Carrying out quick Gossel CTMQC testing!")
     numRepeats = 1
-    all_velMultiplier = [4, 1, 3, 1, 3, 1.6, 2.5, 1.5] * numRepeats
-    all_maxTime = [2000, 6000, 1500, 5000, 1500, 2500, 4000, 6000] * numRepeats
-    all_model = [4, 4, 3, 3, 2, 2, 1, 1] * numRepeats
-    all_p_mean = [-20, -20, -15, -15, -8, -8, -8, -8] * numRepeats
+    mfolder_structure = ['const', 'model', 'mom']
+    all_velMultiplier = [4, 3, 3, 2.5,
+                         1, 1, 1.6, 1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000,
+                   6000, 5000, 2500, 6000] * numRepeats
+    all_model = [4, 3, 2, 1,
+                 4, 3, 2, 1] * numRepeats
+    all_p_mean = [-20, -15, -8, -20,
+                  -20, -15, -8, -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
-    all_doCTMQC_F = ([True] * 8 )  * numRepeats
-    rootFolder = '%s/FullCTMQCGosselQuick' % rootSaveFold
-    all_nRep = [20] * 8 * numRepeats
+    all_doCTMQC_F = ([True] * 8)  * numRepeats
+    rootFolder = '%s/CTMQC_Data/WignerV/VarSig' % rootSaveFold
+    all_nRep = [200] * 8 * numRepeats
 else:
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
@@ -764,6 +769,7 @@ class CTMQC(object):
         self.ctmqc_env['spike_region_count'] = 0
         self.ctmqc_env['poss_spike'] = False
         self.ctmqc_env['threshold'] = 0.995
+        self.ctmqc_env['nSmoothStep0'] = self.ctmqc_env['nSmoothStep']
         self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
                          'transform': [], 'calcQM':[], 'prep': []}
 

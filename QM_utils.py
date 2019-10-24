@@ -507,6 +507,8 @@ def calc_Qlk_Min17_opt(runData):
         if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
             print(Qlk)
             raise SystemExit("Qlk not symmetric!")
+    if ctmqc_env['nSmoothStep'] != ctmqc_env['nSmoothStep0']:
+        ctmqc_env['nSmoothStep'] = ctmqc_env['nSmoothStep0']
         
     #t5 = time.time()
     
