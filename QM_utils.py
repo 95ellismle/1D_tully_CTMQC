@@ -188,10 +188,10 @@ def get_goodR_LGP(runData):
     # Get alternative R
     ctmqc_env = runData.ctmqc_env
     if ctmqc_env['prevSpike'] != ctmqc_env['isSpiking']:
-        ctmqc_env['bob'] = runData.allRlk[ctmqc_env['iter'] - 3]
+        ctmqc_env['lgp'] = runData.allRlk[ctmqc_env['iter'] - 3]
 
     # If it is spiking interpolate between the Rlk and RI0
-    goodR = ctmqc_env['bob']
+    goodR = ctmqc_env['lgp']
 
     return goodR
 
@@ -205,17 +205,22 @@ def get_effective_R(runData, Rlk):
 #    ctmqc_env['isSpiking'] = True
     
     effR = Rlk
+    #oldEffR = ctmqc_env['effR']
+    ctmqc_env['intercept_type'] = 'Rlk'
     if ctmqc_env['isSpiking']:
-        if ctmqc_env['Rlk_smooth'] == 'RI0':
+        if ctmqc_env['Rlk_smooth'] == '<RI0>':
             effR = get_goodR_RIO(ctmqc_env)
             
+        elif ctmqc_env['Rlk_smooth'] == 'RI0':
+            ctmqc_env['intercept_type'] = 'RI0'
+        
         elif 'extrapolation' in ctmqc_env['Rlk_smooth']:
             effR = get_goodR_extrapolation(runData, Rlk)
             
         elif ctmqc_env['Rlk_smooth'] == 'ehrenfest':
             effR = False
         
-        elif ctmqc_env['Rlk_smooth'] == 'LGP':
+        elif ctmqc_env['Rlk_smooth'].lower() == 'lgp':
             effR = get_goodR_LGP(runData)
 
         elif ctmqc_env['Rlk_smooth'].strip() == '':
@@ -224,9 +229,11 @@ def get_effective_R(runData, Rlk):
         else:
             print("I don't recognise the Rlk smoothing method chosen.")
             print("If no smoothing is required set the 'nSmoothStep' = 0.")
-            print("and the 'Rlk_smooth' = ''.")
+            print("and the 'Rlk_smooth' = '%s'." % ctmqc_env['Rlk_smooth'])
             raise SystemExit("No Rlk Smooth Method Inputted")
             
+    #if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > ctmqc_env['gradTol']:
+    #    effR = oldEffR
     if ctmqc_env['nSmoothStep'] > 0:  effR = do_Rlk_smoothing(effR, ctmqc_env)
 
     ctmqc_env['prevSpike'] = ctmqc_env['isSpiking']
@@ -298,7 +305,7 @@ def calc_sigmal(ctmqc_env):
     return sigmal
 
 
-def calc_all_prod_gauss(ctmqc_env, reps_to_do=False):
+def calc_all_prod_gauss(ctmqc_env, reps_to_do):
     """
     Will calculate the product of the gaussians in a more efficient way than
     simply brute forcing it.
@@ -306,54 +313,39 @@ def calc_all_prod_gauss(ctmqc_env, reps_to_do=False):
     nRep = ctmqc_env['nrep']
     
     # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
-    prefact = ctmqc_env['sigma']**(-1)
+    prefact = ctmqc_env['sigma']**(-1)  # -1 as it is 1D (will be -3 for 3D)
+
     # Calculate the exponent
     exponent = np.zeros((nRep, nRep))
-    if reps_to_do is not False:
-        for I in reps_to_do:
-            pos = ctmqc_env['pos']
-            RIv = pos[I]
-            sig = ctmqc_env['sigma'] ** 2
-            exponent[I, :] = -(RIv - pos)**2 / (2*sig)
-#            for J in range(nRep):
-#                RJv = ctmqc_env['pos'][J]
-#                sJv = ctmqc_env['sigma'][J]
-#                
-#                exponent[I, J] -= ( (RIv - RJv)**2 / (sJv**2))
-#            print(exponent[I, :] - ()
-#            exponent[I, :] = -np.sum((RIv - pos)**2/sig**2)
-    else:
-        for I in range(ctmqc_env['nrep']):
-            pos = ctmqc_env['pos']
-            RIv = pos[I]
-            sig = ctmqc_env['sigma']
-            exponent[I, :] = -(RIv - pos)**2 / (2*sig)
+    sig = ctmqc_env['sigma'] ** 2
+    pos = ctmqc_env['pos']
+    for I, RIv in enumerate(pos[reps_to_do]):
+        exponent[I, :] = -(RIv - pos)**2 / sig
             
     return np.exp(exponent * 0.5) * prefact
 
 
-def calc_WIJ(ctmqc_env, reps_to_complete=False):
+def calc_WIJ(ctmqc_env, reps_to_complete):
     """
     Will calculate alpha for all replicas and atoms
     """
+    #t0 = time.time()
     nRep = ctmqc_env['nrep']
     WIJ = np.zeros((nRep, nRep))
+    #t1 = time.time()
     allProdGauss_IJ = calc_all_prod_gauss(ctmqc_env, reps_to_complete)
+    #t2 = time.time()
+    sigma2 = 2 * ctmqc_env['sigma']**2
+    for I in reps_to_complete:
+        # Calc WIJ
+        WIJ[I, :] = allProdGauss_IJ[I, :] \
+                        / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
+    #t3 = time.time()
+    #totTime = t3-t0
+    #print("\t* allocate: %.2g%% %.2g" % (100.*(t1-t0)/totTime, t1-t0))
+    #print("\t* calc gauss prod: %.2g%% %.2g" % (100.*(t2-t1)/totTime, t2-t1))
+    #print("\t* calc WIJ: %.2g%% %.2g" % (100.*(t3-t2)/totTime, t3-t2))
 
-    if reps_to_complete is not False and len(reps_to_complete) > 0:
-        sigma2 = 2 * ctmqc_env['sigma']**2
-        for I in reps_to_complete:
-            # Calc WIJ
-            WIJ[I, :] = allProdGauss_IJ[I, :] \
-                            / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
-    elif reps_to_complete is False:
-        for I in range(ctmqc_env['nrep']):
-            # Calc WIJ
-            sigma2 = ctmqc_env['sigma']**2
-            WIJ[I, :] = allProdGauss_IJ[I, :] \
-                            / (sigma2 * np.sum(allProdGauss_IJ[I, :]))
-            WIJ[I, :] /= 2
-            
     return WIJ
 
 
@@ -369,16 +361,6 @@ def calc_Ylk(ctmqc_env):
     fl_fk =  ctmqc_env['adMom'][:, 0] - ctmqc_env['adMom'][:, 1]
     Ylk[:, 0, 1] = Clk * fl_fk
     Ylk[:, 1, 0] = -Ylk[:, 0, 1]
-#    # Can eventually use antisymmtery for this.
-#    for I in range(ctmqc_env['nrep']):
-#        for l in range(ctmqc_env['nstate']):
-#            for k in range(l):
-#                Clk = ctmqc_env['adPops'][I, l] * ctmqc_env['adPops'][I, k]
-#                fl = ctmqc_env['adMom'][I, l]
-#                fk = ctmqc_env['adMom'][I, k]
-#                
-#                Ylk[I, l, k] = Clk  * (fk - fl)
-#                Ylk[I, k, l] = -Ylk[I, l, k]
     return Ylk
 
 
@@ -391,40 +373,13 @@ def calc_Rlk(ctmqc_env, reps_to_do=False):
     summed_Ylk = np.sum(Ylk, axis=0)
 
     Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))
-#    new_reps_to_do = reps_to_do[:]
-    if reps_to_do is not False:
-        if summed_Ylk[0, 1] != 0:
-            Rlk[0, 1] = np.sum(ctmqc_env['pos'][reps_to_do] 
-                                * ctmqc_env['alpha'][reps_to_do] 
-                                * Ylk[reps_to_do, 0, 1],
-                               axis=0) / summed_Ylk[0, 1]
-            Rlk[1, 0] = Rlk[0,1]
-#        for l in range(ctmqc_env['nstate']):
-#            for k in range(ctmqc_env['nstate']):
-#                for I in reps_to_do:
-#                    RI = ctmqc_env['pos'][I]
-##                    if Ylk[I, l, k] <= 1e-8:
-##                        new_reps_to_do = new_reps_to_do[new_reps_to_do != I]
-##                        print(new_reps_to_do)
-##                        continue
-#                    Ylk_sum = summed_Ylk[l, k]
-#                    if summed_Ylk[l, k] != 0:
-#                        Rlk[l, k] += (RI * ctmqc_env['alpha'][I] 
-#                                         * Ylk[I, l, k]) / Ylk_sum
-    else:
-        Rlk[0, 1] = np.sum(ctmqc_env['pos'] * ctmqc_env['alpha'] * Ylk[:, 0, 1],
-                               axis=0) / summed_Ylk[0, 1]
-        Rlk[1, 0] = Rlk[0, 1]
-#        for l in range(ctmqc_env['nstate']):
-#            for k in range(ctmqc_env['nstate']):
-#                for I in range(ctmqc_env['nrep']):
-#                    RI = ctmqc_env['pos'][I]
-#                    Ylk_sum = summed_Ylk[l, k]
-#                    if summed_Ylk[l, k] != 0:
-#                        Rlk[l, k] += (RI * ctmqc_env['alpha'][I] 
-#                                         * Ylk[I, l, k]) / Ylk_sum
-#    print(new_reps_to_do)
-#    raise SystemExit("BREAK")
+    if summed_Ylk[0, 1] != 0:
+        Rlk[0, 1] = np.sum(ctmqc_env['pos'][reps_to_do] 
+                            * ctmqc_env['alpha'][reps_to_do] 
+                            * Ylk[reps_to_do, 0, 1],
+                           axis=0) / summed_Ylk[0, 1]
+        Rlk[1, 0] = Rlk[0,1]
+
     return Rlk
 
 
@@ -432,7 +387,7 @@ def calc_Gossel_sigma(ctmqc_env):
     """
     Will calculate the sigma parameter as laid out in Gossell, 18.
     """
-    minSig = np.min(ctmqc_env['sigma'])
+    minSig = 0.1  # np.min(ctmqc_env['sigma'])
 
     for I in range(ctmqc_env['nrep']):
         distances = np.abs(ctmqc_env['pos'][I] - ctmqc_env['pos'])
@@ -455,9 +410,10 @@ def calc_Gossel_sigma_with_clusters(ctmqc_env):
     """
     Will calculate the sigma parameter as laid out in Gossell, 18.
     """
-    minSig = np.min(ctmqc_env['sigma'])
+    minSig = 0.1  # np.min(ctmqc_env['sigma'])
 
-    clusterPos, clusterInds = clust.getClusters(ctmqc_env['pos'], 0.7, True)
+    clusterPos, clusterInds = clust.getClusters(ctmqc_env['pos'], 0.7)
+    ctmqc_env['clusters'] = clusterInds
 
     for I in range(ctmqc_env['nrep']):
         clustID = clust.getClustID(clusterInds, I)
@@ -487,12 +443,21 @@ def calc_Qlk_Min17_opt(runData):
     Will calculate the quantum momentum as written in Min, 17.
     """
     ctmqc_env = runData.ctmqc_env
+    Qlk = np.zeros((ctmqc_env['nrep'],
+                    ctmqc_env['nstate'],
+                    ctmqc_env['nstate']))
+
     t0 = time.time()
-#
-#    for I in range(ctmqc_env['nrep']):
-#        pops = ctmqc_env['adPops'][I, 0]
-#        ctmqc_env['sigma'][I] = 2 - (np.exp(-(pops-0.5)**2/0.08) * 1.9)
-#    ctmqc_env['sigma'] = 0.2
+
+    # Get which reps to calculate alpha for
+    threshold = ctmqc_env['threshold']
+    mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
+    reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
+    if len(reps_to_do) == 0: return Qlk
+
+    #t1 = time.time()
+
+    # Calculate Sigma
     if ctmqc_env['do_sigma_calc'].lower() == 'gossel':
         calc_Gossel_sigma(ctmqc_env)
     elif ctmqc_env['do_sigma_calc'].lower() == 'de-broglie':
@@ -505,59 +470,57 @@ def calc_Qlk_Min17_opt(runData):
         print("I don't know how to treat the sigma parameter")
         print("Options are:\n\t* 'Gossel'\n\t* 'De-Broglie'\n\t* 'No'")
         raise SystemExit("Unkown Input")
-    t1 = time.time()
-
-    threshold = ctmqc_env['threshold']
-    mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
-    reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
     
+    #t12 = time.time()
+
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env, reps_to_do)
-    t2 = time.time()
+    #t2 = time.time()
     
     # Calculate slope
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
-    t3 = time.time()
+    #t3 = time.time()
 
 
     
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)
+    if ctmqc_env['intercept_type'] == 'RI0':
+        for I in reps_to_do:
+            RI0 = np.sum(ctmqc_env['WIJ'][I, :] * ctmqc_env['pos'], axis=0)
+
+            Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - RI0
+    else: 
+        ctmqc_env['Rlk'] = Rlk
+        ctmqc_env['effR'] = effR
+        #t4 = time.time()
+
+        # Finally calculate Qlk
+        if effR is False: return Qlk
+
+        for I in reps_to_do:
+            Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - effR
+            for l in range(ctmqc_env['nstate']): Qlk[I, l, l] = 0.0
         
-    ctmqc_env['Rlk'] = Rlk
-    ctmqc_env['effR'] = effR
-    t4 = time.time()
-
-    # Finally calculate Qlk
-    Qlk = np.zeros((ctmqc_env['nrep'],
-                    ctmqc_env['nstate'],
-                    ctmqc_env['nstate']))
-    if effR is False: return Qlk
-
-    for I in reps_to_do:
-        Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - effR
-        for l in range(ctmqc_env['nstate']):
-            Qlk[I, l, l] = 0.0
+        # Only for 2 states
+        if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
+            print(Qlk)
+            raise SystemExit("Qlk not symmetric!")
+        
+    #t5 = time.time()
     
-    # Only for 2 states
-    if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
-        print(Qlk)
-        raise SystemExit("Qlk not symmetric!")
-    
+    #totTime = t5 - t0
+    #print("\n")
+    #print("Get Reps: %.2g%% %.2g" % (100.*(t1-t0)/totTime, t1-t0))
+    #print("calc sigma: %.2g%% %.2g" % (100.*(t12-t1)/totTime, t12-t1))
+    #print("calc Rlk: %.2g%% %.2g" % (100.*(t2-t12)/totTime, t2-t12))
+    #print("calc WIJ/alpha: %.2g%% %.2g" % (100.*(t3-t2)/totTime, t3-t2))
+    #print("calc effR: %.2g%% %.2g" % (100.*(t4-t3)/totTime, t4-t3))
+    #print("calc Qlk: %.2g%% %.2g" % (100.*(t5-t4)/totTime, t5-t4))
+    #print("\n")
+
     Qlk /= ctmqc_env['mass']
-    t5 = time.time()
-    
-    totTime = t5 - t0
-#    print("\n")
-#    print("calc sig: %.2g%% %.2g" % ((t1-t0)/totTime, t1-t0))
-#    print("calc Rlk: %.2g%% %.2g" % ((t2-t1)/totTime, t2-t1))
-#    print("calc WIJ/alpha: %.2g%% %.2g" % ((t3-t2)/totTime, t3-t2))
-#    print("calc effR: %.2g%% %.2g" % ((t4-t3)/totTime, t4-t3))
-#    print("calc Qlk: %.2g%% %.2g" % ((t5-t4)/totTime, t5-t4))
-#    print("\n")
-#    print(Qlk)
-#    print("Qlk = ", Qlk)
     return Qlk
 #test_norm_gauss()
     
@@ -662,18 +625,18 @@ def calc_sigma(ctmqc_env):
     This algorithm doesn't seem to work -it gives discontinuous sigma and sigma
     seems to blow up. To fix discontinuities a weighted stddev might work.
     """
+    sig_thresh = 0.1  # cnst/ctmqc_env['nrep'] * np.sqrt(2)
+    cnst = float(ctmqc_env['const'])
     for I in range(ctmqc_env['nrep']):
-        cnst = ctmqc_env['const']
         sigma_tm = ctmqc_env['sigma_tm'][I]
         cutoff_rad = cnst * sigma_tm
-        sig_thresh = cnst/ctmqc_env['nrep'] * np.sqrt(2)
 
         distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
         distMask = distances < cutoff_rad
         if any(distMask):
             new_var = np.std(distances[distances < cutoff_rad])
         else:
-            print(cutoff_rad)
+            #print(cutoff_rad)
             new_var = sig_thresh
         ctmqc_env['sigma'][I] = new_var
 
@@ -855,7 +818,6 @@ def calc_Qlk_Min17(runData):
 
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env)
-
     
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)

@@ -19,14 +19,24 @@ def add_to_list_in_dict(D, key, val):
             D[key] = [val]
 
 def constructNN(pos, maxDist=0.3):
+    pos = np.array(pos)
+    #t1 = time.time()
     mask = np.ones((len(pos), len(pos)), dtype=bool)
     NN = np.zeros((len(pos), len(pos)), dtype=float)
-    for I in range(len(pos)):
-        for J in range(I):
-            NN[I, J] = np.linalg.norm(pos[I] - pos[J])
-            NN[J, I] = NN[I, J]
-            mask[I, J] = NN[I, J] < maxDist
-            mask[J, I] = mask[I, J]
+    #t2 = time.time()
+    
+    for I in range(len(NN)):
+        NN[I, :] = np.abs(pos[I] - pos)
+
+    #t3 = time.time()
+    mask = NN < maxDist
+    #t4 = time.time()
+
+    #totTime = t4 - t1
+    #print("\t* Allocation (%.2g%%): %.2g s" % (100*(t2 - t1)/totTime, t2-t1))
+    #print("\t* Nearest Neighbour calc(%.2g%%): %.2g s" % (100*(t3 - t2)/totTime, t3-t2))
+    #print("\t* Mask (%.2g%%): %.2g s" % (100*(t4 - t3)/totTime, t4-t3))
+
     return NN, mask
 
 
@@ -129,24 +139,33 @@ def handle_outliers(clusters, NN, numPointsAllowed=5):
         return clusters
 
 
-def getClusters(data, maxDist, handleOutliers=True):
+def getClusters(data, maxDist):
     """
     Will use the above recursive functions to cluster the data points using a
     variant of the DBSCAN algorithm.
     """
+    #t0 = time.time()
     NN, mask = constructNN(data, maxDist)
+    #t1 = time.time()
     clusters = clusterAllPoints(data, mask, list(range(len(data))))
+    #t2 = time.time()
 
-    if handleOutliers:
-        clusters = handle_outliers(clusters, NN, 5)
-
+    clusters = handle_outliers(clusters, NN, 5)
+    #t3 = time.time()
     clustersData = {i: [data[j] for j in clusters[i]] for i in clusters}
+    #t4 = time.time()
+
+    #totTime = t4 - t0
+    #print("Nearest Neighbour (%.2g%%):  %.2g s" % (100*(t1 - t0)/totTime, t1-t0) )
+    #print("Clustering (%.2g%%): %.2g s" % (100*(t2 - t1)/totTime, t2-t1))
+    #print("Outliers (%.2g%%): %.2g s" % (100*(t3 - t2)/totTime, t3-t2))
+    #print("Reformatting (%.2g%%): %.2g s" % (100*(t4 - t3)/totTime, t4-t3))
+
     return clustersData, clusters
 
 
 # Plot the data
 def plotClusters(clusters, data):
-    import matplotlib.pyplot as plt
     f, a = plt.subplots()
     colors = ['b', 'g', 'r', 'c', 'm', 'k', '#a6cee3',
               '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99',

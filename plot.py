@@ -101,8 +101,25 @@ def plotEcons(runData, f=False, a=False, params={}):
     print(r"Energy Drift = %.2g [Ha / (atom ps)]" % (slope))
 
 
+def plotClusters(runData, f=False, a=False, params={}):
+    if a is False or f is False: f, a = plt.subplots()
+    colors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c',
+              '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00',
+              '#cab2d6', '#6a3d9a', '#ffff99', 'b', 'g',
+              'r', 'c', 'm', 'k']
+    
+    for istep, stepCluster in enumerate(runData.allClusters): 
+	    for clustI in stepCluster: 
+	        inds = stepCluster[clustI] 
+	        pos = runData.allR[istep, inds] 
+	        time = np.ones(len(pos)) * runData.allt[istep]     
+	        a.plot(time, pos, '.', color=colors[clustI]) 
+
+
+
 def Rabi(runData, f=False, a=False, params={}):
     H = runData.allH[0, 0]
+    if a is False or f is False: f, a = plt.subplots()
     t = runData.allt
     delE = H[0, 0] - H[1, 1]
     Hab = H[0,1]
@@ -113,7 +130,7 @@ def Rabi(runData, f=False, a=False, params={}):
 
 
 def plotRabi(runData, f=False, a=False, params={}):
-    f, a = plt.subplots()
+    if a is False or f is False: f, a = plt.subplots()
     rabiPops = Rabi(runData)
     diPops = np.conjugate(runData.allu) * runData.allu
     a.plot(runData.allt, rabiPops, 'r', lw=3, alpha=0.5,
@@ -225,7 +242,7 @@ def plotRlk_Rl(runData, f=False, a=False, params={}):
         a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
         a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk", **params)
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r', label="Rlk", **params)
     a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel("Intercept [au]")
@@ -273,7 +290,7 @@ def plotRlk_gradRlk(runData, f=False, a=False, params={}):
                label=r"$R_{\nu, 0}^{(I)}$")
         a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
 
-    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r.', label="Rlk", **params)
+    a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r', label="Rlk", **params)
     a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
 
     a.set_ylabel("Intercept [au]")
@@ -309,15 +326,15 @@ def plotPops(runData, f=False, a=False, params={}):
     lw = 0.25
     alpha = 0.5
 
-    gossData = getData.GosselData()
-    model = runData.ctmqc_env['tullyModel']
-    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
-    if mom > 20: mom = 'high'
-    else: mom = 'low'
-    dfPops, _, _ = get_ExtData(gossData, model, mom)
+    #gossData = getData.GosselData()
+    #model = runData.ctmqc_env['tullyModel']
+    #mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+    #if mom > 20: mom = 'high'
+    #else: mom = 'low'
+    #dfPops, _, _ = get_ExtData(gossData, model, mom)
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r', **params)
+    #a.plot(dfPops['CTMQC_x'], dfPops['CTMQC_y'], 'r', **params)
     a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
@@ -371,15 +388,15 @@ def plotDeco(runData, f=False, a=False, params={}):
     lw = 0.1
     alpha = 0.5
     deco = runData.allAdPop[:, :, 0] * runData.allAdPop[:, :, 1]
-    gossData = getData.GosselData()
-    model = runData.ctmqc_env['tullyModel']
-    mom = int(runData.ctmqc_env['velInit'] / 0.0005)
-    if mom > 20: mom = 'high'
-    else: mom = 'low'
-    _, dfDeco, _ = get_ExtData(gossData, model, mom)
+    #gossData = getData.GosselData()
+    #model = runData.ctmqc_env['tullyModel']
+    #mom = int(runData.ctmqc_env['velInit'] / 0.0005)
+    #if mom > 20: mom = 'high'
+    #else: mom = 'low'
+    #_, dfDeco, _ = get_ExtData(gossData, model, mom)
 
     a.plot(runData.allt, deco, 'k', lw=lw, alpha=alpha, **params)
-    a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r', **params)
+    #a.plot(dfDeco['CTMQC_x'], dfDeco['CTMQC_y'], 'r', **params)
     a.plot(runData.allt, np.mean(deco, axis=1), 'k', **params)
     a.set_ylabel("Coherence")
     a.set_xlabel("Time [au]")
@@ -483,7 +500,7 @@ def plot_single_Epot_frame(data, istep, saveFolder=False, f=False, a=False, para
     if a is False or f is False: f, a = plt.subplots()
     a.plot(data['x'], data['E'][:, :, 0], 'r', **params)
     a.plot(data['x'], data['E'][:, :, 1], 'b', **params)
-    a.plot(data['x'][istep], potE, 'k.', **params)
+    a.plot(data['x'][istep], potE, 'k', **params)
     a.set_ylabel("Energy [Ha]")
     a.set_xlabel("Nucl. Pos [bohr]")
     if isinstance(saveFolder, str):

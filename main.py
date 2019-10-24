@@ -39,8 +39,9 @@ inputs = "custom"
 #inputs = "MomentumEhren2"
 #inputs = "FullEhrenGossel"
 
-rootSaveFold = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test"
+#rootSaveFold = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test"
 #rootSaveFold = "/scratch/mellis/TullyModelData/Test"
+rootSaveFold = "LaptopData"
 
 mfolder_structure = ['ctmqc', 'model', 'mom']
 all_dt = False
@@ -290,13 +291,13 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
     mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
-    all_nRep = [50] * numRepeats  # How many replicas
+    all_nRep = [200] * numRepeats  # How many replicas
     all_model = [3] * numRepeats  # What tully model to use
     all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
     all_maxTime = [1300] * numRepeats  # How long to run for
     all_p_mean = [-15] * numRepeats  # The average initial position
-    all_doCTMQC_C = [False] * numRepeats  # Whether to use the coeff CTMQC equations
-    all_doCTMQC_F = [False]  * numRepeats  # Whether the use the frc CTMQC equations
+    all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
+    all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
     all_elec_steps = [5]
     all_dt = [1]
     rootFolder = './test'  #'%s/test' % rootSaveFold  # Where to save the data.
@@ -387,11 +388,11 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'elec_steps': elec_steps,  # Num elec. timesteps per nucl. one | | -
             'do_QM_F': doCTMQC_F,  # Do the QM force
             'do_QM_C': doCTMQC_C,  # Do the QM force
-            'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
+            'do_sigma_calc': 'gossel_cluster',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 40,  # The constant in the sigma calc
+            'const': 50,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
+            'gradTol': 10,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
@@ -687,6 +688,7 @@ class CTMQC(object):
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
         self.allEffR = np.zeros((nstep, nstate, nstate))
+        self.allClusters = []
         if self.ctmqc_env['Qlk_type'] == 'sigmal':
             self.allRl = np.zeros((nstep, nstate))
         elif self.ctmqc_env['Qlk_type'] == 'Min17':
@@ -704,6 +706,7 @@ class CTMQC(object):
         self.ctmqc_env['H'] = np.zeros((nrep, nstate, nstate))
         self.ctmqc_env['NACV'] = np.zeros((nrep, nstate, nstate),
                                           dtype=complex)
+        self.ctmqc_env['clusters'] = {}
         self.ctmqc_env['NACV_tm'] = np.zeros((nrep, nstate, nstate),
                                              dtype=complex)
         self.ctmqc_env['U'] = np.zeros((nrep, nstate, nstate))
@@ -761,6 +764,8 @@ class CTMQC(object):
         self.ctmqc_env['spike_region_count'] = 0
         self.ctmqc_env['poss_spike'] = False
         self.ctmqc_env['threshold'] = 0.995
+        self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
+                         'transform': [], 'calcQM':[], 'prep': []}
 
         # Calculate the Hamiltonian
         for irep in range(nrep):
@@ -815,6 +820,7 @@ class CTMQC(object):
         self.ctmqc_env['adPops'] = adPops.real
 
         # Do for each rep
+        doQM = False
         for irep in range(self.ctmqc_env['nrep']):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
@@ -838,17 +844,20 @@ class CTMQC(object):
                         for Ck in self.ctmqc_env['adPops'][irep]):
                     adMom = 0.0 * self.ctmqc_env['adMom'][irep]
                 else:
+                    doQM = True
                     adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
 
         # Do for all reps
-        if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
+        t1 = time.time()
+        if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C'] and doQM:
             #if self.ctmqc_env['do_sigma_calc']:
             #    qUt.calc_sigma(self.ctmqc_env)
             if self.ctmqc_env['Qlk_type'] == 'Min17':
                 self.ctmqc_env['Qlk'] = qUt.calc_Qlk_Min17_opt(self)
             if self.ctmqc_env['Qlk_type'] == 'sigmal':
                 self.ctmqc_env['Qlk'] = qUt.calc_Qlk_2state(self.ctmqc_env)
+        self.allTimes['calcQM'].append(time.time() - t1)
 #        print("\n")
 
     def __main_loop(self):
@@ -856,13 +865,6 @@ class CTMQC(object):
         Will loop over all steps and propagate the dynamics
         """
         nstep = self.ctmqc_env['nsteps']
-        self.allTimes = {'step': [], 'force': [], 'wf_prop': {'prop': {
-                                                             'makeX': [],
-                                                             'RK4': [],
-                                                             'lin. interp': [],
-                                                              },
-                                                              'transform': []},
-                         'prep': []}
 
         for istep in range(nstep):
             try:
@@ -934,7 +936,7 @@ class CTMQC(object):
         coefficients.
         """
         # Propagate WF
-#        t1 = time.time()
+        t1 = time.time()
         if self.adiab_diab == 'adiab':
             e_prop.do_adiab_prop(self.ctmqc_env)
         else:
@@ -959,7 +961,8 @@ class CTMQC(object):
             e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
-        self.allTimes['wf_prop']['transform'].append(t3 - t2)
+        self.allTimes['wf_prop'].append(t2 - t1)
+        self.allTimes['transform'].append(t3 - t2)
 
     def __ctmqc_step(self):
         """
@@ -980,7 +983,6 @@ class CTMQC(object):
         t4 = time.time()
 
         self.allTimes['prep'].append(t2 - t1)
-#        self.allTimes['wf_prop'].append(t3 - t2)
         self.allTimes['force'].append(t4 - t3)
         self.__update_vars_step()  # Save old positions
 
@@ -1026,6 +1028,7 @@ class CTMQC(object):
         self.allSigmal[istep] = self.ctmqc_env['sigmal']
         self.allRl[istep] = self.ctmqc_env['altR']
         self.allAlphal[istep] = self.ctmqc_env['alphal']
+        self.allClusters.append(self.ctmqc_env['clusters'])
 
         self.allt[istep] = self.ctmqc_env['t']
 
