@@ -219,20 +219,20 @@ def do_adiab_prop(ctmqc_env):
             E += 0.5 * dE_E
             NACV += 0.5 * dNACV_E
             v += 0.5 * dv_E
-            QM += 0.5 * dQM_E
-            f += 0.5 * df_E
             X12 = makeX_adiab_ehren(NACV, v, E)
 #            print("X12: ", X12)
 
             E = E + 0.5 * dE_E
             NACV = NACV + 0.5 * dNACV_E
             v = v + 0.5 * dv_E
-            QM += 0.5 * dQM_E
-            f += 0.5 * df_E
             X2 = makeX_adiab_ehren(NACV, v, E)
             if doQM:
-                adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+                QM += 0.5 * dQM_E
+                f += 0.5 * df_E
                 X12 -= makeX_adiab_Qlk(QM, f, adPops)
+                
+                QM += 0.5 * dQM_E
+                f += 0.5 * df_E
                 X2 -= makeX_adiab_Qlk(QM, f, adPops)
 #            print("X2: ", X2)
 
@@ -246,8 +246,9 @@ def do_adiab_prop(ctmqc_env):
         lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
         lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
         lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
-        lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
-        lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
+        if doQM:
+           lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
+           lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
 #        print("VARS")
 #        print("----")
 #        print("iter = ", ctmqc_env['iter'])

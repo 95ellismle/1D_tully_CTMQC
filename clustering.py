@@ -139,28 +139,17 @@ def handle_outliers(clusters, NN, numPointsAllowed=5):
         return clusters
 
 
-def getClusters(data, maxDist):
+def getClusters(data, maxDist, minPoints=5):
     """
     Will use the above recursive functions to cluster the data points using a
     variant of the DBSCAN algorithm.
     """
-    #t0 = time.time()
     NN, mask = constructNN(data, maxDist)
-    #t1 = time.time()
     clusters = clusterAllPoints(data, mask, list(range(len(data))))
-    #t2 = time.time()
 
-    clusters = handle_outliers(clusters, NN, 5)
-    #t3 = time.time()
+    clusters = handle_outliers(clusters, NN, minPoints)
+
     clustersData = {i: [data[j] for j in clusters[i]] for i in clusters}
-    #t4 = time.time()
-
-    #totTime = t4 - t0
-    #print("Nearest Neighbour (%.2g%%):  %.2g s" % (100*(t1 - t0)/totTime, t1-t0) )
-    #print("Clustering (%.2g%%): %.2g s" % (100*(t2 - t1)/totTime, t2-t1))
-    #print("Outliers (%.2g%%): %.2g s" % (100*(t3 - t2)/totTime, t3-t2))
-    #print("Reformatting (%.2g%%): %.2g s" % (100*(t4 - t3)/totTime, t4-t3))
-
     return clustersData, clusters
 
 

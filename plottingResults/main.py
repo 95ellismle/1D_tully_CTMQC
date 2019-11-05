@@ -20,8 +20,8 @@ norm_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest
 norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Ehren_DC/NormCons_vs_ElecDT"
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
-pops_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/Pops_Compare2"
-pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/WignerV/VarSig/const=150.0"
+pops_root_folder = "/scratch/mellis/TullyModelData/Test/Ehren_Data/Diab/"
+pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Test/CTMQC_Data/Diab_Prop"
 pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Extrap_DC/Pops_Compare"
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
@@ -408,9 +408,9 @@ if plot_pop_norm_Rlk:
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
                 
-                savePath = savePath + "/Repeat_%i" % iSim
-                f.savefig(savePath)
-                plt.close("all")
+                #savePath = savePath + "/Repeat_%i" % iSim
+                #f.savefig(savePath)
+                #plt.close("all")
                 
                 print("\rRepeat %i done" % iSim, end="\r")
             print("Model %i %s momentum done" % (model, mom))
@@ -484,9 +484,9 @@ if plot_frc_ener_Rlk:
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
                 
-                savePath = savePath + "/Repeat_%i" % iSim
-                f.savefig(savePath)
-                plt.close("all")
+                #savePath = savePath + "/Repeat_%i" % iSim
+                #f.savefig(savePath)
+                #plt.close("all")
                             
                 print("\rRepeat %i done" % iSim, end="\r")
             print("Model %i %s momentum done" % (model, mom))
@@ -657,6 +657,7 @@ if plot_pop_lit_compare_ctmqc:
 
     for i, fig in enumerate((fL, fDL, fH, fDH)):
          fig.savefig("%i.jpg" % i)
+    plt.show()
     print("Done 0.3")
 #    sigmas = [0.1, 0.2, 0.5, 2]
 #    for sig in sigmas:
@@ -697,3 +698,5 @@ if plot_pop_lit_compare_ctmqc:
                                   )*0.024188843265857*1.1
                     ax.set_xlim([-1.9, xlimmax])
 """
+
+plt.show()

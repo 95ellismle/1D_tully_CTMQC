@@ -412,7 +412,7 @@ def calc_Gossel_sigma_with_clusters(ctmqc_env):
     """
     minSig = 0.1  # np.min(ctmqc_env['sigma'])
 
-    clusterPos, clusterInds = clust.getClusters(ctmqc_env['pos'], 0.7)
+    clusterPos, clusterInds = clust.getClusters(ctmqc_env['pos'], 0.7, 4)
     ctmqc_env['clusters'] = clusterInds
 
     for I in range(ctmqc_env['nrep']):
@@ -447,7 +447,6 @@ def calc_Qlk_Min17_opt(runData):
                     ctmqc_env['nstate'],
                     ctmqc_env['nstate']))
 
-    t0 = time.time()
 
     # Get which reps to calculate alpha for
     threshold = ctmqc_env['threshold']
@@ -455,7 +454,6 @@ def calc_Qlk_Min17_opt(runData):
     reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
     if len(reps_to_do) == 0: return Qlk
 
-    #t1 = time.time()
 
     # Calculate Sigma
     if ctmqc_env['do_sigma_calc'].lower() == 'gossel':
@@ -471,17 +469,13 @@ def calc_Qlk_Min17_opt(runData):
         print("Options are:\n\t* 'Gossel'\n\t* 'De-Broglie'\n\t* 'No'")
         raise SystemExit("Unkown Input")
     
-    #t12 = time.time()
 
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env, reps_to_do)
-    #t2 = time.time()
     
     # Calculate slope
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
-    #t3 = time.time()
-
 
     
     # Smooth out the intercept
@@ -494,7 +488,6 @@ def calc_Qlk_Min17_opt(runData):
     else: 
         ctmqc_env['Rlk'] = Rlk
         ctmqc_env['effR'] = effR
-        #t4 = time.time()
 
         # Finally calculate Qlk
         if effR is False: return Qlk
@@ -510,22 +503,21 @@ def calc_Qlk_Min17_opt(runData):
     if ctmqc_env['nSmoothStep'] != ctmqc_env['nSmoothStep0']:
         ctmqc_env['nSmoothStep'] = ctmqc_env['nSmoothStep0']
         
-    #t5 = time.time()
-    
-    #totTime = t5 - t0
-    #print("\n")
-    #print("Get Reps: %.2g%% %.2g" % (100.*(t1-t0)/totTime, t1-t0))
-    #print("calc sigma: %.2g%% %.2g" % (100.*(t12-t1)/totTime, t12-t1))
-    #print("calc Rlk: %.2g%% %.2g" % (100.*(t2-t12)/totTime, t2-t12))
-    #print("calc WIJ/alpha: %.2g%% %.2g" % (100.*(t3-t2)/totTime, t3-t2))
-    #print("calc effR: %.2g%% %.2g" % (100.*(t4-t3)/totTime, t4-t3))
-    #print("calc Qlk: %.2g%% %.2g" % (100.*(t5-t4)/totTime, t5-t4))
-    #print("\n")
 
     Qlk /= ctmqc_env['mass']
     return Qlk
-#test_norm_gauss()
-    
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

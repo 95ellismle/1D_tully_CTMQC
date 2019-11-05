@@ -48,8 +48,8 @@ class SingleSimData(object):
                  'time': ['T'], 'u': ['diab coeff'], 'C': ['ad coeff'],
                  'Fad': ['ad force'], 'f': ['ad mom'], 'NACV': ['dlk'],
                  'Qlk': ['QM', 'quantum momentum'], 'Rlk': ['intercept'],
-                 'sigma':[], 'vel': ['v'], 'Ftot': ['tot force'],
-                 'effR': ['effective_R', 'effectiveR']}
+                 'sigma':[], 'vel': ['v'], 'Ftot': ['tot force'], 
+                 'alpha': ['alpha'], 'effR': ['effective_R', 'effectiveR']}
 
     # What the filenames will be saved as
     conv_file_to_param_names = {'|C|^2': 'adPop', 'E': 'E', 'Feh': 'Feh',
@@ -57,7 +57,7 @@ class SingleSimData(object):
                  'sigmal': 'sig_l', 'time': 'times', 'u': 'u', 'C': 'C',
                  'Fad': 'Fad', 'f': 'f', 'NACV': 'dlk', 'Qlk': 'Qlk',
                  'Rlk': 'Rlk', 'sigma':'sig', 'vel': 'v', 'Ftot': 'F',
-                 'effR':'effR'}
+                 'effR':'effR', 'alpha': 'alpha'}
 
     def __init__(self, folderpath, params_to_read=False, model=False):
 
@@ -209,7 +209,8 @@ class NestedSimData(object):
         Will read the data from many simulations that are nested and return a dict
         that has the same nested structure as the folders.
         """
-        ignore_keys = ('lastGoodPoint', 'effR', 'smoothInitT',)
+        ignore_keys = ('lastGoodPoint', 'effR', 'smoothInitT', 'isSpiking', 'threshold',
+                       'renorm', 'index', 'intercept_type')
 
         self.allData = []
         self.__allDataMap = {}
@@ -236,7 +237,6 @@ class NestedSimData(object):
                             value = round(value, 3)
                         add_to_list_in_dict(self.__allDataMap, key, value)
                         
-#        print({key: len(self.__allDataMap[key]) for key in self.__allDataMap})
 #        print(self.__allDataMap.get('effR'))
         self.__allDataMap = pd.DataFrame(self.__allDataMap)
 

@@ -35,7 +35,7 @@ def plotTotE(runData, f=False, a=False, params={}):
 
     a.plot(runData.allt, totE, lw=lw, alpha=alpha, **params)
     avgTotE = np.mean(totE, axis=1)
-    a.plot(runData.allt, avgTotE, 'k', label="Tot. E", **params)
+    a.plot(runData.allt, avgTotE, 'k', **params)
 
     # Now get the conservation level
     dt = runData.ctmqc_env['dt']
@@ -68,21 +68,18 @@ def plotEcons(runData, f=False, a=False, params={}):
     totE = potE + kinE
     #a.plot(runData.allt, potE, 'g', lw=lw, alpha=alpha, **params)
     #a.plot(runData.allt, kinE, 'r', lw=lw, alpha=alpha, **params)
-    a[0].plot(runData.allt, kinE[:, :],
-              label="Kin E", lw=lw, alpha=alpha)
-    a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-',
-              label="$\langle E$_{kin} \rangle$", **params)
+    a[0].plot(runData.allt, kinE[:, :], lw=lw, alpha=alpha)
+    a[0].plot(runData.allt, np.mean(kinE, axis=1), 'r-', **params)
     a[1].plot(runData.allt, totE, lw=lw, alpha=alpha, **params)
 
     avgTotE = np.mean(totE, axis=1)
-    #a.plot(runData.allt, np.mean(potE, axis=1), 'g', label="Pot. E", **params)
-    #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', label="Kin. E", **params)
-    a[1].plot(runData.allt, avgTotE, 'k', label="Tot. E", **params)
+    #a.plot(runData.allt, np.mean(potE, axis=1), 'g', **params)
+    #a.plot(runData.allt, np.mean(kinE, axis=1), 'r', **params)
+    a[1].plot(runData.allt, avgTotE, 'k', **params)
 
-    a[2].plot(runData.allt, potE[:, :],
-              label="E$_{1}$", lw=lw, alpha=alpha)
+    a[2].plot(runData.allt, potE[:, :], lw=lw, alpha=alpha)
     a[2].plot(runData.allt, np.mean(potE, axis=1), 'g-',
-              label="$\langle E$_{pot} \rangle$", **params)
+              **params)
 
     dt = runData.ctmqc_env['dt']
     fit = np.polyfit(runData.allt, avgTotE, 1)
@@ -133,10 +130,8 @@ def plotRabi(runData, f=False, a=False, params={}):
     if a is False or f is False: f, a = plt.subplots()
     rabiPops = Rabi(runData)
     diPops = np.conjugate(runData.allu) * runData.allu
-    a.plot(runData.allt, rabiPops, 'r', lw=3, alpha=0.5,
-           label="rabi pops")
-    a.plot(runData.allt, diPops[:, :, 0], 'k--', lw=1,
-           label=r"$|u_{0}|^2$")
+    a.plot(runData.allt, rabiPops, 'r', lw=3, alpha=0.5)
+    a.plot(runData.allt, diPops[:, :, 0], 'k--', lw=1)
     a.set_ylabel("Diabatic Population")
     a.set_xlabel("Time [au]")
     a.set_title(r"Rabi Oscillation H$_{ab}$ = %.2g (Diab. Prop)" % runData.allH[0, 0, 0, 1])
@@ -159,8 +154,8 @@ def plotS26(runData, f=False, a=False, params={}):
     alpha = 1
 
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, S2612, lw=lw, alpha=alpha, label=r"S26$_{12}$", **params)
-    a.plot(runData.allt, S2621, lw=lw, alpha=alpha, label=r"S26$_{21}$", **params)
+    a.plot(runData.allt, S2612, lw=lw, alpha=alpha, **params)
+    a.plot(runData.allt, S2621, lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel("S26")
     a.legend()
@@ -179,12 +174,30 @@ def plotAdMom(runData, f=False, a=False, params={}):
            color='r', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allAdMom[:, :, 1],
            color='b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf[:, 0],
-           label=r"$\mathbf{f}^{(I)}_{0}$", color='r')
-    a.plot(runData.allt, avgf[:, 1],
-           label=r"$\mathbf{f}^{(I)}_{1}$", color='b')
+    a.plot(runData.allt, avgf[:, 0], color='r')
+    a.plot(runData.allt, avgf[:, 1], color='b')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{f}_{l}^{(I)}$ [au]")
+    a.legend()
+
+
+def plotAdEner(runData, f=False, a=False, params={}):
+    """
+    Will plot the adiabatic momentum
+    """
+    if a is False or f is False: f, a = plt.subplots()
+    lw = 0.5
+    alpha = 0.5
+    avgf = np.mean(runData.allE, axis=1)
+
+    a.plot(runData.allt, runData.allE[:, :, 0],
+           color='r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, runData.allE[:, :, 1],
+           color='b', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgf[:, 0], color='r')
+    a.plot(runData.allt, avgf[:, 1], color='b')
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$E_{l}^{(I)}$ [au]")
     a.legend()
 
 
@@ -201,10 +214,8 @@ def plotAdFrc(runData, f=False, a=False, params={}):
            color='r', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allAdFrc[:, :, 1],
            color='b', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf[:, 0],
-           label=r"$\mathbf{Fad}^{(I)}_{0}$", color='r')
-    a.plot(runData.allt, avgf[:, 1],
-           label=r"$\mathbf{Fad}^{(I)}_{1}$", color='b')
+    a.plot(runData.allt, avgf[:, 0], color='r')
+    a.plot(runData.allt, avgf[:, 1], color='b')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{Fad}_{l}^{(I)}$ [au]")
     a.legend()
@@ -221,12 +232,27 @@ def plotFrc(runData, f=False, a=False, params={}):
 
     a.plot(runData.allt, runData.allF,
            color='r', lw=lw, alpha=alpha)
-    a.plot(runData.allt, avgf,
-           label=r"$\mathbf{F}^{(I)}_{0}$", color='r')
+    a.plot(runData.allt, avgf, color='r')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{F}_{l}^{(I)}$ [au]")
     a.legend()
 
+
+def plotQMFrc(runData, f=False, a=False, params={}):
+    """ 
+    Will plot the total force
+    """
+    if a is False or f is False: f, a = plt.subplots()
+    lw = 0.5 
+    alpha = 0.5 
+    avgf = np.mean(runData.allFqm, axis=1)    
+
+    a.plot(runData.allt, runData.allFqm, 
+           color='r', lw=lw, alpha=alpha)
+    a.plot(runData.allt, avgf, color='r')
+    a.set_xlabel("Time [au]")
+    a.set_ylabel(r"$\mathbf{Fqm}_{l}^{(I)}$ [au]")
+    a.legend()
 
 def plotRlk_Rl(runData, f=False, a=False, params={}):
     """
@@ -309,9 +335,9 @@ def plotQlk(runData, f=False, a=False, params={}):
 
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allQlk[:, :, 0, 1], 'k', lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allQlk[:, :, 0, 0], 'g', lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allQlk[:, :, 1, 1], 'r', lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allQlk[:, :, 1, 0], 'b', lw=lw, alpha=alpha, **params)
 
 
 def plotAlpha(runData, f=False, a=False, params={}):
@@ -338,9 +364,9 @@ def plotPops(runData, f=False, a=False, params={}):
     a.plot(runData.allt, runData.allAdPop[:, :, 1], 'b', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, runData.allAdPop[:, :, 0], 'r', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 0], axis=1), 'r',
-           label=r"|C$_{1}$|$^2$", **params)
+           **params)
     a.plot(runData.allt, np.mean(runData.allAdPop[:, :, 1], axis=1), 'b',
-           label=r"|C$_{2}$|$^2$", **params)
+            **params)
     a.set_ylabel("Adiab. Pop.")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
@@ -354,9 +380,9 @@ def plotDiPops(runData, f=False, a=False, params={}):
     a.plot(runData.allt, runData.allu[:, :, 1], 'b', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, runData.allu[:, :, 0], 'r', lw=lw, alpha=alpha, **params)
     a.plot(runData.allt, np.mean(runData.allu[:, :, 0], axis=1), 'r',
-           label=r"|C$_{1}$|$^2$", **params)
+           **params)
     a.plot(runData.allt, np.mean(runData.allu[:, :, 1], axis=1), 'b',
-           label=r"|C$_{2}$|$^2$", **params)
+           **params)
     a.set_ylabel("Diab. Pop.")
     a.set_xlabel("Time [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
@@ -411,7 +437,7 @@ def plotSigma(runData, f=False, a=False, params={}):
     a.plot(runData.allt, runData.allSigma[:, :], 'k',
            lw=0.5, alpha=0.5)
     a.plot(runData.allt, np.mean(runData.allSigma, axis=1),
-           'k', label=r"$\langle \sigma_{I}\rangle_{I}$", **params)
+           'k', **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\sigma^{(I)}$ [au]")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
@@ -422,8 +448,8 @@ def plotSigmal(runData, f=False, a=False, params={}):
     Will plot sigmal against time
     """
     if a is False or f is False: f, a = plt.subplots()
-    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', label=r"$\sigma_{1}$", **params)
-    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', label=r"$\sigma_{2}$", **params)
+    a.plot(runData.allt, runData.allSigmal[:, 0], 'r', **params)
+    a.plot(runData.allt, runData.allSigmal[:, 1], 'b', **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\sigma_{l}$")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])
