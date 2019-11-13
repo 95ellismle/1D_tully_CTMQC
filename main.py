@@ -407,7 +407,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 50,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
+            'gradTol': 12,  # The maximum allowed gradient in Rlk in time.
             'renorm': False,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
@@ -1056,27 +1056,28 @@ class CTMQC(object):
         """
         Will splice the arrays to the appropriate size (to num steps done)
         """
-        self.allR = self.allR[:self.ctmqc_env['iter']]
-        self.allt = self.allt[:self.ctmqc_env['iter']]
-        self.allNACV = self.allNACV[:self.ctmqc_env['iter']]
-        self.allF = self.allF[:self.ctmqc_env['iter']]
-        self.allFeh = self.allFeh[:self.ctmqc_env['iter']]
-        self.allFqm = self.allFqm[:self.ctmqc_env['iter']]
-        self.allE = self.allE[:self.ctmqc_env['iter']]
-        self.allC = self.allC[:self.ctmqc_env['iter']]
-        self.allu = self.allu[:self.ctmqc_env['iter']]
-        self.allAdPop = self.allAdPop[:self.ctmqc_env['iter']]
-        self.allH = self.allH[:self.ctmqc_env['iter']]
-        self.allAdMom = self.allAdMom[:self.ctmqc_env['iter']]
-        self.allAdFrc = self.allAdFrc[:self.ctmqc_env['iter']]
-        self.allv = self.allv[:self.ctmqc_env['iter']]
-        self.allQlk = self.allQlk[:self.ctmqc_env['iter']]
-        self.allRlk = self.allRlk[:self.ctmqc_env['iter']]
-        self.allEffR = self.allEffR[:self.ctmqc_env['iter']]
-        self.allSigma = self.allSigma[:self.ctmqc_env['iter']]
-        self.allSigmal = self.allSigmal[:self.ctmqc_env['iter']]
-        self.allRl = self.allRl[:self.ctmqc_env['iter']]
-        self.allAlphal = self.allAlphal[:self.ctmqc_env['iter']]
+        self.ctmqc_env['iter'] -= 1
+        self.allR = self.allR[:self.saveIter]
+        self.allt = self.allt[:self.saveIter]
+        self.allNACV = self.allNACV[:self.saveIter]
+        self.allF = self.allF[:self.saveIter]
+        self.allFeh = self.allFeh[:self.saveIter]
+        self.allFqm = self.allFqm[:self.saveIter]
+        self.allE = self.allE[:self.saveIter]
+        self.allC = self.allC[:self.saveIter]
+        self.allu = self.allu[:self.saveIter]
+        self.allAdPop = self.allAdPop[:self.saveIter]
+        self.allH = self.allH[:self.saveIter]
+        self.allAdMom = self.allAdMom[:self.saveIter]
+        self.allAdFrc = self.allAdFrc[:self.saveIter]
+        self.allv = self.allv[:self.saveIter]
+        self.allQlk = self.allQlk[:self.saveIter]
+        self.allRlk = self.allRlk[:self.saveIter]
+        self.allEffR = self.allEffR[:self.saveIter]
+        self.allSigma = self.allSigma[:self.saveIter]
+        self.allSigmal = self.allSigmal[:self.saveIter]
+        self.allRl = self.allRl[:self.saveIter]
+        self.allAlphal = self.allAlphal[:self.saveIter]
 
     def __checkS26(self):
         """
