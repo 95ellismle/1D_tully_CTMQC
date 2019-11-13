@@ -327,7 +327,7 @@ def plotRlk_gradRlk(runData, f=False, a=False, params={}):
 
     a = ax[1]
     a.plot(runData.allt,
-           np.gradient(runData.allRlk, runData.ctmqc_env['dt'], axis=0)[:, 0, 1])
+           g)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\frac{\delta R_{lk, \nu}^{0}}{\delta t}$ [au]")
 
