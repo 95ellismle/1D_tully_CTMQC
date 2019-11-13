@@ -23,21 +23,8 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "custom"
+inputs = "LowCTMQCGossel"
 
-#inputs = "EhrenEnerCons"
-#inputs = "custom"
-#inputs = "EhrenNormCons"
-#inputs = "AllEhrenfestTest"
-#inputs = "FullCTMQC"
-#inputs = "FullCTMQCGossel"
-#inputs = "FullCTMQCGosselQuick"
-#inputs = "FullCTMQCEhren"
-#inputs = "quickFullCTMQC"
-#inputs = "quickFullEhren"
-#inputs = "quickFullEhrenGossel"
-#inputs = "MomentumEhren2"
-#inputs = "FullEhrenGossel"
 
 #rootSaveFold = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test"
 rootSaveFold = "/scratch/mellis/TullyModelData/Test"
@@ -272,6 +259,20 @@ elif inputs == "FullCTMQCGossel":
     all_dt = [0.4] * 8 * numRepeats
     all_nRep = [200] * 8 * numRepeats
 
+elif inputs == "LowCTMQCGossel":
+    print("Carrying out full Gossel CTMQC testing!")
+    numRepeats = 3
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = [1, 1, 1.6, 1.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000] * numRepeats
+    all_model = [4, 3, 2, 1] * numRepeats
+    all_p_mean = [-20, -15, -8, -20] * numRepeats
+    all_doCTMQC_C = ([True] * 4) * numRepeats
+    all_doCTMQC_F = ([True] * 4)  * numRepeats
+    rootFolder = '%s/CTMQC_Data/Test_RI0_Switch' % rootSaveFold
+    all_dt = [0.4] * 4 * numRepeats
+    all_nRep = [200] * 4 * numRepeats
+
 elif inputs == "HighCTMQCGossel":
     print("Carrying out full Gossel CTMQC testing!")
     numRepeats = 3
@@ -284,7 +285,7 @@ elif inputs == "HighCTMQCGossel":
     all_doCTMQC_F = ([True] * 4)  * numRepeats
     rootFolder = '%s/CTMQC_Data/Adiab_Prop' % rootSaveFold
     all_dt = [0.4] * 4 * numRepeats
-    all_nRep = [70] * 4 * numRepeats
+    all_nRep = [200] * 4 * numRepeats
 
 elif inputs == "FullCTMQCGosselQuick":
     print("Carrying out quick Gossel CTMQC testing!")
