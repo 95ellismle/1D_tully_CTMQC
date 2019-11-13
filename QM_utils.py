@@ -202,7 +202,7 @@ def get_effective_R(runData, Rlk):
     """
     ctmqc_env = runData.ctmqc_env
     ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, runData)
-    runData.allIsSpiking[ctmqc_env['iter']] = ctmqc_env['isSpiking']
+    runData.allIsSpiking[runData.saveIter] = ctmqc_env['isSpiking']
 
 #    ctmqc_env['isSpiking'] = False
     effR = Rlk

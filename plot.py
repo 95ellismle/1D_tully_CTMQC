@@ -259,16 +259,16 @@ def plotRlk_Rl(runData, f=False, a=False, params={}):
     """
     Will plot the Rlk and Rl term on the same axis
     """
-    lw = 0.5
-    alpha = 0.5
+#    lw = 0.5
+#    alpha = 0.5
     if a is False or f is False: f, a = plt.subplots()
-    if runData.allRl.shape[1] == 2:
-        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
-        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
-    else:
-        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
-               label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
+#    if runData.allRl.shape[1] == 2:
+#        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
+#        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
+#    else:
+#        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
+#               label=r"$R_{\nu, 0}^{(I)}$")
+#        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r', label="Rlk", **params)
     a.plot(runData.allt, runData.allEffR[:, 0, 1, 0], 'g', label=r"R$_{eff}$", **params)
     a.plot(runData.allt, runData.allEffR[:, 0, 1, 1:], 'g', **params)
@@ -306,17 +306,18 @@ def plotRlk_gradRlk(runData, f=False, a=False, params={}):
     """
     Will plot the Rlk and Rl term on the same axis
     """
-    lw = 0.5
-    alpha = 0.5
+#    lw = 0.5
+#    alpha = 0.5
     if a is False or f is False: f, ax = plt.subplots(2)
     a = ax[0]
-    if runData.allRl.shape[1] == 2:
-        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
-        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
-    else:
-        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
-               label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
+
+#    if runData.allRl.shape[1] == 2:
+#        a.plot(runData.allt, runData.allRl[:, 0], label=r"R$_{0}$", **params)
+#        a.plot(runData.allt, runData.allRl[:, 1], label=r"R$_{1}$", **params)
+#    else:
+#        a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
+#               label=r"$R_{\nu, 0}^{(I)}$")
+#        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
 
     a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r', label="Rlk", **params)
     a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
