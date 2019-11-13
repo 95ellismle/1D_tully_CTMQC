@@ -104,13 +104,13 @@ def plotClusters(runData, f=False, a=False, params={}):
               '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00',
               '#cab2d6', '#6a3d9a', '#ffff99', 'b', 'g',
               'r', 'c', 'm', 'k']
-    
-    for istep, stepCluster in enumerate(runData.allClusters): 
-	    for clustI in stepCluster: 
-	        inds = stepCluster[clustI] 
-	        pos = runData.allR[istep, inds] 
-	        time = np.ones(len(pos)) * runData.allt[istep]     
-	        a.plot(time, pos, '.', color=colors[clustI]) 
+
+    for istep, stepCluster in enumerate(runData.allClusters):
+	    for clustI in stepCluster:
+	        inds = stepCluster[clustI]
+	        pos = runData.allR[istep, inds]
+	        time = np.ones(len(pos)) * runData.allt[istep]
+	        a.plot(time, pos, '.', color=colors[clustI])
 
 
 
@@ -239,20 +239,21 @@ def plotFrc(runData, f=False, a=False, params={}):
 
 
 def plotQMFrc(runData, f=False, a=False, params={}):
-    """ 
+    """
     Will plot the total force
     """
     if a is False or f is False: f, a = plt.subplots()
-    lw = 0.5 
-    alpha = 0.5 
-    avgf = np.mean(runData.allFqm, axis=1)    
+    lw = 0.5
+    alpha = 0.5
+    avgf = np.mean(runData.allFqm, axis=1)
 
-    a.plot(runData.allt, runData.allFqm, 
+    a.plot(runData.allt, runData.allFqm,
            color='r', lw=lw, alpha=alpha)
     a.plot(runData.allt, avgf, color='r')
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"$\mathbf{Fqm}_{l}^{(I)}$ [au]")
     a.legend()
+
 
 def plotRlk_Rl(runData, f=False, a=False, params={}):
     """
@@ -267,9 +268,10 @@ def plotRlk_Rl(runData, f=False, a=False, params={}):
     else:
         a.plot(runData.allt, runData.allRl[:, 0], 'k', lw=lw, alpha=alpha,
                label=r"$R_{\nu, 0}^{(I)}$")
-        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha, **params)
+        a.plot(runData.allt, runData.allRl[:, 1:], 'k', lw=lw, alpha=alpha)
     a.plot(runData.allt, runData.allRlk[:, 0, 1], 'r', label="Rlk", **params)
-    a.plot(runData.allt, runData.allEffR[:, 0, 1], 'g', label=r"R$_{eff}$", **params)
+    a.plot(runData.allt, runData.allEffR[:, 0, 1, 0], 'g', label=r"R$_{eff}$", **params)
+    a.plot(runData.allt, runData.allEffR[:, 0, 1, 1:], 'g', **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel("Intercept [au]")
     a.legend()

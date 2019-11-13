@@ -25,7 +25,7 @@ def calc_ad_frc(pos, ctmqc_env):
     E_xp = np.linalg.eigh(H_xp)[0]
     E_x = np.linalg.eigh(H_x)[0]
     gradE = -np.array(E_xp - E_x) / dx
-    
+
     return gradE
 
 
@@ -53,10 +53,10 @@ def smoothingFunc(x, ctmqc_env):
     pos = ctmqc_env['smoothInitT']
     finalPos = pos + (dt * ctmqc_env['nSmoothStep'])
     midPoint = (finalPos + pos) / 2.
-    
+
     D = 0.5 * (ctmqc_env['currGoodPoint'] - ctmqc_env['lastGoodPoint'])
     W = ctmqc_env['nSmoothStep'] * dt * 0.3
-    
+
     return ctmqc_env['lastGoodPoint'] + (np.tanh((x - midPoint) / W) + 1) * D
 
 
@@ -76,7 +76,7 @@ def do_Rlk_smoothing(effR, ctmqc_env):
     #   End Spiking
     elif ctmqc_env['iSmoothStep'] == ctmqc_env['nSmoothStep']:
         ctmqc_env['iSmoothStep'] = -1
-    
+
     # Smoothing between boundaries
     elif 0 < ctmqc_env['iSmoothStep'] and ctmqc_env['iSmoothStep'] < ctmqc_env['nSmoothStep']:
         effR = smoothingFunc(ctmqc_env['t'], ctmqc_env)
@@ -99,9 +99,9 @@ def Lagrange_Extrapolation(arrayX, arrayY, x):
             xm = arrayX[m]
             xj = arrayX[j]
             lj *= float(x - xm)/float(xj - xm)
-        
+
         result += yj * lj
-    
+
     return result
 
 
@@ -113,7 +113,7 @@ def Rlk_is_spiking(Rlk, runData):
     """
     ctmqc_env = runData.ctmqc_env
     if ctmqc_env['iter'] == 0 and not ctmqc_env['Rlk_smooth']: return False
-    
+
     # Check whether the Rlk will be near 0 in the next N steps
     Nstep = 50 / ctmqc_env['dt']  # 50 atomic unit window
     if ctmqc_env['spike_region_count'] >= Nstep:
@@ -126,7 +126,7 @@ def Rlk_is_spiking(Rlk, runData):
             ctmqc_env['poss_spike'] = True
     else:
         ctmqc_env['spike_region_count'] += 1
-    
+
     # Check whether the gradient of the Rlk is too high
     Rlk = Rlk[0, 1]
     gradRlk = (Rlk - ctmqc_env['Rlk_tm'][0, 1]) / ctmqc_env['dt']
@@ -175,7 +175,7 @@ def get_goodR_extrapolation(runData, Rlk):
     effR = Lagrange_Extrapolation(runData.allt[indS:indE],
                                   runData.allRlk[indS:indE],
                                   ctmqc_env['t'] + ctmqc_env['dt'])
-    
+
     return effR
 
 
@@ -202,38 +202,39 @@ def get_effective_R(runData, Rlk):
     """
     ctmqc_env = runData.ctmqc_env
     ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, runData)
-#    ctmqc_env['isSpiking'] = True
-    
+    runData.allIsSpiking[ctmqc_env['iter']] = ctmqc_env['isSpiking']
+
+#    ctmqc_env['isSpiking'] = False
     effR = Rlk
-    oldEffR = ctmqc_env['effR']
+#    oldEffR = ctmqc_env['effR']
     ctmqc_env['intercept_type'] = 'Rlk'
     if ctmqc_env['isSpiking']:
         if ctmqc_env['Rlk_smooth'] == '<RI0>':
             effR = get_goodR_RIO(ctmqc_env)
-            
+
         elif ctmqc_env['Rlk_smooth'] == 'RI0':
             ctmqc_env['intercept_type'] = 'RI0'
-        
+
         elif 'extrapolation' in ctmqc_env['Rlk_smooth']:
             effR = get_goodR_extrapolation(runData, Rlk)
-            
+
         elif ctmqc_env['Rlk_smooth'] == 'ehrenfest':
             effR = False
-        
+
         elif ctmqc_env['Rlk_smooth'].lower() == 'lgp':
             effR = get_goodR_LGP(runData)
 
         elif ctmqc_env['Rlk_smooth'].strip() == '':
             effR = Rlk
-        
+
         else:
             print("I don't recognise the Rlk smoothing method chosen.")
             print("If no smoothing is required set the 'nSmoothStep' = 0.")
             print("and the 'Rlk_smooth' = '%s'." % ctmqc_env['Rlk_smooth'])
             raise SystemExit("No Rlk Smooth Method Inputted")
-            
-    if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > 40:
-        effR = oldEffR
+
+#    if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > 40:
+#        effR = oldEffR
     if ctmqc_env['nSmoothStep'] > 0:  effR = do_Rlk_smoothing(effR, ctmqc_env)
 
     ctmqc_env['prevSpike'] = ctmqc_env['isSpiking']
@@ -251,10 +252,10 @@ def calc_Qlk_2state(ctmqc_env):
                            #if all(state_pop < 0.995 for state_pop in rep_pops)]
     calc_sigmal(ctmqc_env)
     #ctmqc_env['sigmal'][:] = 0.25
-    
+
     alpha = np.nan_to_num(np.sum(ctmqc_env['adPops'][0] / ctmqc_env['sigmal']))
     ctmqc_env['alphal'] = alpha
-    
+
     rho11 = pops[:, 0]
     rho22 = pops[:, 1]
     f1 = ctmqc_env['adMom'][:, 0]
@@ -263,16 +264,16 @@ def calc_Qlk_2state(ctmqc_env):
     Rlk = np.sum(ctmqc_env['pos'] * (allBottomRlk / np.sum(allBottomRlk)))
     ctmqc_env['Rlk'][0, 1] = Rlk
     ctmqc_env['Rlk'][1, 0] = Rlk
-    
+
     effR = get_goodR_RIO(ctmqc_env)
-    
+
     Qlk = np.zeros((nRep, nState, nState))
     for I in range(nRep):
         Qlk[I, 0, 1] = ctmqc_env['pos'][I] - effR[0, 1]
         Qlk[I, 1, 0] = ctmqc_env['pos'][I] - effR[1, 0]
     Qlk = np.nan_to_num(Qlk)
     Qlk = alpha * Qlk / ctmqc_env['mass']
-    
+
     return Qlk
 
 
@@ -284,24 +285,24 @@ def calc_sigmal(ctmqc_env):
     nRep = ctmqc_env['nrep']
     pops = ctmqc_env['adPops']
     sumPops = np.sum(ctmqc_env['adPops'], axis=0)
-    
+
     # First  get R_l
     sumInvPops = np.nan_to_num(1. / sumPops)
     Rl = np.zeros(nState)
     for irep in range(nRep):
         # implicit iteration over l
         Rl += ctmqc_env['pos'][irep] * pops[irep] * sumInvPops
-    
+
     # Now get sigma_l
     sigmal = np.zeros(nState)
     for irep in range(nRep):
         # implicit iteration over l
         squaredDist = (ctmqc_env['pos'][irep] - Rl)**2
         sigmal += squaredDist * pops[irep] * sumInvPops
-    
+
     ctmqc_env['sigmal'] = sigmal
     ctmqc_env['Rl'] = Rl
-    
+
     return sigmal
 
 
@@ -311,7 +312,7 @@ def calc_all_prod_gauss(ctmqc_env, reps_to_do):
     simply brute forcing it.
     """
     nRep = ctmqc_env['nrep']
-    
+
     # We don't need the prefactor of (1/(2 pi))^{3/2} as it always cancels out
     prefact = ctmqc_env['sigma']**(-1)  # -1 as it is 1D (will be -3 for 3D)
 
@@ -321,7 +322,7 @@ def calc_all_prod_gauss(ctmqc_env, reps_to_do):
     pos = ctmqc_env['pos']
     for I, RIv in enumerate(pos[reps_to_do]):
         exponent[I, :] = -(RIv - pos)**2 / sig
-            
+
     return np.exp(exponent * 0.5) * prefact
 
 
@@ -356,7 +357,7 @@ def calc_Ylk(ctmqc_env):
     Ylk = np.zeros((ctmqc_env['nrep'],
                     ctmqc_env['nstate'],
                     ctmqc_env['nstate']))
-    
+
     Clk = ctmqc_env['adPops'][:, 1] * ctmqc_env['adPops'][:, 0]
     fl_fk =  ctmqc_env['adMom'][:, 0] - ctmqc_env['adMom'][:, 1]
     Ylk[:, 0, 1] = Clk * fl_fk
@@ -374,8 +375,8 @@ def calc_Rlk(ctmqc_env, reps_to_do=False):
 
     Rlk = np.zeros((ctmqc_env['nstate'], ctmqc_env['nstate']))
     if summed_Ylk[0, 1] != 0:
-        Rlk[0, 1] = np.sum(ctmqc_env['pos'][reps_to_do] 
-                            * ctmqc_env['alpha'][reps_to_do] 
+        Rlk[0, 1] = np.sum(ctmqc_env['pos'][reps_to_do]
+                            * ctmqc_env['alpha'][reps_to_do]
                             * Ylk[reps_to_do, 0, 1],
                            axis=0) / summed_Ylk[0, 1]
         Rlk[1, 0] = Rlk[0,1]
@@ -394,13 +395,13 @@ def calc_Gossel_sigma(ctmqc_env):
         multiplier = float(ctmqc_env['const']) / float(len(distances))
         cutoffR = 2 * np.std(ctmqc_env['pos'])
         distances = distances[distances < cutoffR]
-        
+
         avgD = np.mean(distances)
         Dsquared = np.mean(distances**2)
         ctmqc_env['sigma'][I] = np.sqrt(Dsquared - (avgD**2)) * multiplier
-        
+
 #        ctmqc_env['sigma'][I] = np.std(stdPos) * multiplier
-    
+
     mask = ctmqc_env['sigma'] < minSig
     if sum(mask):
         ctmqc_env['sigma'][mask] = minSig
@@ -468,41 +469,42 @@ def calc_Qlk_Min17_opt(runData):
         print("I don't know how to treat the sigma parameter")
         print("Options are:\n\t* 'Gossel'\n\t* 'De-Broglie'\n\t* 'No'")
         raise SystemExit("Unkown Input")
-    
+
 
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env, reps_to_do)
-    
+    ctmqc_env['Rlk'] = Rlk
+
     # Calculate slope
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
 
-    
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)
+
     if ctmqc_env['intercept_type'] == 'RI0':
         for I in reps_to_do:
             RI0 = np.sum(ctmqc_env['WIJ'][I, :] * ctmqc_env['pos'], axis=0)
+            ctmqc_env['effR'][:, :, I] = RI0
 
             Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - RI0
-    else: 
-        ctmqc_env['Rlk'] = Rlk
-        ctmqc_env['effR'] = effR
+    else:
+        for l in range(ctmqc_env['nstate']):
+            for k in range(ctmqc_env['nstate']):
+                ctmqc_env['effR'][l, k, :] = effR[l, k]
 
-        # Finally calculate Qlk
-        if effR is False: return Qlk
+    # Finally calculate Qlk
+    if effR is False: return Qlk
 
-        for I in reps_to_do:
-            Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - effR
-            for l in range(ctmqc_env['nstate']): Qlk[I, l, l] = 0.0
-        
-        # Only for 2 states
-        if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
-            print(Qlk)
-            raise SystemExit("Qlk not symmetric!")
-    if ctmqc_env['nSmoothStep'] != ctmqc_env['nSmoothStep0']:
-        ctmqc_env['nSmoothStep'] = ctmqc_env['nSmoothStep0']
-        
+    for I in reps_to_do:
+        Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - Rlk
+        for l in range(ctmqc_env['nstate']): Qlk[I, l, l] = 0.0
+
+    # Only for 2 states
+    if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
+        print(Qlk)
+        raise SystemExit("Qlk not symmetric!")
+
 
     Qlk /= ctmqc_env['mass']
     return Qlk
@@ -644,18 +646,18 @@ def calc_QM_FD(ctmqc_env):
     for I in range(nRep):
         RIv = ctmqc_env['pos'][I]
         dx = ctmqc_env['dx']
-    
+
         nuclDens_xm = calc_nucl_dens(RIv - dx, ctmqc_env)
         nuclDens = calc_nucl_dens(RIv, ctmqc_env)
         nuclDens_xp = calc_nucl_dens(RIv + dx, ctmqc_env)
-    
+
         gradNuclDens = np.gradient([nuclDens_xm, nuclDens, nuclDens_xp],
                                    dx)[2]
         if nuclDens < 1e-12:
             return 0
-    
+
         QM[I] = -gradNuclDens/(2*nuclDens)
-        
+
     return QM / ctmqc_env['mass']
 
 
@@ -674,10 +676,10 @@ def calc_QM_analytic(ctmqc_env):
         # Calc WIJ
         sigma2 = ctmqc_env['sigma']**2
         WIJ = allGauss / (2. * sigma2 * np.sum(allGauss))
-    
+
         # Calc QM
         QM[I] = np.sum(WIJ * (RIv - ctmqc_env['pos']))
-        
+
     return QM / ctmqc_env['mass']
 
 
@@ -704,7 +706,7 @@ def calc_Qlk(ctmqc_env):
 #    if sig < 0.1:
 #        sig = 0.1
 #    ctmqc_env['sigma'][:] = sig
-    
+
 #    print(ctmqc_env['sigma'])
 
     # Calculate WIJ and alpha
@@ -743,7 +745,7 @@ def calc_Qlk(ctmqc_env):
                     Rlk[l, k] += Rav * (
                                  Ylk[I, l, k] / sum_Ylk[l, k])
                     Rlk[k, l] = Rlk[l, k]
-            
+
         # Save the data
         ctmqc_env['Rlk'] = Rlk
         ctmqc_env['RI0'] = RI0
@@ -762,18 +764,18 @@ def calc_Qlk(ctmqc_env):
                     else:
                         R[l, k] = Rlk[l, k]
                         R[l, k] = Rlk[k, l]
-            
+
             Qlk[I, :, :] = Ralpha[I] - R
 
             ctmqc_env['EffR'][I, :, :] = R
 
         # Divide by mass2
         Qlk[:, :, :] /= ctmqc_env['mass']
-    
+
 #        for I in ctmqc_env['QM_reps']
 
     return Qlk
-        
+
 
 def test_QM_calc(ctmqc_env):
     """
@@ -792,8 +794,8 @@ def test_QM_calc(ctmqc_env):
 
     return allDiffs, allPos
 
-        
-        
+
+
 def calc_Qlk_Min17(runData):
     """
     Will calculate the quantum momentum as written in Min, 17.
@@ -805,17 +807,17 @@ def calc_Qlk_Min17(runData):
     threshold = 0.995
     mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
     reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
-    
+
     # Verified by hand for a 3 rep system
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
 
     # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env)
-    
+
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)
-        
+
     ctmqc_env['Rlk'] = Rlk
     ctmqc_env['effR'] = effR
 
@@ -829,11 +831,11 @@ def calc_Qlk_Min17(runData):
         Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - effR
         for l in range(ctmqc_env['nstate']):
             Qlk[I, l, l] = 0.0
-    
+
     # Only for 2 states
     if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
         raise SystemExit("Qlk not symmetric!")
-    
+
     Qlk /= ctmqc_env['mass']
 #    print("Qlk = ", Qlk)
     return Qlk

@@ -23,7 +23,7 @@ import elec_prop as e_prop
 import QM_utils as qUt
 import plot
 #from plottingResults import plotPaperData as plotPaper
-inputs = "HighCTMQCGossel"
+inputs = "custom"
 
 #inputs = "EhrenEnerCons"
 #inputs = "custom"
@@ -307,15 +307,15 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
     mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
-    all_nRep = [60] * numRepeats  # How many replicas
+    all_nRep = [30] * numRepeats  # How many replicas
     all_model = [4] * numRepeats  # What tully model to use
-    all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
-    all_maxTime = [1300] * numRepeats  # How long to run for
+    all_velMultiplier = [1] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
+    all_maxTime = [3500] * numRepeats  # How long to run for
     all_p_mean = [-15] * numRepeats  # The average initial position
     all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
-    all_elec_steps = [5]
-    all_dt = [0.4]
+    all_elec_steps = [3]
+    all_dt = [0.7]
     rootFolder = './test'  #'%s/test' % rootSaveFold  # Where to save the data.
 #    all_elec_steps = [5]  # How many electronic timesteps in the nuclear one.
 
@@ -405,12 +405,12 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 80,  # The constant in the sigma calc
+            'const': 10,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
             'gradTol': 1,  # The maximum allowed gradient in Rlk in time.
-            'renorm': True,  # Choose whether renormalise the wf
+            'renorm': False,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
-            'Rlk_smooth': '<RI0>',  # Apply the smoothing algorithm to Rlk
+            'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
                 }
     return ctmqc_env
 
@@ -702,7 +702,8 @@ class CTMQC(object):
         self.allQlk = np.zeros((nstep, nrep, nstate, nstate))
         self.allAlphal = np.zeros(nstep)
         self.allRlk = np.zeros((nstep, nstate, nstate))
-        self.allEffR = np.zeros((nstep, nstate, nstate))
+        self.allEffR = np.zeros((nstep, nstate, nstate, nrep))
+        self.allIsSpiking = np.zeros((nstep), dtype=bool)
         self.allClusters = []
         if self.ctmqc_env['Qlk_type'] == 'sigmal':
             self.allRl = np.zeros((nstep, nstate))
@@ -733,7 +734,7 @@ class CTMQC(object):
         self.ctmqc_env['alpha'] = np.zeros((nrep))
         self.ctmqc_env['alphal'] = 0.0
         self.ctmqc_env['sigmal'] = np.zeros(nstate)
-        self.ctmqc_env['effR'] = np.zeros((nstate, nstate))
+        self.ctmqc_env['effR'] = np.zeros((nstate, nstate, nrep))
         if self.ctmqc_env['Qlk_type'] == 'sigmal':
             self.ctmqc_env['altR'] = np.zeros(nstate)
         elif self.ctmqc_env['Qlk_type'] == 'Min17':
@@ -779,7 +780,8 @@ class CTMQC(object):
         self.ctmqc_env['spike_region_count'] = 0
         self.ctmqc_env['poss_spike'] = False
         self.ctmqc_env['threshold'] = 0.995
-        self.ctmqc_env['nSmoothStep0'] = self.ctmqc_env['nSmoothStep']
+        if self.ctmqc_env['Rlk_smooth'] == "RI0":
+            self.ctmqc_env['nSmoothStep'] = 0
         self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
                          'transform': [], 'calcQM':[], 'prep': []}
 
