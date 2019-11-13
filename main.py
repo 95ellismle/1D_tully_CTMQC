@@ -407,8 +407,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 50,  # The constant in the sigma calc
             'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 12,  # The maximum allowed gradient in Rlk in time.
-            'renorm': False,  # Choose whether renormalise the wf
+            'gradTol': 2,  # The maximum allowed gradient in Rlk in time.
+            'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
                 }
