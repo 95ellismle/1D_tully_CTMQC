@@ -202,6 +202,7 @@ def get_effective_R(runData, Rlk):
     """
     ctmqc_env = runData.ctmqc_env
     ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, runData)
+    print(len(runData.allIsSpiking))
     runData.allIsSpiking[runData.saveIter] = ctmqc_env['isSpiking']
 
 #    ctmqc_env['isSpiking'] = False
@@ -470,14 +471,13 @@ def calc_Qlk_Min17_opt(runData):
         print("Options are:\n\t* 'Gossel'\n\t* 'De-Broglie'\n\t* 'No'")
         raise SystemExit("Unkown Input")
 
-
-    # Now calculate intercept
-    Rlk = calc_Rlk(ctmqc_env, reps_to_do)
-    ctmqc_env['Rlk'] = Rlk
-
     # Calculate slope
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
+
+    # Now calculate intercept (need to use the slope for this)
+    Rlk = calc_Rlk(ctmqc_env, reps_to_do)
+    ctmqc_env['Rlk'] = Rlk
 
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)
