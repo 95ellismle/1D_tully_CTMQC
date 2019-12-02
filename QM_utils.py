@@ -201,14 +201,14 @@ def get_effective_R(runData, Rlk):
     Will get the effective R using one of the alternative R
     """
     ctmqc_env = runData.ctmqc_env
+    ctmqc_env['intercept_type'] = 'Rlk'
+    if ctmqc_env['Rlk_smooth'] == '':
+       return Rlk
     ctmqc_env['isSpiking'] = Rlk_is_spiking(Rlk, runData)
-    print(len(runData.allIsSpiking))
-    runData.allIsSpiking[runData.saveIter] = ctmqc_env['isSpiking']
 
 #    ctmqc_env['isSpiking'] = False
     effR = Rlk
 #    oldEffR = ctmqc_env['effR']
-    ctmqc_env['intercept_type'] = 'Rlk'
     if ctmqc_env['isSpiking']:
         if ctmqc_env['Rlk_smooth'] == '<RI0>':
             effR = get_goodR_RIO(ctmqc_env)
@@ -220,7 +220,7 @@ def get_effective_R(runData, Rlk):
             effR = get_goodR_extrapolation(runData, Rlk)
 
         elif ctmqc_env['Rlk_smooth'] == 'ehrenfest':
-            effR = False
+            ctmqc_env['intercept_type'] = "ehrenfest"
 
         elif ctmqc_env['Rlk_smooth'].lower() == 'lgp':
             effR = get_goodR_LGP(runData)
@@ -236,7 +236,7 @@ def get_effective_R(runData, Rlk):
 
 #    if ((effR[0, 1] - oldEffR[0, 1]) / ctmqc_env['dt']) > 40:
 #        effR = oldEffR
-    if ctmqc_env['nSmoothStep'] > 0:  effR = do_Rlk_smoothing(effR, ctmqc_env)
+    #if ctmqc_env['nSmoothStep'] > 0:  effR = do_Rlk_smoothing(effR, ctmqc_env)
 
     ctmqc_env['prevSpike'] = ctmqc_env['isSpiking']
     return effR
@@ -381,7 +381,6 @@ def calc_Rlk(ctmqc_env, reps_to_do=False):
                             * Ylk[reps_to_do, 0, 1],
                            axis=0) / summed_Ylk[0, 1]
         Rlk[1, 0] = Rlk[0,1]
-
     return Rlk
 
 
@@ -453,7 +452,7 @@ def calc_Qlk_Min17_opt(runData):
     # Get which reps to calculate alpha for
     threshold = ctmqc_env['threshold']
     mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
-    reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
+    reps_to_do = np.arange(ctmqc_env['nrep'])#[mask]
     if len(reps_to_do) == 0: return Qlk
 
 
@@ -475,31 +474,33 @@ def calc_Qlk_Min17_opt(runData):
     ctmqc_env['WIJ'] = calc_WIJ(ctmqc_env, reps_to_do)
     ctmqc_env['alpha'] = np.sum(ctmqc_env['WIJ'], axis=1)
 
-    # Now calculate intercept (need to use the slope for this)
+    # Now calculate intercept
     Rlk = calc_Rlk(ctmqc_env, reps_to_do)
     ctmqc_env['Rlk'] = Rlk
 
     # Smooth out the intercept
     effR = get_effective_R(runData, Rlk)
 
-    if ctmqc_env['intercept_type'] == 'RI0':
+    if ctmqc_env['intercept_type'] == 'Rlk':
+        for l in range(ctmqc_env['nstate']):
+            for k in range(ctmqc_env['nstate']):
+                ctmqc_env['effR'][l, k, :] = effR[l, k]
+
+        for I in reps_to_do:
+            Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - Rlk
+
+    elif ctmqc_env['intercept_type'] == 'RI0':
         for I in reps_to_do:
             RI0 = np.sum(ctmqc_env['WIJ'][I, :] * ctmqc_env['pos'], axis=0)
             ctmqc_env['effR'][:, :, I] = RI0
 
             Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - RI0
-    else:
-        for l in range(ctmqc_env['nstate']):
-            for k in range(ctmqc_env['nstate']):
-                ctmqc_env['effR'][l, k, :] = effR[l, k]
-
-    # Finally calculate Qlk
-    if effR is False: return Qlk
-
-    for I in reps_to_do:
-        Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - Rlk
-        for l in range(ctmqc_env['nstate']): Qlk[I, l, l] = 0.0
-
+    
+    elif ctmqc_env['intercept_type'] == 'ehrenfest':
+       Qlk = np.zeros((ctmqc_env['nrep'],
+                       ctmqc_env['nstate'],
+                       ctmqc_env['nstate']))
+    
     # Only for 2 states
     if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
         print(Qlk)
@@ -630,7 +631,7 @@ def calc_sigma(ctmqc_env):
         distances = ctmqc_env['pos'] - ctmqc_env['pos'][I]
         distMask = distances < cutoff_rad
         if any(distMask):
-            new_var = np.std(distances[distances < cutoff_rad])
+            new_var = np.std(np.abs(distances[distances < cutoff_rad]))
         else:
             #print(cutoff_rad)
             new_var = sig_thresh

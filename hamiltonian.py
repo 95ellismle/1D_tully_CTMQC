@@ -10,16 +10,11 @@ Created on Thu May  9 14:41:34 2019
 import numpy as np
 
 
-def create_H1(x, A=0.01, B=1.6, C=0.005, D=1.0):
+def create_H1(x, A=0.03, B=0.4, C=0.005, D=0.3):
     """
     Will create the Hamiltonian in Tully Model 1
     """
-    if x > 0:
-        V11 = A*(1 - np.exp(-B*x))
-    elif x < 0:
-        V11 = -A*(1 - np.exp(B*x))
-    else:
-        V11 = 0
+    V11 = A*np.tanh(B*x)
 
     V22 = -V11
 
@@ -44,13 +39,11 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
     Will create the Hamiltonian in Tully Model 3
     """
     V11 = A
-    if x < 0:
+    if x <= 0:
         V12 = B*np.exp(C*x)
-    elif x > 0:
-        V12 = B*(2-np.exp(-C*x))
     else:
-        V12 = B
-    V22 = -A
+        V12 = B*(2-np.exp(-C*x))
+    V22 = -V11
 #    print(np.matrix([[V11, V12], [V12, V22]]))
     return np.matrix([[V11, V12], [V12, V22]])
 
@@ -60,13 +53,13 @@ def create_H4(x, A=6e-4, B=0.1, C=0.9, D=4):
     Will create the Hamiltonian in Tully Model 3
     """
     V11 = A
-    V22 = -A
-    if x < -D:
-        V12 = -B *np.exp(C *(x-D)) + B *np.exp(C *(x+D))
-    elif x > D:
-        V12 = B *np.exp(-C *(x-D)) - B *np.exp(-C *(x+D))
+    V22 = -V11
+    if x <= -D:
+        V12 = B * (-np.exp(C *(x-D)) + np.exp(C *(x+D)))
+    elif x >= D:
+        V12 = B * (np.exp(-C *(x-D)) - np.exp(-C *(x+D)))
     else:
-        V12 = 2*B - B*np.exp(C *(x-D)) - B *np.exp(-C *(x+D))
+        V12 = B * (2 - np.exp(C *(x-D)) - np.exp(-C *(x+D)))
 
     return np.matrix([[V11, V12],
                       [V12, V22]])
