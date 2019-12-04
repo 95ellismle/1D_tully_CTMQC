@@ -555,12 +555,12 @@ class CTMQC(object):
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-                #if any(Ck > self.ctmqc_env['threshold']
-                #        for Ck in self.ctmqc_env['adPops'][irep]):
-                #    adMom = 0.0 * self.ctmqc_env['adMom'][irep]
-                #else:
-                #    doQM = True
-                adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
+                if any(Ck > self.ctmqc_env['threshold']
+                        for Ck in self.ctmqc_env['adPops'][irep]):
+                    adMom = 0.0 * self.ctmqc_env['adMom'][irep]
+                else:
+                    doQM = True
+                    adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
 
         # Do for all reps

@@ -452,7 +452,7 @@ def calc_Qlk_Min17_opt(runData):
     # Get which reps to calculate alpha for
     threshold = ctmqc_env['threshold']
     mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
-    reps_to_do = np.arange(ctmqc_env['nrep'])#[mask]
+    reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
     if len(reps_to_do) == 0: return Qlk
 
 
