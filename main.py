@@ -101,7 +101,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'do_QM_C': doCTMQC_C,  # Do the QM force
             'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
-            'const': 50,  # The constant in the sigma calc
+            'const': 40,  # The constant in the sigma calc
             'nSmoothStep': 0,  # The number of steps to take to smooth the QM intercept
             'gradTol': 2,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
@@ -363,7 +363,7 @@ class CTMQC(object):
         as the force array
         """
         nrep = self.ctmqc_env['nrep']
-        nstate, nstep = self.ctmqc_env['nstate'], self.ctmqc_env['nsteps']
+        nstate, nstep = self.ctmqc_env['nstate'], self.ctmqc_env['nsteps'] + 1
         if 'mass' in self.ctmqc_env:
             self.ctmqc_env['mass'] = np.array(self.ctmqc_env['mass'])
         else:
@@ -480,7 +480,8 @@ class CTMQC(object):
         if self.ctmqc_env['Rlk_smooth'] == "RI0":
             self.ctmqc_env['nSmoothStep'] = 0
         self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
-                         'transform': [], 'calcQM':[], 'prep': []}
+                         'transform': [], 'calcQM':[], 'prep': [],
+                         "get pops": [],}
 
         # Calculate the Hamiltonian
         for irep in range(nrep):
@@ -501,26 +502,13 @@ class CTMQC(object):
             e_prop.trans_adiab_to_diab(self.ctmqc_env)
 
         # Calculate the QM, adMom, adPop, adFrc.
+        if self.ctmqc_env['do_sigma_calc'].lower() == 'no':
+           self.ctmqc_env['alpha'][:] = 1 / (2 * (self.ctmqc_env['sigma']**2))
         self.__calc_quantities()
         # Calculate the forces
         self.__calc_F()
 
         self.__update_vars_step()
-#        print("dt: ", self.ctmqc_env['dt'])
-#        print("x = ", self.ctmqc_env['pos'])
-#        print("v = ", self.ctmqc_env['vel'])
-#        print("C = ", self.ctmqc_env['C'])
-#        print("model = ", self.ctmqc_env['tullyModel'])
-#        print("nrep = ", self.ctmqc_env['nrep'])
-#        print("QM F = ", self.ctmqc_env['do_QM_F'])
-#        print("QM C = ", self.ctmqc_env['do_QM_C'])
-#        print("elec_steps = ", self.ctmqc_env['elec_steps'])
-#        print("H: ", self.ctmqc_env['H'])
-#        print("E: ", self.ctmqc_env['E'])
-#        print("dlk: ", self.ctmqc_env['NACV'])
-
-
-#        print("F: ", self.ctmqc_env['frc'])
 
 
     def __calc_quantities(self):
@@ -540,6 +528,7 @@ class CTMQC(object):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+
 
             # Get Eigen properties
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
@@ -615,6 +604,10 @@ class CTMQC(object):
                 print("\n\n\n\n\n\n\n\n\n------------\n\n\n\n\n\n\n\n\n\n\n\n")
                 print(E)
                 return
+        if self.tenSteps and self.ctmqc_env['iter'] % 10 == 0:
+           self.__save_data()
+        elif self.tenSteps is False:
+           self.__save_data()
 
     def __calc_F(self):
         """
@@ -642,8 +635,6 @@ class CTMQC(object):
             self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
             self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass']
-#        print("\n")
-#        raise SystemExit("BREAK")
 
     def __prop_wf(self):
         """
@@ -676,8 +667,16 @@ class CTMQC(object):
             e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
+        # Get adiabatic populations
+        adPops = np.conjugate(self.ctmqc_env['C']) * self.ctmqc_env['C']
+        if np.any(np.abs(adPops.imag) > 0):
+            raise SystemExit("Something funny with adiabatic populations")
+        self.ctmqc_env['adPops'] = adPops.real
+        t4 = time.time()
+
         self.allTimes['wf_prop'].append(t2 - t1)
         self.allTimes['transform'].append(t3 - t2)
+        self.allTimes['get pops'].append(t4 - t3)
 
     def __ctmqc_step(self):
         """
@@ -723,6 +722,7 @@ class CTMQC(object):
         Will save data to RAM (arrays within this class)
         """
         istep = self.saveIter
+
         self.allR[istep] = self.ctmqc_env['pos']
         self.allNACV[istep] = self.ctmqc_env['NACV']
         self.allF[istep] = self.ctmqc_env['frc']
@@ -853,7 +853,7 @@ class CTMQC(object):
         self.allt = np.array(self.allt)
         self.__chop_arrays()
         # Small runs are probably tests
-        if self.ctmqc_env['iter'] > 30 and self.save_folder and not self.para:
+        if self.save_folder and not self.para:
             self.store_data()
 
         # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
@@ -985,49 +985,10 @@ def doSim(iSim, para=False):
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
 
-#    pos = np.array([-19.165035521886324,
-#     -19.826817613622875,
-#      -22.830915247071182,
-#       -22.944298815044323,
-#        -17.983295284686285,
-#         -20.824215066559919,
-#          -20.310020585801738,
-#           -21.081973711085521,
-#            -18.298520500912943,
-#             -17.294131061284222,
-#              -20.546614297639017,
-#               -18.480160976805909,
-#                -18.102574798194031,
-#                 -20.225738800275035,
-#                  -19.494225814235001,
-#                   -16.404958223977541,
-#                    -21.221624472305770,
-#                     -21.096713574922028,
-#                      -19.706253086344773,
-#                       -21.029628297204589])
-#
-#
-#    vel = np.array([1.5475400000000000E-002,
-#     1.4689499999999999E-002,
-#      1.5106400000000001E-002,
-#       1.5215800000000000E-002,
-#        1.5774099999999999E-002,
-#         1.5191800000000000E-002,
-#          1.4916199999999999E-002,
-#           1.5324800000000000E-002,
-#            1.5129600000000000E-002,
-#             1.5130899999999999E-002,
-#              1.5184300000000000E-002,
-#               1.5294000000000000E-002,
-#                1.5282600000000000E-002,
-#                 1.4942199999999999E-002,
-#                  1.5026599999999999E-002,
-#                   1.5402500000000000E-002,
-#                    1.5273399999999999E-002,
-#                     1.5491200000000000E-002,
-#                      1.4598200000000000E-002,
-#                       1.5307500000000000E-002])
-#
+#    pos = np.array([-10.179425554537751, -8.742893542840743, -8.626051776044424,
+#                     -5.462026619970005, -11.022432382418035])
+#    vel = np.array([1.4884200000000000E-002, 1.4703400000000000E-002, 1.5176200000000001E-002,
+#                    1.4734799999999999E-002, 1.4889599999999999E-002])
     sigma = [rd.gauss(s_min, s_std) for I in range(nRep)]
 
     elec_steps = 5
@@ -1083,12 +1044,11 @@ def para_doSim(iSim):
     print("Completed Simulation %i\n" % iSim)
     return runData
 
-
-if nSim > 1:
+if nSim > 1 and do_parallel:
     import multiprocessing as mp
 
 
-    nProc = get_min_procs(nSim, 12)
+    nProc = get_min_procs(nSim, 16)
     print("Using %i processes" % (nProc))
     pool = mp.Pool(nProc)
 #    print("Doing %i sims with %i processes" % (nSim, nProc))
@@ -1133,9 +1093,9 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 ##    plotPaper.params['whichSimType'] = ['CTMQC']
 ##    plotPaper.params['whichQuantity'] = 'pops'
 ##    f, a = plotPaper.plot_data(plotPaper.params)
-    plot.plotPops(runData)
-    plot.plotPos(runData)
-    plot.plotNACV(runData)
+#    plot.plotPops(runData)
+#    plot.plotPos(runData)
+#    plot.plotNACV(runData)
 #    plot.plotNorm(runData)
 #    #plot.plotRabi(runData)
 #    plot.plotDeco(runData)

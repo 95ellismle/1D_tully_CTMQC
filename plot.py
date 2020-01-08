@@ -496,9 +496,9 @@ def plotNACV(runData, f=False, a=False, params={}):
 
     if a is False or f is False: f, a = plt.subplots()
     a.plot(runData.allt, runData.allNACV[:, :, 0, 1], lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha, **params)
-    a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allNACV[:, :, 0, 0], lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allNACV[:, :, 1, 1], lw=lw, alpha=alpha, **params)
+    #a.plot(runData.allt, runData.allNACV[:, :, 1, 0], lw=lw, alpha=alpha, **params)
     a.set_xlabel("Time [au]")
     a.set_ylabel(r"NACV")
     a.set_title("%i Reps" % runData.ctmqc_env['nrep'])

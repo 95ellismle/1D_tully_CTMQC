@@ -21,7 +21,7 @@ norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTM
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
 pops_root_folder = "/scratch/mellis/TullyModelData/Test/Ehren_Data/Diab/"
-pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Test/CTMQC_Data/Test_RI0_Switch/"
+pops_ctmqc_root_folder = "/scratch/mellis/TullyModelData/Test/CTMQC_Data/VaryingSigma20/CTMQC"
 pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Extrap_DC/Pops_Compare"
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
