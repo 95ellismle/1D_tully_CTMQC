@@ -1,4 +1,0 @@
-* Implement more unit tests
-* Do the linear interpolation for the elec prop
-* Make the input a dictionary
-

@@ -93,24 +93,18 @@ def calcNACVgradPhi(pos, ctmqc_env):
     differences in phi for different pos.
     """
     dx = ctmqc_env['dx']
-#    H_xm = ctmqc_env['Hfunc'](pos - dx)
     H_x = ctmqc_env['Hfunc'](pos)
     H_xp = ctmqc_env['Hfunc'](pos + dx)
-#    nstate = len(H_x)
 
     allU = [np.linalg.eigh(H)[1]
             for H in (H_xp, H_x)]
-#            for H in (H_xm, H_x, H_xp)]
-#    gradU = np.gradient(allU, dx, axis=0)
     gradU = (allU[1] - allU[0]) / dx
     
     NACV = np.zeros((2, 2))
     for l in range(2):
         for k in range(l):
-#            print((allU[1].A[l], gradU.A[k]))
             NACV[l, k] = np.dot(allU[1].A[l], gradU.A[k])
             NACV[k, l] = -NACV[l, k]
-#    print(NACV)
             
     # Check the anti-symettry of the NACV
     badNACV = False
@@ -133,7 +127,7 @@ def calcNACV(irep, ctmqc_env):
     """
     pos = ctmqc_env['pos'][irep]
 
-    return calcNACVgradPhi(pos, ctmqc_env)
+    return calcNACVgradH(pos, ctmqc_env)
 #    if ctmqc_env['tullyModel'] == 2 and ctmqc_env['velInit'] < 0.01:
 #    else:
 #        return calcNACVgradH(pos, ctmqc_env)

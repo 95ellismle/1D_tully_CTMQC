@@ -117,25 +117,24 @@ elif 'norm' in inputs:
 else:
 
     print("Carrying out custom input file")
-    numRepeats = 1  # How many repeated simulations (each with different init pos)
-    #mfolder_structure = ['sigma', 'model', 'mom']  # What the folderstructure of the outputted data looks like.
-    #all_nRep = [70] * numRepeats  # How many replicas
-    #all_model = [3] * numRepeats  # What tully model to use
-    #all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
-    #all_maxTime = [1500] * numRepeats  # How long to run for
-    #all_p_mean = [-15] * numRepeats  # The average initial position
-    #all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
-    #all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
-    #rootFolder = './test'  #'%s/test' % rootSaveFold  # Where to save the data.
+
+    models = [4]
+    highs_lows = ['high']
+    reps = 70
+    
     mfolder_structure = ["ctmqc", 'model', 'mom']
-    all_velMultiplier = [3,] * numRepeats
-    all_maxTime = [1500,] * numRepeats
-    all_model = [3,] * numRepeats
-    all_p_mean = [-8,] * numRepeats
-    all_doCTMQC_C = ([True] * 1) * numRepeats
-    all_doCTMQC_F = ([True] * 1)  * numRepeats
-    rootFolder = './test'
-    all_nRep = [5] * 1 * numRepeats
+    all_model = models
+    all_nRep = [reps] * len(models)
+    highs_lows = [0 if hl =='high' else 1 for hl in highs_lows]
+
+    all_velMultiplier = [modelVel[mdl][hl] for mdl, hl in zip(models, highs_lows)]
+    all_maxTime = [modelTime[mdl][hl] + 500 for mdl, hl in zip(models, highs_lows)]
+    all_p_mean = [modelPos[mdl] for mdl in models]
+    all_doCTMQC_C = [True] * len(models)
+    all_doCTMQC_F = [True] * len(models)
+    rootFolder = './Test'
+    all_dt = [0.4] * len(models)
+
 
 
 

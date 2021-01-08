@@ -7,6 +7,14 @@ import os
 from plottingResults import getData
 
 
+def plot2(runData, func1, func2):
+    f, a = plt.subplots(2)
+    func1(runData, f=f, a=a[0])
+    func2(runData, f=f, a=a[1])
+    a[0].set_xlabel("")
+    plt.show()
+
+
 def get_ExtData(extData, model, mom):
     dfDeco = getattr(extData,
                          "mod%i_%sMom_deco" % (model, mom))
