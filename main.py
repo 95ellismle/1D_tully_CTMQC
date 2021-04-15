@@ -13,12 +13,13 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 import random as rd
-import datetime as dt
+import datetime
 import time
 import os
 import collections
 import re
 import subprocess
+import json
 
 import hamiltonian as Ham
 import nucl_prop
@@ -28,7 +29,11 @@ import plot
 
 
 #rootSaveFold = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test"
-rootSaveFold = "/scratch/mellis/TullyModelData/Test"
+#rootSaveFold = "/scratch/mellis/TullyModelData/Test"
+
+
+BASIS = "adiab"
+
 
 
 def get_time_taken_ordering_dict(all_nrep, all_max_time,
@@ -86,11 +91,19 @@ def get_sig_figs_diff(num1, num2):
 
 def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
           dt=0.41341373336565040, elec_steps=5):
+
+    coeffSymb = 'u' if BASIS == 'diab' else 'C'
+
+    print(f"Nuclear Timestep = {dt:.4f} au ({dt*0.02418884254:.2g} fs | {dt*24.18884254:.2g} as)")
+    print(f"Electronic Timestep = {dt/elec_steps:.4f} au ({(dt/elec_steps)*0.02418884254:.4f} fs | {(dt/elec_steps)*24.18884254:.2g} as))")
+    print(f"Basis: {BASIS}, coeff symbol: {coeffSymb}")
+
+
     # All units must be atomic units
     ctmqc_env = {
             'pos': pos,  # Intial Nucl. pos | nrep |in bohr
             'vel': vel,  # Initial Nucl. veloc | nrep |au_v
-            'C': coeff,  # Intial WF |nrep, 2| -
+            coeffSymb: coeff,  # Intial WF |nrep, 2| -
             'mass': mass,  # nuclear mass |nrep| au_m
             'tullyModel': model,  # Which model | | -
             'max_time': maxTime,  # Maximum time to simulate to | | au_t
@@ -102,8 +115,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 50,  # The constant in the sigma calc
-            'nSmoothStep': 0,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 2,  # The maximum allowed gradient in Rlk in time.
+            'nSmoothStep': 4,  # The number of steps to take to smooth the QM intercept
+            'gradTol': 5,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
@@ -214,7 +227,7 @@ class CTMQC(object):
         if int(mom) == mom: mom = int(mom)
         mom_str = "Kinit_%s" % (str(mom).replace(".", "x").strip())
 
-        model_str = "Model_%i" % self.ctmqc_env['tullyModel']
+        model_str = f"Model_{self.ctmqc_env['tullyModel']}"
 
         params = {i: str(i) + "=" + str(self.ctmqc_env[i]) for i in self.ctmqc_env}
         params['ctmqc'] = CT_str
@@ -316,9 +329,8 @@ class CTMQC(object):
             self.ctmqc_env['pos'] = np.array(self.ctmqc_env['pos'],
                                              dtype=np.float64)
             nrep1, = np.shape(self.ctmqc_env['pos'])
+            if nrep != nrep1: changes = True
             nrep = np.min([nrep1, nrep])
-            if nrep != nrep1:
-                changes = True
         else:
             msg = "Can't find initial positions\n\t"
             msg += "(specify this as 'pos')"
@@ -331,9 +343,8 @@ class CTMQC(object):
                                              dtype=np.float64)
             nrep1, = np.shape(self.ctmqc_env['vel'])
 
+            if nrep != nrep1: changes = True
             nrep = np.min([nrep1, nrep])
-            if nrep != nrep1:
-                changes = True
         else:
             msg = "Can't find initial velocities\n\t"
             msg += "(specify this as 'vel')"
@@ -447,19 +458,18 @@ class CTMQC(object):
         """
         Will put the correct tully model in the ctmqc_env dict
         """
-        if self.ctmqc_env['tullyModel'] == 1:
-            self.ctmqc_env['Hfunc'] = Ham.create_H1
-        elif self.ctmqc_env['tullyModel'] == 2:
-            self.ctmqc_env['Hfunc'] = Ham.create_H2
-        elif self.ctmqc_env['tullyModel'] == 3:
-            self.ctmqc_env['Hfunc'] = Ham.create_H3
-        elif self.ctmqc_env['tullyModel'] == 4:
-            self.ctmqc_env['Hfunc'] = Ham.create_H4
-        elif self.ctmqc_env['tullyModel'] == 'lin':
-            self.ctmqc_env['Hfunc'] = Ham.create_Hlin
+        options = {1: Ham.create_H1, 2: Ham.create_H2,
+                   3: Ham.create_H3, 4: Ham.create_H4,
+                   'lin': Ham.create_Hlin, 'big': Ham.createBigHam,
+                   'mult1': Ham.createManyCross,
+                   'constHigh': Ham.constantHighCouplings,
+                  }
+        if self.ctmqc_env['tullyModel'] in options:
+            self.ctmqc_env['Hfunc'] = options[self.ctmqc_env['tullyModel']]
         else:
             print("Tully Model = %s" % str(self.ctmqc_env['tullyModel']))
-            msg = "Incorrect tully model chosen. Only 1, 2, 3 and 4 available"
+            msg = "Incorrect tully model chosen. Choose from:\n\t*" % \
+                    ('\n\t* '.join(options.keys()))
             raise SystemExit(msg)
 
     def __init_step(self):
@@ -492,9 +502,17 @@ class CTMQC(object):
 
         # Transform the coefficieints
         if 'u' in self.ctmqc_env:
-            self.ctmqc_env['C'] = np.zeros((nrep, nstate),
+            #self.ctmqc_env['C'] = np.zeros((nrep, nstate),
+            #                               dtype=complex)
+            #e_prop.trans_diab_to_adiab(self.ctmqc_env)
+
+            # A quick hack to simulate adiabatic ground state initialisation
+            # using the diabatic propagation.
+            self.ctmqc_env['C'] = np.array([[complex(1, 0), complex(0, 0)]
+                                   for iRep in range(nrep)])
+            self.ctmqc_env['u'] = np.zeros((nrep, nstate),
                                            dtype=complex)
-            e_prop.trans_diab_to_adiab(self.ctmqc_env)
+            e_prop.trans_adiab_to_diab(self.ctmqc_env)
         else:
             self.ctmqc_env['u'] = np.zeros((nrep, nstate),
                                            dtype=complex)
@@ -601,7 +619,7 @@ class CTMQC(object):
                     msg = "\rStep %i/%i  Time Taken = %.2gs" % (istep, nstep,
                                                                 avgTime)
                     timeLeft = int((nstep - istep) * avgTime)
-                    timeLeft = str(dt.timedelta(seconds=timeLeft))
+                    timeLeft = str(datetime.timedelta(seconds=timeLeft))
                     msg += "  Time Left = %s" % (timeLeft)
                     percentComplete = (float(istep) / float(nstep)) * 100
                     msg += "  %i%% Complete" % (percentComplete)
@@ -821,7 +839,10 @@ class CTMQC(object):
         tullyInfo = {i:self.ctmqc_env[i]
                        for i in self.ctmqc_env
                        if isinstance(self.ctmqc_env[i], saveTypes)}
-        np.save("%s/tullyInfo" % self.save_folder, tullyInfo)
+
+        #np.save("%s/tullyInfo" % self.save_folder, tullyInfo)
+        with open("%s/tullyInfo.json" % self.save_folder, 'w') as f:
+            json.dump(tullyInfo, f)
 
 
     def __checkVV(self):
@@ -869,7 +890,7 @@ class CTMQC(object):
             msg += "                                                              "
             msg += "\n\n***\n"
             timeTaken = np.ceil(sumTime)
-            timeTaken = str(dt.timedelta(seconds=timeTaken))
+            timeTaken = str(datetime.timedelta(seconds=timeTaken))
             msg += "Steps = %i   Total Time Taken__prop_wf = %ss" % (nstep, timeTaken)
             msg += "  Avg. Time Per Step = %.2gs" % np.mean(self.allTimes['step'])
             msg += "  All Done!\n***\n"
@@ -943,8 +964,8 @@ def save_vitals(runData):
         ener = get_ener_drift(runData)
         commit = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode("utf-8").strip("\n")
 
-        line = (model, CTMQC, nrep, str(Ndt), str(Edt), norm, ener, commit)
-        f.write("%i,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
+        line = (str(model), CTMQC, nrep, str(Ndt), str(Edt), norm, ener, commit)
+        f.write("%s,%s,%i,%s,%s,%.2g,%.2g,%s\n" % line)
 
 
 def doSim(iSim, para=False):
@@ -961,16 +982,16 @@ def doSim(iSim, para=False):
     v_std = 1. /(2000. * pos_std)
     s_std = 0
 
-    #if model == 1 or model == 2:
+
     coeff = [[complex(1, 0), complex(0, 0)]
-                for iRep in range(nRep)]
-    #else:
-    #   coeff = [[complex(0, 0), complex(1, 0)]
-    #             for iRep in range(nRep)]
+              for iRep in range(nRep)]
+    if BASIS == 'diab':
+        if model == 3 or model == 4:
+            coeff = [[complex(0, 0), complex(1, 0)]
+                        for iRep in range(nRep)]
 
-#    coeff = [[complex(1/np.sqrt(2), 0), complex(1/np.sqrt(2), 0)]
-#              for iRep in range(nRep)]
 
+    rd.seed(1)
     pos = [rd.gauss(p_mean, pos_std) for I in range(nRep)]
     vel = [abs(rd.gauss(v_mean, v_std)) for I in range(nRep)]
 
@@ -985,49 +1006,6 @@ def doSim(iSim, para=False):
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
 
-#    pos = np.array([-19.165035521886324,
-#     -19.826817613622875,
-#      -22.830915247071182,
-#       -22.944298815044323,
-#        -17.983295284686285,
-#         -20.824215066559919,
-#          -20.310020585801738,
-#           -21.081973711085521,
-#            -18.298520500912943,
-#             -17.294131061284222,
-#              -20.546614297639017,
-#               -18.480160976805909,
-#                -18.102574798194031,
-#                 -20.225738800275035,
-#                  -19.494225814235001,
-#                   -16.404958223977541,
-#                    -21.221624472305770,
-#                     -21.096713574922028,
-#                      -19.706253086344773,
-#                       -21.029628297204589])
-#
-#
-#    vel = np.array([1.5475400000000000E-002,
-#     1.4689499999999999E-002,
-#      1.5106400000000001E-002,
-#       1.5215800000000000E-002,
-#        1.5774099999999999E-002,
-#         1.5191800000000000E-002,
-#          1.4916199999999999E-002,
-#           1.5324800000000000E-002,
-#            1.5129600000000000E-002,
-#             1.5130899999999999E-002,
-#              1.5184300000000000E-002,
-#               1.5294000000000000E-002,
-#                1.5282600000000000E-002,
-#                 1.4942199999999999E-002,
-#                  1.5026599999999999E-002,
-#                   1.5402500000000000E-002,
-#                    1.5273399999999999E-002,
-#                     1.5491200000000000E-002,
-#                      1.4598200000000000E-002,
-#                       1.5307500000000000E-002])
-#
     sigma = [rd.gauss(s_min, s_std) for I in range(nRep)]
 
     elec_steps = 5
@@ -1134,17 +1112,17 @@ if nSim == 1 and runData.ctmqc_env['iter'] > 50:
 ##    plotPaper.params['whichQuantity'] = 'pops'
 ##    f, a = plotPaper.plot_data(plotPaper.params)
     plot.plotPops(runData)
-    plot.plotPos(runData)
-    plot.plotNACV(runData)
+    #plot.plotPos(runData)
+    #plot.plotNACV(runData)
 #    plot.plotNorm(runData)
 #    #plot.plotRabi(runData)
 #    plot.plotDeco(runData)
 #    plot.plotSigma(runData)
-#    #plot.plotRlk_Rl(runData)
-#    #plot.plotNorm(runData)
+    #plot.plotRlk_Rl(runData)
+    plot.plotNorm(runData)
 #    plot.plotEcons(runData)
 #    #plot.plotSigmal(runData)
-#    #plot.plotQlk(runData)
+    #plot.plotQlk(runData)
 #    #plot.plotS26(runData)
 ##    plot.plotEpotTime(runData, range(0, runData.ctmqc_env['iter']),
 ##                      saveFolder='/scratch/mellis/Pics')

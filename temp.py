@@ -53,7 +53,7 @@ def getChi(pos, sig):
     return chi
 
 
-pos = np.array(list(np.random.normal(2, 1, 200)) + list(np.random.normal(-5, 1.3, 200)))
+pos = np.array(list(np.random.normal(2, 0.2, 200)) + list(np.random.normal(-5, 1.3, 200)))
 minP, maxP, nBin = min(pos), max(pos), int(np.sqrt(len(pos)))
 bins = np.linspace(minP, maxP, nBin+1)
 binCounts = [len(pos[(pos >= m) & (pos <= M)])
@@ -68,34 +68,80 @@ posBins = [np.mean([pos[j] for j in revBinMap[i] ])
            for i in set(revBinMap.keys())]
 Hplot = np.array([binCounts[binMap[revBinMap[i][0]]] for i in revBinMap],
              dtype=float)
-Hplot /= integrate.simps(Hplot, posBins)
+Hplot /= abs(integrate.simps(Hplot, posBins))
 
 H = np.array([binCounts[binMap[i]] for i in range(len(pos))], dtype=float)
 H /= abs(integrate.simps(H, pos))
 
-#chi = getChi(pos, np.random.normal(0.3, 0.1, size=len(pos)))
-#plt.plot(posBins, H, 'ro')
 
-#plt.plot(pos, chi, 'k.')
+def getInterpolatedH(pos, posBins, Hplot):
+    """
+    Will use linear interpolation between points on the Hamiltonian
+    """
+    posBins, Hplot = np.array(posBins), np.array(Hplot)
+
+    if pos in posBins:
+        return Hplot[posBins == pos][0]
+
+    elif pos > max(posBins):
+        x2 = max(posBins)
+        x1 = max(posBins[posBins != x2])
+        y2 = max(Hplot)
+        y1 = max(Hplot[Hplot != y2])
+
+    elif pos < min(posBins):
+        x1 = min(posBins)
+        x2 = min(posBins[posBins != x1])
+        y1 = min(Hplot)
+        y2 = min(Hplot[Hplot != y1])
+
+    else:
+        x2 = min(posBins[posBins > pos])
+        x1 = max(posBins[posBins < pos])
+        y2 = Hplot[posBins == x2][0]
+        y1 = Hplot[posBins == x1][0]
+
+    xdiff = x2 - x1
+    ydiff = y2 - y1
+
+    newH = y1 + (((pos - x1) / xdiff) * ydiff)
+    return newH
+
+
+# Get all the interpolated H values
+allH = [getInterpolatedH(RI, posBins, Hplot) for RI in pos]
+
+
+#chi = getChi(pos, 0.3)
+#plt.plot(pos, allH, 'k.')
+#plt.plot(pos, chi, 'b.')
+
 
 
 dS = 0.01
 ctmqc_env = {'nrep': len(pos), 'pos': pos}
-allSig = np.arange(0.01, 2, dS)
+allSig = np.arange(0.08, 2, dS)
 allGrad = []
 allP = []
 for count, sigma in enumerate(allSig):
     grad = 0.0
     chi = getChi(pos, sigma)
 
-    P = np.sum(H - chi)
+    P = np.sum((allH - chi)**2)
     allP.append(P)
 
     if count % 1000 == 0:   print(sigma)
-#
-#
-#plt.figure()
-plt.plot(allSig, allP)
-#plt.figure()
-#plt.plot(allSig, np.gradient(allP, dS))
-#plt.show()
+
+
+if np.min(allP) < 0.3:
+    bestSig = allSig[np.argmin(allP)]
+
+    print("Best Sigma = %.2g" % bestSig)
+    print("Residuals = %.2g" % np.min(allP))
+
+    chi=getChi(pos, bestSig)
+    plt.plot(pos, chi, 'k.')
+    plt.plot(pos, allH, 'r.')
+
+else:
+    print("Couldn't find the optimum sigma, residuals were too high.")

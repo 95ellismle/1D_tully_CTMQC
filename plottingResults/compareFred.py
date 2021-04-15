@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 
-mroot_folder = '' # /scratch/mellis/TullyModelData/FullCTMQC_gradRlk'
+mroot_folder = './FullGossel_std' # /scratch/mellis/TullyModelData/FullCTMQC_gradRlk'
 model = 1
 whichPlot = 'compFred'# normEner'
 numStd = 1
@@ -30,7 +30,7 @@ plotFred = ['CTMQC', 'exact']
 plotMe = ['CTMQC']
 
 
-frootfolder = "/homes/mellis/Documents/Graphs/Tully_Models"
+frootfolder = "/home/matt/Data/Work/CTMQC/FredericaData"
 # First plot Frederica's tmpData
 def plotFredData(rootFolder, model, momentum=False,
                  plot_names = ['exact', 'SH', 'Eh', 'CTMQC']):
@@ -47,7 +47,7 @@ def plotFredData(rootFolder, model, momentum=False,
         moms = [int(re.findall("\d*K", folder)[0].strip('K'))
                 for folder in allFolders]
         allFolders = [f[1] for f in sorted(zip(moms, allFolders))]
-    
+
     figure, axes = plt.subplots(2, 2)
     for iAy, folder in enumerate(allFolders):
         names = ['exact', 'SH', 'Eh', 'MQC', 'CTMQC']
@@ -59,40 +59,40 @@ def plotFredData(rootFolder, model, momentum=False,
                 lines = f.read().split('\n')[2:]
                 headers = [name + j for name in names for j in ['_x', '_y']]
                 txt = [','.join(headers)] + lines
-            
+
             with open("tmp.csv", 'w') as f:
                 f.write('\n'.join(txt))
-                
+
             tmpData = pd.read_csv("tmp.csv")
-        
+
             # Sort by x tmpData
             for name in names:
                 xname, yname = name+'_x', name+'_y'
                 tmpData[yname][tmpData[yname] > 1] = 1
                 tmpData[yname][tmpData[yname] < 0] = 0
-                
-            
+
+
             for iN, name in enumerate(plot_names):
                 col = colors[name]
-    
+
                 xname, yname = name+'_x', name+'_y'
                 xdata, ydata = tmpData[xname], tmpData[yname]
-            
+
                 sortedData = sorted(zip(xdata, ydata))
                 xdata = np.array([i[0] for i in sortedData])
                 ydata = np.array([i[1] for i in sortedData])
-                
+
                 axes[iAx, iAy].plot(xdata, ydata, color=col,
                                     ls='-', lw=5, alpha=0.3)
-                
+
                 if iAx == 0 and iN == 0:
                     xPos = np.nanmax(xdata) / 12
                     axes[iAx, iAy].annotate(r"k$_0$ = %s a.u." % mom,
                                             (xPos, 0.7), fontsize=15)
-                    
+
 #                    axes[iAx, iAy].plot(xdata, 1-ydata, color=col,
 #                                    ls='-', lw=5, alpha=0.3)
-    
+
     for iy in range(2):
         for ix in range(2):
             axes[ix, iy].grid(False)
@@ -100,16 +100,16 @@ def plotFredData(rootFolder, model, momentum=False,
                 axes[ix, iy].set_xlabel("time (a.u)", fontsize=20)
                 if iy == 0:
                     axes[ix, iy].set_ylabel("coherence", fontsize=20)
-            
+
             else:
                 #axes[ix, iy].set_ylim([0, 1])
                 #axes[ix, iy].set_yticks([0, 0.5, 1.0])
                 if iy == 0:
                     axes[ix, iy].set_ylabel("populations", fontsize=20)
-            
+
 
     os.remove("tmp.csv")
-        
+
     return figure, axes
 
 
@@ -151,7 +151,7 @@ count = 0
 for fold, _, files in os.walk(mroot_folder):
     for name in plotMe:
         numpy_files = any('.npy' in f for f in files)
-        correct_folder_name = any("/"+nam+"/" in fold 
+        correct_folder_name = any("/"+nam+"/" in fold
                                   for nam in folderNames[name])
         if correct_folder_name and numpy_files:
             m_model = re.findall("\/Model\_\d\/", fold)[0].strip("//").replace("Model_", "")
@@ -162,7 +162,7 @@ for fold, _, files in os.walk(mroot_folder):
                 for fName in os.listdir(fold):
                     fPath = "%s/%s" % (fold, fName)
                     tmpData['data'][fName.replace(".npy", "")] = np.load(fPath)
-                
+
                 tmpData['model'] = int(m_model)
                 tmpData['simType'] = name
                 mom = re.findall("\/Kinit\_\d*", fold)[0].strip("//").replace("Kinit_", "")
@@ -171,7 +171,7 @@ for fold, _, files in os.walk(mroot_folder):
                 tmpData['folder'] = fold
                 allData[count] = tmpData
                 count += 1
-            
+
 for name in plotMe:
     print("\n"+name+":")
     allPopsLow, timeLow = [], []
@@ -195,7 +195,7 @@ for name in plotMe:
                     timeHigh = allData[i]['data']['time']
                 allPopsHigh.append(allData[i]['data']['|C|^2'])
                 folders.append(allData[i]['folder'])
-        
+
     if len(allPopsLow) > 0:
         maxLowSteps = np.max([i.shape[0] for i in allPopsLow])
         allPopsLow = np.array([i for i in allPopsLow if i.shape[0] == maxLowSteps])
@@ -213,7 +213,7 @@ for name in plotMe:
     print("Num Bad Sims = %i" % len(badSims))
     print("\tLow Sims = %i" % len(allPopsLow))
     print("\tHigh Sims = %i" % len(allPopsHigh))
-    
+
     if 'Ener' in whichPlot:
         allPotLow, allKinLow = [], []
         allPotHigh, allKinHigh = [], []
@@ -227,7 +227,7 @@ for name in plotMe:
                 else:
                     allPotHigh.append(potE)
                     allKinHigh.append(1000 * (allData[i]['data']['vel'] ** 2))
-    
+
         allPotLow, allKinLow = np.array(allPotLow), np.array(allKinLow)
         allPotHigh, allKinHigh = np.array(allPotHigh), np.array(allKinHigh)
 
@@ -237,31 +237,31 @@ for name in plotMe:
         allPotHigh = allPotHigh[minSim:maxSim]
 
         allTotLow, allTotHigh = allKinLow + allPotLow, allKinHigh + allPotHigh
-    
+
     if 'normEner' in whichPlot:
         if len(allPopsLow) > 0:
             # Do the norm
             avgPopsLow = np.mean(np.sum(allPopsLow, axis=3), axis=2)  # avg over rep
             avgAvgPopsLow = np.mean(avgPopsLow, axis=0)
             stdAvgPopsLow = np.std(avgPopsLow, axis=0)
-            ax[0, 0].plot(timeLow, 
+            ax[0, 0].plot(timeLow,
                            avgAvgPopsLow, 'k-')
-            ax[0, 0].plot(timeLow, 
+            ax[0, 0].plot(timeLow,
                            avgAvgPopsLow + numStd * stdAvgPopsLow, 'k--')
-            ax[0, 0].plot(timeLow, 
+            ax[0, 0].plot(timeLow,
                            avgAvgPopsLow - numStd * stdAvgPopsLow, 'k--')
 
         if len(allPopsHigh) > 0:
             avgPopsHigh = np.mean(np.sum(allPopsHigh, axis=3), axis=2)  # avg over rep
             avgAvgPopsHigh = np.mean(avgPopsHigh, axis=0)
             stdAvgPopsHigh = np.std(avgPopsHigh, axis=0)
-            ax[0, 1].plot(timeHigh, 
+            ax[0, 1].plot(timeHigh,
                           avgAvgPopsHigh, 'k-')
-            ax[0, 1].plot(timeHigh, 
+            ax[0, 1].plot(timeHigh,
                           avgAvgPopsHigh + numStd * stdAvgPopsHigh, 'k--')
-            ax[0, 1].plot(timeHigh, 
+            ax[0, 1].plot(timeHigh,
                           avgAvgPopsHigh - numStd * stdAvgPopsHigh, 'k--')
-            
+
         # Do the energy conservation
         if len(allKinLow) > 0:
             avgKinLow = np.mean(allKinLow, axis=2)
@@ -271,19 +271,19 @@ for name in plotMe:
             avgKL, avgTL = np.mean(avgKinLow, axis=0), np.mean(avgTotLow, axis=0)
             avgPL, stdTL = np.mean(avgPotLow, axis=0), np.std(avgTotLow, axis=0)
             ax[1, 0].plot(timeLow, avgKL, 'r-', label="Kin")
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgKL + numStd * stdKL, 'r--')
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgKL - numStd * stdKL, 'r--')
             ax[1, 0].plot(timeLow, avgPL, 'g-', label="Pot")
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgPL + numStd * stdPL, 'g--')
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgPL - numStd * stdPL, 'g--')
             ax[1, 0].plot(timeLow, avgTL, 'k-', label="Tot")
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgTL + numStd * stdTL, 'k--')
-            ax[1, 0].plot(timeLow, 
+            ax[1, 0].plot(timeLow,
                           avgTL - numStd * stdTL, 'k--')
 
             Edrift, _ = np.polyfit(timeLow, avgTL, 1)
@@ -301,23 +301,23 @@ for name in plotMe:
             avgKH, stdTH = np.mean(avgKinHigh, axis=0), np.std(avgTotHigh, axis=0)
             stdKH, stdPH = np.std(avgKinHigh, axis=0), np.std(avgPotHigh, axis=0)
             avgPH, avgTH = np.mean(avgPotHigh, axis=0), np.mean(avgTotHigh, axis=0)
-            
+
             ax[1, 1].plot(timeHigh, avgKH, 'r-', label="Kin")
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgKH + numStd * stdKH, 'r--')
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgKH - numStd * stdKH, 'r--')
             ax[1, 1].plot(timeHigh, avgPH, 'g-', label="Pot")
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgPH + numStd * stdPH, 'g--')
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgPH - numStd * stdPH, 'g--')
             ax[1, 1].plot(timeHigh, avgTH, 'k-', label="Tot")
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgTH + numStd * stdTH, 'k--')
-            ax[1, 1].plot(timeHigh, 
+            ax[1, 1].plot(timeHigh,
                           avgTH - numStd * stdTH, 'k--')
-            
+
             Edrift, _ = np.polyfit(timeHigh, avgTH, 1)
             Edrift *= 41341.3745758
             xPos = max(timeHigh)*3./10.
@@ -325,15 +325,15 @@ for name in plotMe:
             ax[1, 1].annotate(r"Ener Drift = %.2g [$\frac{Ha}{atom \ ps}$]" % Edrift, (xPos, yPos),
                               fontsize=15)
             ax[1, 1].legend()
-        
-        
+
+
         ax[1, 0].set_xlabel("Time [au]")
         ax[1, 1].set_xlabel("Time [au]")
         ax[0, 0].set_ylabel("Norm")
         ax[1, 0].set_ylabel("Energy [au]")
         ax[0, 0].set_title("Low Momentum", fontsize=18)
         ax[0, 1].set_title("High Momentum", fontsize=18)
-    
+
     if 'compFred' in whichPlot:
         if len(allPopsLow):
             # Low Momentum
@@ -341,11 +341,11 @@ for name in plotMe:
             avgDecoLow1 = np.mean(decoLow, axis=2)  # average over Replicas
             stdDecoLow = np.std(avgDecoLow1, axis=0)  # average over Replicas
             avgDecoLow = np.mean(avgDecoLow1, axis=0)  # average over Replicas
-            
+
             avgPopsLow1 = np.mean(allPopsLow, axis=2) # average over replica first
             stdPopsLow = np.std(avgPopsLow1, axis=0)
             avgPopsLow = np.mean(avgPopsLow1, axis=0) # average over repeated runs
-            
+
             if 'all' in std_or_allSim:
                 for i in range(len(avgPopsLow1)):
                     pdAxes[0, 0].plot(timeLow, avgPopsLow1[i, :, 0], lw=0.3,
@@ -368,7 +368,7 @@ for name in plotMe:
                                   color=colors[name])
                 pdAxes[1, 0].plot(timeLow, avgDecoLow+numStd*stdDecoLow, '--',
                                   color=colors[name])
-        
+
         # High Momentum
         if len(allPopsHigh):
 #            allPopsHigh = 1 - allPopsHigh
@@ -376,11 +376,11 @@ for name in plotMe:
             avgDecoHigh1 = np.mean(decoHigh, axis=2)  # average over Replicas
             stdDecoHigh = np.std(avgDecoHigh1, axis=0)  # average over Replicas
             avgDecoHigh = np.mean(avgDecoHigh1, axis=0)  # average over Replicas
-        
+
             avgPopsHigh1 = np.mean(allPopsHigh, axis=2) # average over replica first
             stdPopsHigh = np.std(avgPopsHigh1, axis=0)
             avgPopsHigh = np.mean(avgPopsHigh1, axis=0) # average over repeated runs
-            
+
             if 'all' in std_or_allSim:
                 for i in range(len(avgPopsHigh1)):
                     pdAxes[0, 1].plot(timeHigh, avgPopsHigh1[i, :, 0], lw=0.3,
@@ -394,7 +394,7 @@ for name in plotMe:
                 pdAxes[0, 1].plot(timeHigh,
                                   avgPopsHigh[:, 0]-numStd*stdPopsHigh[:, 0],
                                   '--', color=colors[name])
-        
+
             if 'all' in std_or_allSim:
                 for i in range(len(avgDecoHigh1)):
                     pdAxes[1, 1].plot(timeHigh, avgDecoHigh1[i], lw=0.3,
@@ -407,8 +407,8 @@ for name in plotMe:
                 pdAxes[1, 1].plot(timeHigh,
                                   avgDecoHigh+numStd*stdDecoHigh, '--',
                                   color=colors[name])
-    
-    
+
+
 
 
         pdAxes[0, 0].set_title("Low Momentum", fontsize=18)

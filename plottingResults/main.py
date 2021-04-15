@@ -16,8 +16,8 @@ import re
 import getData
 import plotData
 
-norm_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/NormCons_vs_ElecDT"
-norm_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_Ehren_DC/NormCons_vs_ElecDT"
+norm_root_folder = "/home/matt/Documents/PhD/Code/1D_tully_CTMQC/FullGossel_std/Ehren/Model_1/Kinit_25"
+norm_root_ctmqc_folder = "/home/matt/Documents/PhD/Code/1D_tully_CTMQC/FullGossel_std/Ehren/Model_1/Kinit_25"
 ener_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/Ehrenfest_Data/EnerCons_vs_NuclDT"
 ener_root_ctmqc_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/NoDC/EnerCons_vs_NuclDT"
 pops_root_folder = "/scratch/mellis/TullyModelData/Test/Ehren_Data/Diab/"
@@ -26,16 +26,16 @@ pops_ctmqc_DC_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/
 Rlk_root_folder = "/scratch/mellis/TullyModelData/Big_ThesisChap_Test/CTMQC_Data/With_DC/Pops_Compare"
 
 
-'''Plot the Ehrenfest norm conservation for model 1, 2, 3 and 4 for the 
-high momentum cases vs timestep, using the gradH NACV and a constant 
+'''Plot the Ehrenfest norm conservation for model 1, 2, 3 and 4 for the
+high momentum cases vs timestep, using the gradH NACV and a constant
 Nuclear timestep of 0.1 au.
 
 If different parameters are required please re-run the code and point the
 variable norm_root_folder to the data folder.'''
-plot_norms = False
+plot_norms = True
 
-'''Plot the Ehrenfest norm conservation for model 1, 2, 3 and 4 for the 
-high momentum cases vs timestep, using the gradH NACV and a constant 
+'''Plot the Ehrenfest norm conservation for model 1, 2, 3 and 4 for the
+high momentum cases vs timestep, using the gradH NACV and a constant
 Electronic timestep of 0.01 au.
 
 If different parameters are required please re-run the code and point the
@@ -44,7 +44,7 @@ plot_ener_cons = False
 
 """
 Plot the high and low momentum cases of model 1, 2, 3 and 4 and compare them to
-the Gossel and Agostini (Ehrenfest) data. 
+the Gossel and Agostini (Ehrenfest) data.
 If the Agostini and Gossel data have different initial momenta then it will
 choose Gossel.
 """
@@ -66,22 +66,22 @@ plot_frc_ener_Rlk = False
 
 """
 Plot the high and low momentum cases of model 1, 2, 3 and 4 and compare them to
-the Gossel and Agostini (CTMQC) data. 
+the Gossel and Agostini (CTMQC) data.
 If the Agostini and Gossel data have different initial momenta then it will
 choose Gossel.
 """
-plot_pop_lit_compare_ctmqc = True
+plot_pop_lit_compare_ctmqc = False
 
-'''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the 
-high momentum cases vs timestep, using the gradPhi NACV and a constant 
+'''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the
+high momentum cases vs timestep, using the gradPhi NACV and a constant
 Nuclear timestep of 0.1 au.
 
 If different parameters are required please re-run the code and point the
 variable norm_root_folder to the data folder.'''
 plot_norms_ctmqc = False
 
-'''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the 
-high momentum cases vs timestep, using the gradPhi NACV and a constant 
+'''Plot the CTMQC norm conservation for model 1, 2, 3 and 4 for the
+high momentum cases vs timestep, using the gradPhi NACV and a constant
 Nuclear timestep of 0.1 au.
 
 If different parameters are required please re-run the code and point the
@@ -95,9 +95,9 @@ compare_DC = False
 
 if plot_norms:
     allData = getData.NestedSimData(norm_root_folder, ['|C|^2', 'time'])
-    
+
     fa = plt.subplots(2, 2)
-    
+
     model = 1
     for x in range(2):
         for y in range(2):
@@ -109,7 +109,7 @@ if plot_norms:
             if y == 1:
                 ax.set_ylabel("")
             model += 1
-            
+
     plt.tight_layout()
     plt.show()
 
@@ -134,7 +134,7 @@ if plot_norms_ctmqc:
 #                                         ['|C|^2', 'time'])
 
     fa = plt.subplots(2, 2)
-    
+
     color = 'k'
     model = 1
     for x in range(2):
@@ -159,7 +159,7 @@ if plot_norms_ctmqc:
             if y == 1:
                 ax.set_ylabel("")
             model += 1
-            
+
     plt.tight_layout()
     fa[0].savefig('/homes/mellis/tmp.png')
 
@@ -170,9 +170,9 @@ if plot_norms_ctmqc:
 if plot_ener_cons:
     allData = getData.NestedSimData(ener_root_folder,
                                     ["time", 'ener', "|C|^2", "vel"])
-    
+
     fa = plt.subplots(2, 2)
-    
+
     model = 1
     color='k'
     for x in range(2):
@@ -184,11 +184,11 @@ if plot_ener_cons:
             if y == 1:
                 ax.set_ylabel("")
             model += 1
-    
+
     plt.tight_layout()
     plt.show()
-   
-    
+
+
 ###############################################################################
 
 
@@ -200,11 +200,11 @@ if plot_ener_cons_ctmqc:
             folderPath = ener_root_ctmqc_folder.replace("With_DC", "NoDC")
         else:
             folderPath = ener_root_ctmqc_folder.replace("NoDC", "With_DC")
-        
+
         allData2 = getData.NestedSimData(folderPath, ["time", 'ener', "|C|^2", "vel"])
-    
+
     fa = plt.subplots(2, 2)
-    
+
     model = 1
     for x in range(2):
         for y in range(2):
@@ -224,25 +224,25 @@ if plot_ener_cons_ctmqc:
             if compare_DC:
                 ax.legend()
             model += 1
-    
+
     plt.tight_layout()
     plt.show()
-   
-    
+
+
 ###############################################################################
-    
-    
+
+
 if plot_pop_lit_compare:
     allData = getData.NestedSimData(pops_root_folder, ['time', '|C|^2'])
     fredData = getData.FredericaData()
     gossData = getData.GosselData()
-    
+
     for mom in ['high', 'low']:
         model = 1
         f, a = plt.subplots(2, 2)
         fD, aD = plt.subplots(2, 2)
-    
-    
+
+
         for x in range(2):
             for y in range(2):
                 ax = a[x][y]
@@ -253,14 +253,14 @@ if plot_pop_lit_compare:
                                     "mod%i_%sMom_pops" % (model, mom))
                 fredMom = getattr(fredData,
                                   "mod%i_%sMom" % (model, mom))
-    
+
                 dfGossDeco = getattr(gossData,
                                      "mod%i_%sMom_deco" % (model, mom))
                 dfGossPop = getattr(gossData,
                                     "mod%i_%sMom_pops" % (model, mom))
                 gossMom = getattr(gossData,
                                   "mod%i_%sMom" % (model, mom))
-    
+
                 myData = allData.query_data({'tullyModel': model,
                                              'velInit': gossMom * 5e-4})
 
@@ -275,7 +275,7 @@ if plot_pop_lit_compare:
                         myPops = np.mean(myPops, axis=0)
                     else:
                         myPops = []
-    
+
                 # Plot the populations
                 ax.plot(dfGossPop['Eh_x']*0.024188843265857,
                         dfGossPop['Eh_y'], label="Gossel, 18", color='k')
@@ -285,18 +285,18 @@ if plot_pop_lit_compare:
                 if gossMom == fredMom:
                     ax.plot(dfFredPop['Eh_x']*0.024188843265857,
                             dfFredPop['Eh_y'], label="Agostini, 16", color='g')
-    
+
                 xlimmax = max(np.nanmax(dfGossPop['Eh_x']),
                               np.nanmax(dfFredPop['Eh_x'])
                               )*0.024188843265857*1.1
                 ax.set_xlim([-1.9, xlimmax])
-                
+
                 if x == 1:
                     ax.set_xlabel("Timestep [fs]")
                 if y == 0:
                     ax.set_ylabel("Ad. Pop.")
                 ax.set_title("Model %i" % model, fontsize=24)
-    
+
                 ax.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
                             xycoords='axes fraction', fontsize=15)
                 ax.legend()
@@ -310,35 +310,35 @@ if plot_pop_lit_compare:
                 if gossMom == fredMom:
                     axD.plot(dfFredDeco['Eh_x']*0.024188843265857,
                             dfFredDeco['Eh_y'], label="Agostini, 16", color='g')
-    
+
                 xlimmax = max(np.nanmax(dfGossDeco['Eh_x']),
                               np.nanmax(dfFredDeco['Eh_x'])
                               )*0.024188843265857*1.1
                 axD.set_xlim([-1.9, xlimmax])
-                
+
                 if x == 1:
                     axD.set_xlabel("Timestep [fs]")
                 if y == 0:
                     axD.set_ylabel("Coherence")
                 axD.set_title("Model %i" % model, fontsize=24)
-    
+
                 axD.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
                             xycoords='axes fraction', fontsize=15)
                 axD.legend()
                 model += 1
-    
+
         f.suptitle("%s Momentum -Populations" % mom.title(), fontsize=30)
         plt.tight_layout()
-        
+
         fD.suptitle("%s Momentum -Coherences" % mom.title(), fontsize=30)
         plt.tight_layout()
-        
-        
-        
-###############################################################################       
-        
-        
-        
+
+
+
+###############################################################################
+
+
+
 if plot_pop_norm_Rlk:
     with_DC = 'With_DC' in Rlk_root_folder
     allData = getData.NestedSimData(Rlk_root_folder,
@@ -351,21 +351,21 @@ if plot_pop_norm_Rlk:
                 modelData = [d for d in modelData if d.velInit == max(initVels)]
             elif mom == 'low':
                 modelData = [d for d in modelData if d.velInit == min(initVels)]
-            
-            
+
+
             for iSim, data in enumerate(modelData):
                 data.times *= 0.024188843265857
                 f, a = plt.subplots(3)
-                
+
                 alpha, lw = 0.1, 0.2
-                
+
                 # Plot Norms
 #                if not with_DC:
                 norm = np.sum(data.adPop, axis=2)
                 a[0].plot(data.times, norm, 'r-', alpha=alpha, lw=lw)
                 a[0].plot(data.times, np.mean(norm, axis=1), 'r-')
                 a[0].set_ylabel("Norm")
-                
+
                 popAx = 1
                 # Plot Pops
                 a[popAx].plot(data.times, data.adPop[:, :, 0], 'r-',
@@ -377,7 +377,7 @@ if plot_pop_norm_Rlk:
                 a[popAx].plot(data.times, np.mean(data.adPop[:, :, 1], axis=1),
                           'b-')
                 a[popAx].set_ylabel("Ad. Pop.")
-                
+
                 # Plot Rlk
                 RlkAx = 2
                 a[RlkAx].plot(data.times, data.Rlk[:, 0, 1], 'k-',
@@ -387,7 +387,7 @@ if plot_pop_norm_Rlk:
                 a[RlkAx].plot(data.times, data.effR[:, 0, 1], 'g-')
                 a[RlkAx].set_ylabel("Rlk [bohr]")
                 a[RlkAx].set_xlabel("Timestep [fs]")
-                
+
                 RlkArtist = plt.Line2D((0,1),(0,0), color='k')
                 effRArtist = plt.Line2D((0,1),(0,0), color='g')
                 RI0Artist = plt.Line2D((0,1),(0,0), color='k', linestyle='--',
@@ -398,7 +398,7 @@ if plot_pop_norm_Rlk:
                 a[RlkAx].legend(artists, labels)
                 a[RlkAx].set_ylim([np.min(data.RI0)*1.1,
                                    np.max(data.RI0)*1.1])
-                
+
                 if with_DC:
                     savePath = "/homes/mellis/Documents/Graphs/Tully_Models/" + \
                                 "CTMQC_Final_Data/DC_Corr/AllNorm_Pop_Rlk"
@@ -407,20 +407,20 @@ if plot_pop_norm_Rlk:
                                 "CTMQC_Final_Data/Bad_Rlk/AllNorm_Pop_Rlk"
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
-                
+
                 #savePath = savePath + "/Repeat_%i" % iSim
                 #f.savefig(savePath)
                 #plt.close("all")
-                
+
                 print("\rRepeat %i done" % iSim, end="\r")
             print("Model %i %s momentum done" % (model, mom))
-        
-        
-        
-###############################################################################       
-        
-        
-        
+
+
+
+###############################################################################
+
+
+
 if plot_frc_ener_Rlk:
     with_DC = 'With_DC' in Rlk_root_folder
     allData = getData.NestedSimData(Rlk_root_folder,
@@ -434,12 +434,12 @@ if plot_frc_ener_Rlk:
                 modelData = [d for d in modelData if d.velInit == max(initVels)]
             elif mom == 'low':
                 modelData = [d for d in modelData if d.velInit == min(initVels)]
-    
+
             for iSim, data in enumerate(modelData):
                 data.times *= 0.024188843265857
                 f, a = plt.subplots(3)
                 alpha, lw = 0.1, 0.2
-                
+
                 # Plot Total Energy
                 Epot = np.sum(data.adPop * data.E, axis=2)
                 Ekin = 1000 * (data.v**2)
@@ -447,13 +447,13 @@ if plot_frc_ener_Rlk:
                 a[0].plot(data.times, Etot, 'k-', alpha=alpha, lw=lw)
                 a[0].plot(data.times, np.mean(Etot, axis=1), 'k-')
                 a[0].set_ylabel("Tot. E [Ha]")
-            
+
                 # Plot Forces
                 frcAx = 1
                 a[frcAx].plot(data.times, data.F, 'k-', alpha=alpha, lw=lw)
                 a[frcAx].plot(data.times, np.mean(data.F, axis=1), 'k-')
                 a[frcAx].set_ylabel(r"F$_{tot}$ [$\frac{Ha}{Bohr}$]")
-                
+
                 # Plot Rlk
                 RlkAx = 2
                 a[RlkAx].plot(data.times, data.Rlk[:, 0, 1], 'k-',
@@ -463,7 +463,7 @@ if plot_frc_ener_Rlk:
                 a[RlkAx].plot(data.times, data.effR[:, 0, 1], 'g-')
                 a[RlkAx].set_ylabel("Rlk [bohr]")
                 a[RlkAx].set_xlabel("Timestep [fs]")
-                
+
                 RlkArtist = plt.Line2D((0,1),(0,0), color='k')
                 effRArtist = plt.Line2D((0,1),(0,0), color='g')
                 RI0Artist = plt.Line2D((0,1),(0,0), color='k', linestyle='--',
@@ -474,7 +474,7 @@ if plot_frc_ener_Rlk:
                 a[RlkAx].legend(artists, labels)
                 a[RlkAx].set_ylim([np.min(data.RI0)*1.1,
                                    np.max(data.RI0)*1.1])
-                
+
                 if with_DC:
                     savePath = "/homes/mellis/Documents/Graphs/Tully_Models/" + \
                                 "CTMQC_Final_Data/DC_Corr/AllEner_Frc"
@@ -483,20 +483,20 @@ if plot_frc_ener_Rlk:
                                 "CTMQC_Final_Data/Bad_Rlk/AllEner_Frc_Rlk"
                 savePath = savePath + "/Model_%i/%sMom/" % (model, mom)
                 if not os.path.isdir(savePath): os.makedirs(savePath)
-                
+
                 #savePath = savePath + "/Repeat_%i" % iSim
                 #f.savefig(savePath)
                 #plt.close("all")
-                            
+
                 print("\rRepeat %i done" % iSim, end="\r")
             print("Model %i %s momentum done" % (model, mom))
 
-    
+
 ###############################################################################
-    
-    
+
+
 if plot_pop_lit_compare_ctmqc:
-    
+
     def get_myPops_myCoh(myData):
         myPops = [d.adPop for d in myData]
         if len(myPops) > 0:
@@ -504,7 +504,7 @@ if plot_pop_lit_compare_ctmqc:
             pop_mask = [i for i, pops in enumerate(myPops)
                         if len(pops) == max(all_lens)]
             myPops = [myPops[i] for i in pop_mask]
-            
+
             myCoh = [pops[:, :, 0]  * pops[:, :, 1]
                      for pops in myPops]
             myCoh = np.mean(myCoh, axis=2)
@@ -513,10 +513,10 @@ if plot_pop_lit_compare_ctmqc:
             myPops = np.mean(myPops, axis=0)
             return myPops, myCoh, pop_mask
         return False, False, False
-    
+
     def plot_myData(myData, axes, legend="My Data", color='#ff0000'):
         myPops, myCoh, pop_mask = get_myPops_myCoh(myData)
-        
+
         darkenColor = 0.7
         colCodes = [color.strip('#')[i*2:i*2+2] for i in range(3)]
         color1 = [hex(int(eval('0x%s'%i) * darkenColor)).strip('0x')
@@ -536,7 +536,7 @@ if plot_pop_lit_compare_ctmqc:
             axes[1].plot(myData[pop_mask[0]].times*0.024188843265857,
                     myCoh, label=legend, color=color)
             for data in myData:
-                coherences = data.adPop[:, :, 0] * data.adPop[:, :, 1] 
+                coherences = data.adPop[:, :, 0] * data.adPop[:, :, 1]
                 axes[1].plot(data.times*0.024188843265857,
                         np.mean(coherences, axis=1), color1, lw=0.6,
                         alpha=0.4)
@@ -562,9 +562,9 @@ if plot_pop_lit_compare_ctmqc:
         folders. I haven't divided the bits up yet and it is very messy!
         """
         allData = getData.NestedSimData(folderpath, ['time', '|C|^2'])
-        
+
         for imom, mom in enumerate(['high', 'low']):
-            model = 1           
+            model = 1
             if figs_axes is False:
                 f, a = plt.subplots(2, 2)
                 fD, aD = plt.subplots(2, 2)
@@ -574,7 +574,7 @@ if plot_pop_lit_compare_ctmqc:
                 for y in range(2):
                     ax = a[x][y]
                     axD = aD[x][y]
-                    
+
                     looper = []
                     if gossData is not False:
                         dfGossPop, dfGossDeco, gossMom = get_ExtData(gossData,
@@ -592,35 +592,35 @@ if plot_pop_lit_compare_ctmqc:
                                                                      mom)
                         looper.append((fredPlot, dfFredPop, ax))
                         looper.append((fredPlot, dfFredDeco, axD))
-   
+
                     # Plot the literature data
                     for litPlot, litData, axis in looper:
                         for key in litPlot:
                             axis.plot(litData['%s_x' % key]*0.024188843265857,
                                     litData['%s_y' % key], label=litPlot[key][0],
                                     **litPlot[key][1])
-                    
+
                     # Plot the my data
                     myData = allData.query_data({'tullyModel': model,
                                                  'velInit': gossMom * 5e-4})
                     plot_myData(myData, (ax, axD), params['label'],
                                 params['color'])
-                    
+
                     # Put labels on axes
                     for axis in (ax, axD):
                         if x == 1:
                             axis.set_xlabel("Sim. Time [fs]")
                         if y == 0:
                             axis.set_ylabel("Ad. Pop.")
-                        
+
                         axis.set_title("Model %i" % model, fontsize=24)
-           
+
                         axis.annotate(r"P$_{0}$: %.2g au" % gossMom, (0.04, 0.06),
                                     xycoords='axes fraction', fontsize=15)
                         axis.legend(fontsize=18)
-           
+
                     model += 1
-            
+
             f.suptitle("%s Momentum -Populations" % mom.title(), fontsize=30)
             f.subplots_adjust(top=0.894,
                                 bottom=0.109,
@@ -628,7 +628,7 @@ if plot_pop_lit_compare_ctmqc:
                                 right=0.979,
                                 hspace=0.259,
                                 wspace=0.112)
-            
+
             fD.suptitle("%s Momentum -Coherences" % mom.title(), fontsize=30)
             fD.subplots_adjust(top=0.894,
                                 bottom=0.109,
@@ -637,10 +637,10 @@ if plot_pop_lit_compare_ctmqc:
                                 hspace=0.259,
                                 wspace=0.112)
 
-        
+
     fredData = getData.FredericaData()
     gossData = getData.GosselData()
-    
+
     fL, aL = plt.subplots(2, 2)
     fDL, aDL = plt.subplots(2, 2)
     fH, aH = plt.subplots(2, 2)
@@ -671,14 +671,14 @@ if plot_pop_lit_compare_ctmqc:
 #                           figs_axes=((fL, aL, fDL, aDL),
 #                                      (fH, aH, fDH, aDH)))
 #        print("Done %.2g" % sig)
-   
-   
+
+
 
 
 
 """
                    # Plot the coherences
-                   
+
 
 #                   if gossMom == fredMom:
 #                       axD.plot(dfFredDeco['CTMQC_x']*0.024188843265857,
@@ -689,10 +689,10 @@ if plot_pop_lit_compare_ctmqc:
                                  np.nanmax(dfFredDeco['CTMQC_x'])
                                  )*0.024188843265857*1.1
                    axD.set_xlim([-1.9, xlimmax])
-                   
-                   
-                                               
-               
+
+
+
+
                     xlimmax = max(np.nanmax(dfGossPop['CTMQC_x']),
                                   np.nanmax(dfFredPop['CTMQC_x'])
                                   )*0.024188843265857*1.1

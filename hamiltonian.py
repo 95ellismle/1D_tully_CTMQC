@@ -44,7 +44,6 @@ def create_H3(x, A=6e-4, B=0.1, C=0.9):
     else:
         V12 = B*(2-np.exp(-C*x))
     V22 = -V11
-#    print(np.matrix([[V11, V12], [V12, V22]]))
     return np.matrix([[V11, V12], [V12, V22]])
 
 
@@ -75,6 +74,46 @@ def create_Hlin(x, slope=-0.01, Start=-15, Egap=0.05):
                      [0, V22]])
 
 
+def constantHighCouplings(x):
+    return np.matrix([[0.03, 0.03],
+                      [0.03, -0.03]])
+
+
+def createManyCross(x):
+    """
+    Will create repeated avoided crossings
+    """
+    if x > 100:
+        x %= 100
+
+    if x < 20:
+        return create_H1(x)
+
+    elif 20 <= x < 40:
+        return -create_H1(x-40)
+
+    elif 40 <= x < 80:
+        return -create_H1(x-40)
+
+    else:
+        return create_H1(x-100)
+
+
+def createBigHam(x):
+    if x < 20:
+        return create_H1(x)
+
+    elif 20 <= x < 60:
+        return create_H4(x-40, A=0.03, D=5)
+
+    elif 60 <= x:
+        H = create_H2(x-80, E0=0.06)
+        H[0,0] += 0.03
+        H[1,1] = -H[1, 1] + 0.03
+        H[1,1], H[0,0] = H[0,0], H[1,1]
+        return -H
+
+
 def getEigProps(H, ctmqc_env):
     """
     Wrapper function, this really needs taking out it when I have time.
@@ -87,7 +126,7 @@ def calcNACVgradPhi(pos, ctmqc_env):
     Will use a different method to calculate the NACV. This function will
     simply use:
         d = <phil | grad phik>
-        
+
     This is slightly more unstable because sometimes the eigen solver sometimes
     mixes up the order of the eigenvectors/eigenvalues which causes large
     differences in phi for different pos.
@@ -103,7 +142,7 @@ def calcNACVgradPhi(pos, ctmqc_env):
 #            for H in (H_xm, H_x, H_xp)]
 #    gradU = np.gradient(allU, dx, axis=0)
     gradU = (allU[1] - allU[0]) / dx
-    
+
     NACV = np.zeros((2, 2))
     for l in range(2):
         for k in range(l):
@@ -111,14 +150,14 @@ def calcNACVgradPhi(pos, ctmqc_env):
             NACV[l, k] = np.dot(allU[1].A[l], gradU.A[k])
             NACV[k, l] = -NACV[l, k]
 #    print(NACV)
-            
+
     # Check the anti-symettry of the NACV
     badNACV = False
     for l in range(len(NACV)):
         for k in range(l+1, len(NACV)):
             if np.abs(NACV[l, k] + np.conjugate(NACV[k, l])) > 1e-10:
                 badNACV = True
-    
+
     if badNACV:
         print("gradPhi NACV bad switching to gradH")
         NACV = calcNACVgradH(pos, ctmqc_env)
@@ -134,9 +173,10 @@ def calcNACV(irep, ctmqc_env):
     pos = ctmqc_env['pos'][irep]
 
     return calcNACVgradPhi(pos, ctmqc_env)
-#    if ctmqc_env['tullyModel'] == 2 and ctmqc_env['velInit'] < 0.01:
-#    else:
-#        return calcNACVgradH(pos, ctmqc_env)
+
+   # if ctmqc_env['tullyModel'] == 2 and ctmqc_env['velInit'] < 0.01:
+   # else:
+   #     return calcNACVgradH(pos, ctmqc_env)
 
 def calcNACVgradH(pos, ctmqc_env):
     """
@@ -191,11 +231,11 @@ def test_NACV(Hfunc):
     randomNums = (np.random.random(nrep) * 30) - 15
     ctmqc_env = {'dx': 1e-5, 'nstate': 2, 'pos': list(sorted(randomNums)),
                  'Hfunc': Hfunc}
-    
+
     allNACV1 = [calcNACV(irep, ctmqc_env) for irep in range(nrep)]
     allNACV2 = [calcNACVgradH(irep, ctmqc_env)
                 for irep in range(nrep)]
-    
+
     allNACV1 = np.array(allNACV1)
     allNACV2 = np.array(allNACV2)
     diff = np.abs(allNACV1 - allNACV2)
@@ -204,13 +244,13 @@ def test_NACV(Hfunc):
     bestCase = np.min(diff)
     avgCase = np.mean(diff)
     std = np.std(diff)
-    
+
     #import matplotlib.pyplot as plt
 
     print("Worst Case: {0}".format(worstCase))
     print("Best Case: {0}".format(bestCase))
     print("Mean Case: {0} +/- {1}".format(avgCase, std))
-    
+
     #plt.plot(ctmqc_env['pos'], allNACV1[:, 0, 1], 'k.',
     #         label="calcNACV")
     #plt.plot(ctmqc_env['pos'], allNACV2[:, 0, 1], 'y.',

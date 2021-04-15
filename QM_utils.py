@@ -451,7 +451,7 @@ def calc_Qlk_Min17_opt(runData):
 
     # Get which reps to calculate alpha for
     threshold = ctmqc_env['threshold']
-    mask = [not any(i) for i in runData.ctmqc_env['adPops'] > threshold]
+    mask = [not any(i) for i in ctmqc_env['adPops'] > threshold]
     reps_to_do = np.arange(ctmqc_env['nrep'])[mask]
     if len(reps_to_do) == 0: return Qlk
 
@@ -495,12 +495,12 @@ def calc_Qlk_Min17_opt(runData):
             ctmqc_env['effR'][:, :, I] = RI0
 
             Qlk[I, :, :] = (ctmqc_env['alpha'][I] * ctmqc_env['pos'][I]) - RI0
-    
+
     elif ctmqc_env['intercept_type'] == 'ehrenfest':
        Qlk = np.zeros((ctmqc_env['nrep'],
                        ctmqc_env['nstate'],
                        ctmqc_env['nstate']))
-    
+
     # Only for 2 states
     if np.any(Qlk[:, 0, 1] != Qlk[:, 1, 0]):
         print(Qlk)
