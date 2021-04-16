@@ -32,7 +32,7 @@ import plot
 #rootSaveFold = "/scratch/mellis/TullyModelData/Test"
 
 
-BASIS = "adiab"
+BASIS = "diab"
 
 
 
@@ -115,8 +115,8 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'do_sigma_calc': 'no',  # Dynamically adapt the value of sigma
             'sigma': sigma,  # The value of sigma (width of gaussian)
             'const': 50,  # The constant in the sigma calc
-            'nSmoothStep': 4,  # The number of steps to take to smooth the QM intercept
-            'gradTol': 5,  # The maximum allowed gradient in Rlk in time.
+            'nSmoothStep': 5,  # The number of steps to take to smooth the QM intercept
+            'gradTol': 0.1,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
             'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
@@ -486,7 +486,7 @@ class CTMQC(object):
         self.ctmqc_env['extrapCount'] = 0
         self.ctmqc_env['spike_region_count'] = 0
         self.ctmqc_env['poss_spike'] = False
-        self.ctmqc_env['threshold'] = 0.995
+        self.ctmqc_env['threshold'] = 9999
         if self.ctmqc_env['Rlk_smooth'] == "RI0":
             self.ctmqc_env['nSmoothStep'] = 0
         self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
@@ -553,7 +553,6 @@ class CTMQC(object):
         self.ctmqc_env['adPops'] = adPops.real
 
         # Do for each rep
-        #doQM = False
         for irep in range(self.ctmqc_env['nrep']):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
@@ -573,12 +572,12 @@ class CTMQC(object):
 
             # Get the QM quantities
             if self.ctmqc_env['do_QM_F'] or self.ctmqc_env['do_QM_C']:
-                if any(Ck > self.ctmqc_env['threshold']
+                if all(Ck > self.ctmqc_env['threshold']
                         for Ck in self.ctmqc_env['adPops'][irep]):
-                    adMom = 0.0 * self.ctmqc_env['adMom'][irep]
-                else:
-                    doQM = True
-                    adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
+                    self.ctmqc_env['adMom'][:, :] =  0.0
+
+                doQM = True
+                adMom = qUt.calc_ad_mom(self.ctmqc_env, irep, adFrc)
                 self.ctmqc_env['adMom'][irep] = adMom
 
         # Do for all reps
@@ -839,6 +838,7 @@ class CTMQC(object):
         tullyInfo = {i:self.ctmqc_env[i]
                        for i in self.ctmqc_env
                        if isinstance(self.ctmqc_env[i], saveTypes)}
+        tullyInfo['propagation_basis'] = BASIS
 
         #np.save("%s/tullyInfo" % self.save_folder, tullyInfo)
         with open("%s/tullyInfo.json" % self.save_folder, 'w') as f:
@@ -1006,6 +1006,7 @@ def doSim(iSim, para=False):
         corrP = p_mean / np.mean(pos)
     pos = np.array(pos) * corrP
 
+    s_min = all_sig_min[iSim]
     sigma = [rd.gauss(s_min, s_std) for I in range(nRep)]
 
     elec_steps = 5
@@ -1024,7 +1025,7 @@ def doSim(iSim, para=False):
     return runData
 
 
-def get_min_procs(nSim, maxProcs):
+def get_nproc(nSim, maxProcs):
    """
    This will simply find the maximum amount of processes that can
    be used (e.g nproc = nSim or maxProcs) then minimise this by
@@ -1037,9 +1038,9 @@ def get_min_procs(nSim, maxProcs):
    """
    if nSim <= maxProcs:
        return nSim
+
    nProc = min([nSim, maxProcs])
-   nProc = min([nProc, mp.cpu_count()-2])
-   print(nProc)
+   nProc = min([nProc, mp.cpu_count()])
    sims_to_procs = np.ceil(nSim / nProc)
    for i in range(nProc+1, 1, -1):
        if np.ceil(nSim / i) == sims_to_procs:
@@ -1049,6 +1050,7 @@ def get_min_procs(nSim, maxProcs):
 
    if nProc > 1 and nSim % (nProc-1) == 0:
        nProc -= 1
+
    return nProc
 
 
@@ -1066,7 +1068,7 @@ if nSim > 1:
     import multiprocessing as mp
 
 
-    nProc = get_min_procs(nSim, 12)
+    nProc = get_nproc(nSim, 12)
     print("Using %i processes" % (nProc))
     pool = mp.Pool(nProc)
 #    print("Doing %i sims with %i processes" % (nSim, nProc))

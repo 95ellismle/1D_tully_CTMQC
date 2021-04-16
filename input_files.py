@@ -1,5 +1,5 @@
-inputs = "constHighBoth"
-s_min = 0.35
+inputs = "HighVaryingSigma"
+all_sig_min = [0.5]*1000
 mass = 2000
 rootSaveFold = "."
 
@@ -22,7 +22,7 @@ if inputs == "FullGossel":
     all_doCTMQC_F = (([True] * 8) + ([False] * 8)) * numRepeats
 
     # Remember to change the smoothing choice when changing this!
-    rootFolder = '%s/FullGossel_Rlk_100Reps_adiabProp_1' % rootSaveFold
+    rootFolder = '%s/Test' % rootSaveFold
 
     print("Saving data in `%s'" % rootFolder)
 
@@ -177,6 +177,22 @@ elif inputs == "HighCTMQCGossel":
     #all_dt = [0.4] * 4 * numRepeats
     all_nRep = [100] * 4 * numRepeats
 
+elif inputs == "HighVaryingSigma":
+    print("Carrying out varying sigma CTMQC testing!")
+    numRepeats = 8
+    mfolder_structure = ['sigma', 'model', 'mom']
+    all_velMultiplier = [4, 3, 3, 2.5] * numRepeats
+    all_maxTime = [2000, 1500, 1500, 4000] * numRepeats
+    all_model = [4, 3, 2, 1] * numRepeats
+    all_p_mean = [-20, -15, -8, -20] * numRepeats
+    all_doCTMQC_C = ([True] * 4) * numRepeats
+    all_doCTMQC_F = ([True] * 4)  * numRepeats
+    rootFolder = '%s/VaryingSigma' % rootSaveFold
+    #all_dt = [0.4] * 4 * numRepeats
+    all_nRep = [100] * 4 * numRepeats
+    all_sig_min = [j for j in (0.1, 0.2, 0.3, 0.5, 0.6, 0.75, 1, 2) for i in range(4)]
+
+
 elif inputs == "changingNumReps":
     print("Carrying out custom input file")
     numRepeats = 1  # How many repeated simulations (each with different init pos)
@@ -195,14 +211,15 @@ else:
     print("Carrying out custom input file")
     numRepeats = 1#len(all_dt)  # How many repeated simulations (each with different init pos)
     mfolder_structure = ["ctmqc", 'model', 'mom']  # What the folderstructure of the outputted data looks like.
-    all_nRep = [10] * numRepeats  # How many replicas
-    all_model = [3] * numRepeats  # What tully model to use
-    all_velMultiplier = [3] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
-    all_maxTime = [3000] * numRepeats  # How long to run for
+    all_nRep = [100] * numRepeats  # How many replicas
+    all_model = [4] * numRepeats  # What tully model to use
+    all_velMultiplier = [4] * numRepeats  # What momentum to select (this is divided by 10 so type 3 for 30)
+    all_maxTime = [2000] * numRepeats  # How long to run for
     all_p_mean = [-20] * numRepeats  # The average initial position
     all_doCTMQC_C = [True] * numRepeats  # Whether to use the coeff CTMQC equations
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
-    rootFolder = './Model3Test'  #'%s/test' % rootSaveFold  # Where to save the data.
+    #all_dt = [0.4134137457575]
+    rootFolder = './Test'  #'%s/test' % rootSaveFold  # Where to save the data.
 
 
 
@@ -210,3 +227,16 @@ import os
 if os.path.isdir(rootFolder) and inputs != 'custom':
    print("The directory '%s' already exists, remove it to continue." % rootFolder)
    raise SystemExit("The directory '%s' already exists, remove it to continue." % rootFolder)
+
+
+
+print("\n\nAll sim params:")
+s = ' '.join([f"{i:8s}" for i in ("Nrep","Model","Vel","Pos","Sigma","CoefCT","FrcCT")])
+print("" + '='*len(s) + "\n" + s +"\n" + '-'*len(s))
+for i in range(min([len(i) for i in (all_nRep, all_model, all_velMultiplier, all_p_mean, all_sig_min, all_doCTMQC_C, all_doCTMQC_F)])):
+    s = ""
+    for j in (all_nRep, all_model, all_velMultiplier, all_p_mean, all_sig_min, all_doCTMQC_C, all_doCTMQC_F):
+        s += f"{str(j[i]):8s} "
+    print(s)
+print("\n" + '='*len(s) + "\n")
+

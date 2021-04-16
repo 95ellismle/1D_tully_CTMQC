@@ -83,14 +83,14 @@ def makeX_diab_ehren(H):
 def do_diab_prop(ctmqc_env):
     """
     Will propagate the coefficients in the diabatic basis (without the
-    diabatic NACE)  
-    
+    diabatic NACE)
+
     N.B. Is just Ehrenfest at the moment
     """
     for irep in range(ctmqc_env['nrep']):
         H = np.matrix(ctmqc_env['H_tm'][irep])
         dH_E = get_diffVal(ctmqc_env['H'][irep], H, ctmqc_env)
-        
+
         U = np.matrix(ctmqc_env['U_tm'][irep])
         dU_E = get_diffVal(ctmqc_env['U'][irep], U, ctmqc_env)
 
@@ -99,10 +99,10 @@ def do_diab_prop(ctmqc_env):
 
         f = ctmqc_env['adMom_tm'][irep]
         df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
-        
+
         adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
         doQM = abs(QM[0, 1]) > 1e-10
-        
+
         X1 = makeX_diab_ehren(H)
         if doQM: X1 -= makeX_diab_QM(QM, f, U, adPops)
         for Estep in range(ctmqc_env['elec_steps']):
@@ -127,7 +127,7 @@ def do_diab_prop(ctmqc_env):
             adPops = np.conjugate(C) * C
 
             X1 = X2[:]
-        
+
         lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
         lin_interp_check(ctmqc_env['adMom'][irep], f, "Adiabatic Momentum")
         lin_interp_check(ctmqc_env['Qlk'][irep], QM, "Quantum Momentum")
@@ -137,7 +137,7 @@ def do_diab_prop(ctmqc_env):
 def makeX_diab_QM(Qlk, f, U, adPops):
     """
     Will make the diabatic X matrix for the full quantum momentum propagation.
-    
+
     N.B. only give Ehrenfest atm
     """
     nstates = len(adPops)
@@ -148,7 +148,7 @@ def makeX_diab_QM(Qlk, f, U, adPops):
 
         for k in range(nstates):
             Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
-    
+
     # Check the Xqm term (using norm conservation)
     if np.sum(Xqm * adPops) > 1e-10:
         print("\n\nQM: ", Qlk, "\n")
@@ -157,9 +157,9 @@ def makeX_diab_QM(Qlk, f, U, adPops):
         print("Xqm: ", Xqm, "\n")
         print("Xqm * adPops: ", Xqm * adPops, "\n")
         raise SystemExit("ERROR: MakeX, sum Xqm != 0")
-    
+
     Xqm = np.matmul(U, np.matmul(Xqm, U.T))
-    
+
     return Xqm
 
 
@@ -167,15 +167,15 @@ def lin_interp_check(oldVal, interpVal, name):
     """
     Will check if the linear interpolation went well for the named variable
     """
-    if np.max(oldVal) > 1e-13:
-        if abs(np.max(oldVal - interpVal)/np.max(oldVal)) > 1e-5:
+    if np.max(oldVal) > 1e-9:
+        if abs(np.max(oldVal - interpVal)/np.max(oldVal)) > 1e-3:
             print("\n\nOld Value = ", oldVal)
             print("\n\nInterpolated Value = ", interpVal)
             print("\n\nDifference = ", oldVal - interpVal)
             print("Quantity = %s" % name)
             raise SystemExit("Something went wrong with the linear " +
                                  "interpolation of the %s" % name)
-    
+
 
 
 def makeX_adiab_ehren(NACV, vel, E):
@@ -205,12 +205,12 @@ def do_adiab_prop(ctmqc_env):
 
         f = ctmqc_env['adMom_tm'][irep]
         df_E = get_diffVal(ctmqc_env['adMom'][irep], f, ctmqc_env)
-        
-        
+
+
         adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
         doQM = abs(QM[0, 1]) > 1e-10
 #        print(doQM)
-        
+
 
         X1 = makeX_adiab_ehren(NACV, v, E)
         if doQM: X1 -= makeX_adiab_Qlk(QM, f, adPops)
@@ -230,7 +230,7 @@ def do_adiab_prop(ctmqc_env):
                 QM += 0.5 * dQM_E
                 f += 0.5 * df_E
                 X12 -= makeX_adiab_Qlk(QM, f, adPops)
-                
+
                 QM += 0.5 * dQM_E
                 f += 0.5 * df_E
                 X2 -= makeX_adiab_Qlk(QM, f, adPops)
@@ -241,7 +241,7 @@ def do_adiab_prop(ctmqc_env):
             ctmqc_env['C'][irep] = coeff
 
             X1 = X2[:]
-        
+
 #        lin_interp_check(ctmqc_env['H'][irep], H, "Hamiltonian")
         lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
         lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
@@ -289,7 +289,7 @@ def makeX_adiab_Qlk(Qlk, f, adPops):
 
         for k in range(nstates):
             Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
-    
+
     # Check the Xqm term (using norm conservation)
     if np.sum(Xqm * adPops) > 1e-10:
         print("\n\nQM: ", Qlk, "\n")
@@ -298,7 +298,7 @@ def makeX_adiab_Qlk(Qlk, f, adPops):
         print("Xqm: ", Xqm, "\n")
         print("Xqm * adPops: ", Xqm * adPops, "\n")
         raise SystemExit("ERROR: MakeX, sum Xqm != 0")
-    
+
     return Xqm
 
 
@@ -349,7 +349,7 @@ def do_diab_prop_ehren(ctmqc_env):
                                          X2.A, ctmqc_env)
 
             X1 = X2[:]
-    
+
 
 def do_adiab_prop_ehren(ctmqc_env):
     """
@@ -382,7 +382,7 @@ def do_adiab_prop_ehren(ctmqc_env):
             ctmqc_env['C'][irep] = coeff
 
             X1 = X2[:]
-        
+
         lin_interp_check(ctmqc_env['NACV'][irep], NACV, "NACV")
         lin_interp_check(ctmqc_env['E'][irep], E, "Energy")
         lin_interp_check(ctmqc_env['vel'][irep], v, "Velocity")
