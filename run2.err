@@ -1,0 +1,12 @@
+main.py:811: RuntimeWarning: invalid value encountered in greater
+  if np.any(np.abs(adPops.imag) > 0):
+/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/elec_prop.py:234: RuntimeWarning: overflow encountered in multiply
+  adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/elec_prop.py:234: RuntimeWarning: invalid value encountered in multiply
+  adPops = np.conjugate(ctmqc_env['C'][irep]) * ctmqc_env['C'][irep]
+/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/elec_prop.py:290: RuntimeWarning: invalid value encountered in multiply
+  Xqm[l, l] += Qlk[l, k] * (f[k] - f[l]) * adPops[k]
+/homes/mellis/Documents/Code_bits_and_bobs/1D_tully_model/elec_prop.py:293: RuntimeWarning: invalid value encountered in multiply
+  if np.sum(Xqm * adPops) > 1e-10:
+main.py:811: RuntimeWarning: invalid value encountered in greater
+  if np.any(np.abs(adPops.imag) > 0):

@@ -119,7 +119,7 @@ def setup(pos, vel, coeff, sigma, maxTime, model, doCTMQC_C, doCTMQC_F,
             'gradTol': 0.1,  # The maximum allowed gradient in Rlk in time.
             'renorm': True,  # Choose whether renormalise the wf
             'Qlk_type': 'Min17',  # What method to use to calculate the QM
-            'Rlk_smooth': 'RI0',  # Apply the smoothing algorithm to Rlk
+            'Rlk_smooth': '',  # Apply the smoothing algorithm to Rlk
                 }
     return ctmqc_env
 
@@ -374,7 +374,7 @@ class CTMQC(object):
         as the force array
         """
         nrep = self.ctmqc_env['nrep']
-        nstate, nstep = self.ctmqc_env['nstate'], self.ctmqc_env['nsteps']
+        nstate, nstep = self.ctmqc_env['nstate'], self.ctmqc_env['nsteps'] + 1
         if 'mass' in self.ctmqc_env:
             self.ctmqc_env['mass'] = np.array(self.ctmqc_env['mass'])
         else:
@@ -490,7 +490,8 @@ class CTMQC(object):
         if self.ctmqc_env['Rlk_smooth'] == "RI0":
             self.ctmqc_env['nSmoothStep'] = 0
         self.allTimes = {'step': [], 'force': [], 'wf_prop': [],
-                         'transform': [], 'calcQM':[], 'prep': []}
+                         'transform': [], 'calcQM':[], 'prep': [],
+                         "get pops": [],}
 
         # Calculate the Hamiltonian
         for irep in range(nrep):
@@ -519,26 +520,13 @@ class CTMQC(object):
             e_prop.trans_adiab_to_diab(self.ctmqc_env)
 
         # Calculate the QM, adMom, adPop, adFrc.
+        if self.ctmqc_env['do_sigma_calc'].lower() == 'no':
+           self.ctmqc_env['alpha'][:] = 1 / (2 * (self.ctmqc_env['sigma']**2))
         self.__calc_quantities()
         # Calculate the forces
         self.__calc_F()
 
         self.__update_vars_step()
-#        print("dt: ", self.ctmqc_env['dt'])
-#        print("x = ", self.ctmqc_env['pos'])
-#        print("v = ", self.ctmqc_env['vel'])
-#        print("C = ", self.ctmqc_env['C'])
-#        print("model = ", self.ctmqc_env['tullyModel'])
-#        print("nrep = ", self.ctmqc_env['nrep'])
-#        print("QM F = ", self.ctmqc_env['do_QM_F'])
-#        print("QM C = ", self.ctmqc_env['do_QM_C'])
-#        print("elec_steps = ", self.ctmqc_env['elec_steps'])
-#        print("H: ", self.ctmqc_env['H'])
-#        print("E: ", self.ctmqc_env['E'])
-#        print("dlk: ", self.ctmqc_env['NACV'])
-
-
-#        print("F: ", self.ctmqc_env['frc'])
 
 
     def __calc_quantities(self):
@@ -557,6 +545,7 @@ class CTMQC(object):
             # Get Hamiltonian
             pos = self.ctmqc_env['pos'][irep]
             self.ctmqc_env['H'][irep] = self.ctmqc_env['Hfunc'](pos)
+
 
             # Get Eigen properties
             E, U = np.linalg.eigh(self.ctmqc_env['H'][irep])
@@ -632,6 +621,10 @@ class CTMQC(object):
                 print("\n\n\n\n\n\n\n\n\n------------\n\n\n\n\n\n\n\n\n\n\n\n")
                 print(E)
                 return
+        if self.tenSteps and self.ctmqc_env['iter'] % 10 == 0:
+           self.__save_data()
+        elif self.tenSteps is False:
+           self.__save_data()
 
     def __calc_F(self):
         """
@@ -659,8 +652,6 @@ class CTMQC(object):
             self.ctmqc_env['F_qm'][irep] = Fqm
             self.ctmqc_env['frc'][irep] = Ftot
             self.ctmqc_env['acc'][irep] = Ftot/self.ctmqc_env['mass']
-#        print("\n")
-#        raise SystemExit("BREAK")
 
     def __prop_wf(self):
         """
@@ -693,8 +684,16 @@ class CTMQC(object):
             e_prop.trans_diab_to_adiab(self.ctmqc_env)
         t3 = time.time()
 
+        # Get adiabatic populations
+        adPops = np.conjugate(self.ctmqc_env['C']) * self.ctmqc_env['C']
+        if np.any(np.abs(adPops.imag) > 0):
+            raise SystemExit("Something funny with adiabatic populations")
+        self.ctmqc_env['adPops'] = adPops.real
+        t4 = time.time()
+
         self.allTimes['wf_prop'].append(t2 - t1)
         self.allTimes['transform'].append(t3 - t2)
+        self.allTimes['get pops'].append(t4 - t3)
 
     def __ctmqc_step(self):
         """
@@ -740,6 +739,7 @@ class CTMQC(object):
         Will save data to RAM (arrays within this class)
         """
         istep = self.saveIter
+
         self.allR[istep] = self.ctmqc_env['pos']
         self.allNACV[istep] = self.ctmqc_env['NACV']
         self.allF[istep] = self.ctmqc_env['frc']
@@ -874,7 +874,7 @@ class CTMQC(object):
         self.allt = np.array(self.allt)
         self.__chop_arrays()
         # Small runs are probably tests
-        if self.ctmqc_env['iter'] > 30 and self.save_folder and not self.para:
+        if self.save_folder and not self.para:
             self.store_data()
 
         # Run tests on data (only after Ehrenfest, CTMQC normally fails!)
@@ -1063,8 +1063,7 @@ def para_doSim(iSim):
     print("Completed Simulation %i\n" % iSim)
     return runData
 
-
-if nSim > 1:
+if nSim > 1 and do_parallel:
     import multiprocessing as mp
 
 

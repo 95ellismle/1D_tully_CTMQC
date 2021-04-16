@@ -1,7 +1,22 @@
+<<<<<<< HEAD
 inputs = "HighVaryingSigma"
 all_sig_min = [0.5]*1000
 mass = 2000
 rootSaveFold = "."
+=======
+inputs = "custom"
+s_min = 0.5
+mass = 2000 
+rootSaveFold = "/scratch/mellis/TullyModelData/Test"
+do_parallel = True
+
+
+
+modelTime = {1: (6000, 4000), 2: (2500, 1500), 3: (5000, 1500), 4: (6000, 2000)}
+modelVel = {1: (1.5, 2.5), 2: (1.6, 3), 3: (1, 3), 4: (1, 4)}
+modelPos = {1: -20, 2: -8, 3: -15, 4: -20}
+
+>>>>>>> 9a9353e67dbbcaba24b8d3b6746cface20922513
 
 all_dt = [2.0670687287875/i for i in range(5, 500)]
 all_elec_steps = [5] * len(all_dt)
@@ -22,6 +37,7 @@ if inputs == "FullGossel":
     all_doCTMQC_F = (([True] * 8) + ([False] * 8)) * numRepeats
 
     # Remember to change the smoothing choice when changing this!
+<<<<<<< HEAD
     rootFolder = '%s/Test' % rootSaveFold
 
     print("Saving data in `%s'" % rootFolder)
@@ -118,6 +134,12 @@ elif inputs == "PartGossel":
 
 
 
+=======
+    rootFolder = '%s/FullGossel_VarSigRI0' % rootSaveFold
+
+    print("Saving data in `%s'" % rootFolder)
+
+>>>>>>> 9a9353e67dbbcaba24b8d3b6746cface20922513
 elif inputs == "FullEhrenGossel":
     print("Carrying out Ehrenfest simulations!")
     numRepeats = 10
@@ -134,7 +156,11 @@ elif inputs == "FullEhrenGossel":
 elif inputs == "FullCTMQCGossel":
     print("Carrying out full Gossel CTMQC testing!")
     numRepeats = 1
+<<<<<<< HEAD
     mfolder_structure = ["ctmqc", "sigma", 'model', 'mom']
+=======
+    mfolder_structure = ["ctmqc", 'model', 'mom']
+>>>>>>> 9a9353e67dbbcaba24b8d3b6746cface20922513
     all_velMultiplier = [4, 3, 3, 2.5,
                          1, 1, 1.6, 1.5] * numRepeats
     all_maxTime = [2000, 1500, 1500, 4000,
@@ -145,9 +171,14 @@ elif inputs == "FullCTMQCGossel":
                   -20, -15, -8, -20] * numRepeats
     all_doCTMQC_C = ([True] * 8) * numRepeats
     all_doCTMQC_F = ([True] * 8)  * numRepeats
+<<<<<<< HEAD
     rootFolder = '%s/CTMQC_Data/VaryingSigma' % rootSaveFold
     #all_dt = [0.4] * 8 * numRepeats
     all_nRep = [100] * 8 * numRepeats
+=======
+    rootFolder = '%s/CTMQC_Data/VaryingSigma20' % rootSaveFold
+    all_nRep = [200] * 8 * numRepeats
+>>>>>>> 9a9353e67dbbcaba24b8d3b6746cface20922513
 
 elif inputs == "LowCTMQCGossel":
     print("Carrying out full Gossel CTMQC testing!")
@@ -177,6 +208,7 @@ elif inputs == "HighCTMQCGossel":
     #all_dt = [0.4] * 4 * numRepeats
     all_nRep = [100] * 4 * numRepeats
 
+<<<<<<< HEAD
 elif inputs == "HighVaryingSigma":
     print("Carrying out varying sigma CTMQC testing!")
     numRepeats = 8
@@ -220,6 +252,51 @@ else:
     all_doCTMQC_F = [True]  * numRepeats  # Whether the use the frc CTMQC equations
     #all_dt = [0.4134137457575]
     rootFolder = './Test'  #'%s/test' % rootSaveFold  # Where to save the data.
+=======
+elif 'norm' in inputs:
+    import re
+    models = [int(i) for i in re.findall("[0-9]", inputs)]
+    if len(models) == 0:   models = [1, 2, 3, 4]
+    
+    all_elec_steps = [1, 10, 50, 100, 250, 500, 750, 1000, 1500, 2000]
+    models = models * len(all_elec_steps)
+    numRepeats = 1
+
+
+    mfolder_structure = ['model', 'mom']
+    all_velMultiplier = [modelVel[i][1] for i in models] * numRepeats
+    all_maxTime = [modelTime[i][1] for i in models] * numRepeats
+    all_model = models * numRepeats
+    all_p_mean = [modelPos[i] for i in models] * numRepeats
+    all_doCTMQC_C = ([True] * len(models)) * numRepeats
+    all_doCTMQC_F = ([True] * len(models))  * numRepeats
+    rootFolder = '%s/CTMQC_Data/Adiab_Prop' % rootSaveFold
+    all_dt = [0.4] * len(models) * numRepeats
+    all_nRep = [70] * len(models) * numRepeats
+ 
+
+else:
+
+    print("Carrying out custom input file")
+
+    models = [4]
+    highs_lows = ['high']
+    reps = 70
+    
+    mfolder_structure = ["ctmqc", 'model', 'mom']
+    all_model = models
+    all_nRep = [reps] * len(models)
+    highs_lows = [0 if hl =='high' else 1 for hl in highs_lows]
+
+    all_velMultiplier = [modelVel[mdl][hl] for mdl, hl in zip(models, highs_lows)]
+    all_maxTime = [modelTime[mdl][hl] + 500 for mdl, hl in zip(models, highs_lows)]
+    all_p_mean = [modelPos[mdl] for mdl in models]
+    all_doCTMQC_C = [True] * len(models)
+    all_doCTMQC_F = [True] * len(models)
+    rootFolder = './Test'
+    all_dt = [0.4] * len(models)
+
+>>>>>>> 9a9353e67dbbcaba24b8d3b6746cface20922513
 
 
 
